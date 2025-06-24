@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITable extends Document {
-  tableId: string;
   clubId: string;
   number: number;
   category: string;
@@ -9,11 +8,6 @@ export interface ITable extends Document {
 }
 
 const TableSchema = new Schema({
-  tableId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   clubId: {
     type: Schema.Types.ObjectId,
     ref: 'Club',

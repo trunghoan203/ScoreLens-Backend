@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IManager extends Document {
-  managerId: string;
   adminId: string;
   clubId: string;
   fullName: string;
@@ -13,11 +12,6 @@ export interface IManager extends Document {
 }
 
 const ManagerSchema = new Schema({
-  managerId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   adminId: {
     type: Schema.Types.ObjectId,
     ref: 'Admin',

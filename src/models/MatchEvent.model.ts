@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMatchEvent extends Document {
-  eventId: string;
   matchId: string;
   managerId: string;
   performingPlayerId: string;
@@ -10,11 +9,6 @@ export interface IMatchEvent extends Document {
 }
 
 const MatchEventSchema = new Schema({
-  eventId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   matchId: {
     type: Schema.Types.ObjectId,
     ref: 'Match',

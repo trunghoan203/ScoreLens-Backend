@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IClub extends Document {
-  clubId: string;
   brandId: string;
   clubName: string;
   address: string;
@@ -11,11 +10,6 @@ export interface IClub extends Document {
 }
 
 const ClubSchema = new Schema({
-  clubId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   brandId: {
     type: Schema.Types.ObjectId,
     ref: 'Brand',

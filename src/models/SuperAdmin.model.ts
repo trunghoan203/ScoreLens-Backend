@@ -1,17 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISuperAdmin extends Document {
-  sAdminId: string;
   fullName: string;
   email: string;
 }
 
 const SuperAdminSchema = new Schema({
-  sAdminId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   fullName: {
     type: String,
     required: true

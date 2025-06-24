@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IBrand extends Document {
-  brandId: string;
   adminId: string;
   brandName: string;
   website: string;
@@ -9,11 +8,6 @@ export interface IBrand extends Document {
 }
 
 const BrandSchema = new Schema({
-  brandId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   adminId: {
     type: Schema.Types.ObjectId,
     ref: 'Admin',
