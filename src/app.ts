@@ -10,7 +10,7 @@ import notFoundMiddleware from './middlewares/errors/notFound';
 import errorHandlerMiddleware from './middlewares/errors/errorHandler';
 
 // handle unhandled rejection error
-// import './middlewares/errors/unhandledRejection';
+import './middlewares/errors/unhandledRejection';
 
 // Import Routes
 import api from './api';
