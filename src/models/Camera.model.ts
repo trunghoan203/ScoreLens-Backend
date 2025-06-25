@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICamera extends Document {
-  cameraId: string;
   tableId: string;
   IPAddress: string;
   username: string;
@@ -10,11 +9,6 @@ export interface ICamera extends Document {
 }
 
 const CameraSchema = new Schema({
-  cameraId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   tableId: {
     type: Schema.Types.ObjectId,
     ref: 'Table',

@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMatchTeam extends Document {
-  matchTeamId: string;
   matchId: string;
   teamId: string;
   totalScore: number;
@@ -9,11 +8,6 @@ export interface IMatchTeam extends Document {
 }
 
 const MatchTeamSchema = new Schema({
-  matchTeamId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   matchId: {
     type: Schema.Types.ObjectId,
     ref: 'Match',

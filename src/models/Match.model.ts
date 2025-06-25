@@ -1,7 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMatch extends Document {
-  matchId: string;
   tableId: string;
   membershipId: string;
   managerId: string;
@@ -10,11 +9,6 @@ export interface IMatch extends Document {
 }
 
 const MatchSchema = new Schema({
-  matchId: {
-    type: String,
-    required: true,
-    unique: true
-  },
   tableId: {
     type: Schema.Types.ObjectId,
     ref: 'Table',
