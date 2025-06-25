@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
+// import mongoSanitize from 'express-mongo-sanitize';
 import notFoundMiddleware from './middlewares/errors/notFound';
 import errorHandlerMiddleware from './middlewares/errors/errorHandler';
 
@@ -63,7 +63,7 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
+// app.use(mongoSanitize());
 
 // Serve all static files inside public directory.
 app.use('/static', express.static('public'));
