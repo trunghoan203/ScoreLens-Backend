@@ -1,15 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { SuperAdmin } from '../../models/SuperAdmin.model';
-import { ISuperAdmin } from '../../interfaces/SuperAdmin.interface';
-
-declare global {
-  namespace Express {
-    interface Request {
-      superAdmin?: ISuperAdmin;
-    }
-  }
-}
 
 export const authenticateSuperAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -24,7 +15,7 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     if (!token) {
       res.status(401).json({
         success: false,
-        message: 'Authentication failed: No token provided.'
+        message: 'No token provided'
       });
       return;
     }
@@ -37,7 +28,7 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     if (!admin) {
       res.status(401).json({
         success: false,
-        message: 'Authentication failed: User not found.'
+        message: 'Invalid token'
       });
       return;
     }
@@ -52,12 +43,12 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     }
 
     // Attach admin to request object
-    req.superAdmin = admin;
+    (req as any).superAdmin = admin;
     next();
   } catch (error) {
     res.status(401).json({
       success: false,
-      message: 'Not authorized. Token may be invalid or expired.'
+      message: 'Not authorized to access this resource'
     });
   }
 };
