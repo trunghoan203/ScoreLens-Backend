@@ -5,8 +5,13 @@ import { SuperAdmin } from '../../models/SuperAdmin.model';
 
 export const authenticateSuperAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Get token from header or cookie
+    let token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    // If no token in header, try to get from cookie
+    if (!token) {
+      token = req.cookies?.access_token;
+    } else {}
 
     if (!token) {
       res.status(401).json({
@@ -17,7 +22,7 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { sAdminId: string };
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN as string) as { sAdminId: string };
 
     // Find admin
     const admin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
@@ -42,7 +47,6 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     (req as any).superAdmin = admin;
     next();
   } catch (error) {
-    console.error('Error authenticating super admin:', error);
     res.status(401).json({
       success: false,
       message: 'Not authorized to access this resource'
