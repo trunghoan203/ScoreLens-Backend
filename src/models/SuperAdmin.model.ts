@@ -3,6 +3,11 @@ import jwt from 'jsonwebtoken';
 import { ISuperAdmin } from '../interfaces/SuperAdmin.interface';
 
 const SuperAdminSchema = new Schema<ISuperAdmin>({
+  sAdminId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   fullName: { 
     type: String, 
     required: true 

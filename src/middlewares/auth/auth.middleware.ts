@@ -13,7 +13,13 @@ declare global {
 
 export const authenticateSuperAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const token = req.cookies.access_token;
+    // Get token from header or cookie
+    let token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    // If no token in header, try to get from cookie
+    if (!token) {
+      token = req.cookies?.access_token;
+    } else {}
 
     if (!token) {
       res.status(401).json({
@@ -24,11 +30,8 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN!) as { sAdminId: string };
-    if (!decoded.sAdminId) {
-        res.status(401).json({ success: false, message: 'Authentication failed: Invalid token payload.' });
-        return;
-    }
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN as string) as { sAdminId: string };
+
     // Find admin
     const admin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
     if (!admin) {
@@ -52,7 +55,6 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     req.superAdmin = admin;
     next();
   } catch (error) {
-    console.error('Error authenticating super admin:', error);
     res.status(401).json({
       success: false,
       message: 'Not authorized. Token may be invalid or expired.'
