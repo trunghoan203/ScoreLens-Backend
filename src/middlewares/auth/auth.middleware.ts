@@ -1,30 +1,40 @@
-// middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { SuperAdmin } from '../../models/SuperAdmin.model';
+import { ISuperAdmin } from '../../interfaces/SuperAdmin.interface';
+
+declare global {
+  namespace Express {
+    interface Request {
+      superAdmin?: ISuperAdmin;
+    }
+  }
+}
 
 export const authenticateSuperAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.cookies.access_token;
 
     if (!token) {
       res.status(401).json({
         success: false,
-        message: 'No token provided'
+        message: 'Authentication failed: No token provided.'
       });
       return;
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { sAdminId: string };
-
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN!) as { sAdminId: string };
+    if (!decoded.sAdminId) {
+        res.status(401).json({ success: false, message: 'Authentication failed: Invalid token payload.' });
+        return;
+    }
     // Find admin
     const admin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
     if (!admin) {
       res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Authentication failed: User not found.'
       });
       return;
     }
@@ -39,13 +49,13 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
     }
 
     // Attach admin to request object
-    (req as any).superAdmin = admin;
+    req.superAdmin = admin;
     next();
   } catch (error) {
     console.error('Error authenticating super admin:', error);
     res.status(401).json({
       success: false,
-      message: 'Not authorized to access this resource'
+      message: 'Not authorized. Token may be invalid or expired.'
     });
   }
 };

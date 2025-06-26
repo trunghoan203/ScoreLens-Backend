@@ -15,12 +15,10 @@ export const registerSuperAdmin = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const sAdminId = `SA-${Date.now()}`;
     const activationCode = generateRandomCode(6);
     const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
 
     const newAdmin = await SuperAdmin.create({
-      sAdminId,
       fullName,
       email,
       activationCode,
@@ -189,29 +187,21 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
   }
 };
 
-export const getProfile = async (req: Request & { superAdmin?: any }, res: Response): Promise<void> => {
+export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    const superAdmin = req.superAdmin; // Giờ sẽ không báo lỗi
+    const superAdmin = req.superAdmin;
     
-    if (!superAdmin) {
-      res.status(401).json({ 
-        success: false, 
-        message: 'Not authenticated' 
-      });
-      return;
-    }
-
-    res.status(200).json({ 
+     res.status(200).json({ 
       success: true, 
       admin: {
-        sAdminId: superAdmin.sAdminId,
-        fullName: superAdmin.fullName,
-        email: superAdmin.email,
-        isVerified: superAdmin.isVerified,
-        lastLogin: superAdmin.lastLogin
+        sAdminId: superAdmin!.sAdminId,
+        fullName: superAdmin!.fullName,
+        email: superAdmin!.email,
+        isVerified: superAdmin!.isVerified,
+        lastLogin: superAdmin!.lastLogin
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Internal server error while fetching profile' });
   }
 };
