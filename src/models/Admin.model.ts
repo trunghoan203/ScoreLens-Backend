@@ -1,33 +1,42 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+import bcrypt from 'bcryptjs';
+import { IAdmin } from '../interfaces/Admin.interface';
+import jwt from 'jsonwebtoken';
 
-export interface IAdmin extends Document {
-  sAdminId: string;
-  fullName: string;
-  email: string;
-  password: string;
-}
+const adminSchema = new Schema<IAdmin>({
+  adminId: { type: String, required: true, unique: true },
+  fullName: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, select: false },
+  isVerified: { type: Boolean, default: false },
+  activationCode: { type: String, select: false },
+  activationCodeExpires: { type: Date, select: false },
+  lastLogin: { type: Date }
+}, { timestamps: true });
 
-const AdminSchema = new Schema({
-  sAdminId: {
-    type: Schema.Types.ObjectId,
-    ref: 'SuperAdmin',
-    required: true
-  },
-  fullName: {
-    type: String,
-    required: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  password: {
-    type: String,
-    required: true
+adminSchema.pre<IAdmin>('save', async function (next) {
+  if (!this.isModified('password') || !this.password) {
+    return next();
   }
-}, {
-  timestamps: true
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
 });
 
-export const Admin = mongoose.model<IAdmin>('Admin', AdminSchema); 
+adminSchema.methods.comparePassword = async function (enteredPassword: string): Promise<boolean> {
+  if (!this.password) return false;
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+adminSchema.methods.signAccessToken = function (): string {
+  return jwt.sign({ adminId: this.adminId }, process.env.ACCESS_TOKEN as string, {
+    expiresIn: '15m'
+  });
+};
+
+adminSchema.methods.signRefreshToken = function (): string {
+  return jwt.sign({ adminId: this.adminId }, process.env.REFRESH_TOKEN as string, {
+    expiresIn: '7d'
+  });
+};
+
+export const Admin = mongoose.model<IAdmin>('Admin', adminSchema); 

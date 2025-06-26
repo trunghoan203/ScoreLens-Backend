@@ -7,18 +7,18 @@ import {
   logoutSuperAdmin,
   getProfile
 } from '../controllers/SuperAdmin.controller';
-import { authenticateSuperAdmin } from '../middlewares/auth/auth.middleware';
+import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
-const router = express.Router();
+const superAdminRouter = express.Router();
 
 // Public routes
-router.post('/register', registerSuperAdmin);
-router.post('/verify', verifySuperAdmin);
-router.post('/login', loginSuperAdmin);
-router.post('/login/verify', verifyLogin);
+superAdminRouter.post('/register', registerSuperAdmin);
+superAdminRouter.post('/verify', verifySuperAdmin);
+superAdminRouter.post('/login', loginSuperAdmin);
+superAdminRouter.post('/login/verify', verifyLogin);
 
 // Protected routes (require authentication)
-router.post('/logout', authenticateSuperAdmin, logoutSuperAdmin);
-router.get('/profile', authenticateSuperAdmin, getProfile);
+superAdminRouter.post('/logout', isAuthenticated, logoutSuperAdmin);
+superAdminRouter.get('/profile', isAuthenticated, getProfile);
 
-export default router;
+export default superAdminRouter;
