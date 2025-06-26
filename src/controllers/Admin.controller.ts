@@ -118,62 +118,12 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
         return;
       }
 
-      const activationCode = generateRandomCode(6);
-      const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+      admin.lastLogin = new Date();
+      await admin.save();
 
-      admin.activationCode = activationCode;
-      admin.activationCodeExpires = activationCodeExpires;
-      await admin.save({ validateBeforeSave: false });
-
-      await sendMail({
-        email: admin.email,
-        subject: 'ScoreLens - Login Verification Code',
-        template: 'activation-mail.ejs',
-        data: {
-          user: { name: admin.fullName },
-          activationCode
-        }
-      });
-  
-      res.status(200).json({
-        success: true,
-        message: 'Login verification code sent to your email.',
-        data: { email: admin.email }
-      });
+      sendToken(admin, 200, res);
 
     } catch (error:any) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
-
-export const verifyLogin = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { email, activationCode } = req.body;
-
-        const admin = await Admin.findOne({ email }).select('+activationCode');
-        if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
-            return;
-        }
-
-        if (!admin.activationCode || admin.activationCode !== activationCode) {
-            res.status(400).json({ success: false, message: 'Invalid activation code' });
-            return;
-        }
-
-        if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Activation code expired' });
-            return;
-        }
-
-        admin.activationCode = null;
-        admin.activationCodeExpires = null;
-        admin.lastLogin = new Date();
-        await admin.save({ validateBeforeSave: false });
-
-        sendToken(admin, 200, res);
-
-    } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
