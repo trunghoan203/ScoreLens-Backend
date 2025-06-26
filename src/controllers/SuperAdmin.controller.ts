@@ -175,7 +175,7 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const decoded = jwt.verify(refresh_token, process.env.REFRESH_TOKEN_SECRET as string) as { sAdminId: string };
+    const decoded = jwt.verify(refresh_token, process.env.REFRESH_TOKEN as string) as { sAdminId: string };
     
     const admin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
     if (!admin) {
