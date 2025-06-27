@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { SuperAdmin } from '../models/SuperAdmin.model';
-import { sendAdminToken } from '../utils/jwt';
+import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
 import jwt from 'jsonwebtoken'
@@ -150,7 +150,7 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
     admin.lastLogin = new Date();
     await admin.save();
 
-    sendAdminToken(admin, 200, res);
+    sendToken(admin, 200, res);
   } catch (error) {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -183,7 +183,7 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    sendAdminToken(admin, 200, res);
+    sendToken(admin, 200, res);
   } catch (error) {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }

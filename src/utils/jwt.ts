@@ -1,5 +1,6 @@
 import { ISuperAdmin } from '../interfaces/SuperAdmin.interface';
 import { Response } from 'express';
+import { IAdmin } from '../interfaces/Admin.interface';
 
 interface ITokenOptions {
   expires: Date;
@@ -33,21 +34,19 @@ export const refreshTokenOptions: ITokenOptions = {
   path: '/'
 };
 
-export const sendAdminToken = (admin: ISuperAdmin, statusCode: number, res: Response): void => {
-  const accessToken = admin.signAccessToken();
-  const refreshToken = admin.signRefreshToken();
+export const sendToken = (user: IAdmin | ISuperAdmin, statusCode: number, res: Response): void => {
+  const accessToken = user.signAccessToken();
+  const refreshToken = user.signRefreshToken();
 
   // Set cookies
   res.cookie('access_token', accessToken, accessTokenOptions);
   res.cookie('refresh_token', refreshToken, refreshTokenOptions);
+  
+  const userData = 'adminId' in user ? { adminId: user.adminId, fullName: user.fullName, email: user.email } : { sAdminId: user.sAdminId, fullName: user.fullName, email: user.email };
 
   res.status(statusCode).json({
     success: true,
-    admin: {
-      sAdminId: admin.sAdminId,
-      fullName: admin.fullName,
-      email: admin.email
-    },
+    user: userData,
     accessToken
   });
 };

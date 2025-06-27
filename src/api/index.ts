@@ -1,10 +1,10 @@
-import express from 'express';
-import superAdminRoutes from '../routes/SuperAdmin.route'
+import { Router } from 'express';
+import superAdminRouter from '../routes/SuperAdmin.route';
+import adminRouter from '../routes/Admin.route';
 
+const router = Router();
 
-const router = express.Router();
-
-router.use('/superAdmin', superAdminRoutes );
-
+router.use('/superAdmin', superAdminRouter);
+router.use('/admin', adminRouter);
 
 export default router;
