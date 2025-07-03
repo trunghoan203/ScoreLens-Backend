@@ -1,91 +1,94 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { Admin } from '../models/Admin.model';
 import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
+import * as AdminService from '../services/Admin.service';
+import ErrorHandler from '../utils/ErrorHandler';
+import { catchAsync } from '../utils/catchAsync';
 
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { fullName, email, password } = req.body;
+    try {
+        const { fullName, email, password } = req.body;
 
-    if (!fullName || !email || !password) {
-      res.status(400).json({ success: false, message: 'Please provide fullName, email, and password' });
-      return;
+        if (!fullName || !email || !password) {
+            res.status(400).json({ success: false, message: 'Please provide fullName, email, and password' });
+            return;
+        }
+
+        const existingAdmin = await Admin.findOne({ email });
+        if (existingAdmin) {
+            res.status(400).json({ success: false, message: 'Email already registered' });
+            return;
+        }
+
+        const adminId = `AD-${Date.now()}`;
+        const activationCode = generateRandomCode(6);
+        const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+        const newAdmin = await Admin.create({
+            adminId,
+            fullName,
+            email,
+            password,
+            activationCode,
+            activationCodeExpires
+        });
+
+        await sendMail({
+            email: newAdmin.email,
+            subject: 'ScoreLens - Admin Email Verification',
+            template: 'activation-mail.ejs',
+            data: {
+                user: { name: newAdmin.fullName },
+                activationCode
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            message: `Activation code sent to ${newAdmin.email}. It will expire in 10 minutes.`,
+        });
+
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    const existingAdmin = await Admin.findOne({ email });
-    if (existingAdmin) {
-      res.status(400).json({ success: false, message: 'Email already registered' });
-      return;
-    }
-
-    const adminId = `AD-${Date.now()}`;
-    const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    const newAdmin = await Admin.create({
-      adminId,
-      fullName,
-      email,
-      password,
-      activationCode,
-      activationCodeExpires
-    });
-
-    await sendMail({
-      email: newAdmin.email,
-      subject: 'ScoreLens - Admin Email Verification',
-      template: 'activation-mail.ejs',
-      data: {
-        user: { name: newAdmin.fullName },
-        activationCode
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      message: `Activation code sent to ${newAdmin.email}. It will expire in 10 minutes.`,
-    });
-
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
 };
 
 export const verifyAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, activationCode } = req.body;
-  
-      const admin = await Admin.findOne({ email }).select('+activationCode');
-      if (!admin) {
-        res.status(404).json({ success: false, message: 'Admin not found' });
-        return;
-      }
-  
-      if (admin.isVerified) {
-        res.status(400).json({ success: false, message: 'Account already verified' });
-        return;
-      }
-  
-      if (admin.activationCode !== activationCode) {
-        res.status(400).json({ success: false, message: 'Invalid activation code' });
-        return;
-      }
-  
-      if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-        res.status(400).json({ success: false, message: 'Activation code expired' });
-        return;
-      }
-  
-      admin.isVerified = true;
-      admin.activationCode = null;
-      admin.activationCodeExpires = null;
-      await admin.save();
-  
-      res.status(200).json({
-        success: true,
-        message: 'Account verified successfully. You can now log in.',
-      });
+        const { email, activationCode } = req.body;
+
+        const admin = await Admin.findOne({ email }).select('+activationCode');
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Admin not found' });
+            return;
+        }
+
+        if (admin.isVerified) {
+            res.status(400).json({ success: false, message: 'Account already verified' });
+            return;
+        }
+
+        if (admin.activationCode !== activationCode) {
+            res.status(400).json({ success: false, message: 'Invalid activation code' });
+            return;
+        }
+
+        if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
+            res.status(400).json({ success: false, message: 'Activation code expired' });
+            return;
+        }
+
+        admin.isVerified = true;
+        admin.activationCode = null;
+        admin.activationCodeExpires = null;
+        await admin.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Account verified successfully. You can now log in.',
+        });
 
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
@@ -94,54 +97,54 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
 export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, password } = req.body;
-  
-      if (!email || !password) {
-        res.status(400).json({ success: false, message: 'Please provide email and password' });
-        return;
-      }
-  
-      const admin = await Admin.findOne({ email }).select('+password');
-      if (!admin) {
-        res.status(404).json({ success: false, message: 'Invalid credentials' });
-        return;
-      }
+        const { email, password } = req.body;
 
-      if (!admin.isVerified) {
-        res.status(403).json({ success: false, message: 'Account not verified. Please check your email for verification code.' });
-        return;
-      }
-  
-      const isPasswordMatched = await (admin as any).comparePassword(password);
-      if (!isPasswordMatched) {
-        res.status(401).json({ success: false, message: 'Invalid credentials' });
-        return;
-      }
+        if (!email || !password) {
+            res.status(400).json({ success: false, message: 'Please provide email and password' });
+            return;
+        }
 
-      admin.lastLogin = new Date();
-      await admin.save();
+        const admin = await Admin.findOne({ email }).select('+password');
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Invalid credentials' });
+            return;
+        }
 
-      sendToken(admin, 200, res);
+        if (!admin.isVerified) {
+            res.status(403).json({ success: false, message: 'Account not verified. Please check your email for verification code.' });
+            return;
+        }
 
-    } catch (error:any) {
+        const isPasswordMatched = await (admin as any).comparePassword(password);
+        if (!isPasswordMatched) {
+            res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return;
+        }
+
+        admin.lastLogin = new Date();
+        await admin.save();
+
+        sendToken(admin, 200, res);
+
+    } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
 export const logoutAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-      res.cookie('access_token', '', { maxAge: 1 });
-      res.cookie('refresh_token', '', { maxAge: 1 });
-      res.status(200).json({ success: true, message: 'Logged out successfully' });
+        res.cookie('access_token', '', { maxAge: 1 });
+        res.cookie('refresh_token', '', { maxAge: 1 });
+        res.status(200).json({ success: true, message: 'Logged out successfully' });
     } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
-  
+
 export const getAdminProfile = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
     try {
         const adminId = req.admin.adminId;
-        const admin = await Admin.findOne({adminId: adminId});
+        const admin = await Admin.findOne({ adminId: adminId });
 
         if (!admin) {
             res.status(404).json({ success: false, message: 'Admin not found' });
@@ -315,4 +318,33 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
-}; 
+};
+
+export const createManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const { fullName, email, phoneNumber, dateOfBirth, citizenCode, address, clubId } = req.body;
+
+    const adminId = req.admin?.adminId;
+    if (!adminId) {
+        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+    }
+
+    if (!fullName || !email || !phoneNumber || !dateOfBirth || !citizenCode || !address || !clubId) {
+        return next(new ErrorHandler('Vui lòng điền đầy đủ tất cả các trường bắt buộc.', 400));
+    }
+
+    const newManager = await AdminService.createManagerByAdmin(adminId.toString(), {
+        fullName,
+        email,
+        phoneNumber,
+        dateOfBirth,
+        citizenCode,
+        address,
+        clubId
+    });
+
+    res.status(201).json({
+        success: true,
+        message: 'Tài khoản Manager đã được tạo thành công.',
+        data: newManager,
+    });
+});

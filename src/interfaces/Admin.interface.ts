@@ -5,6 +5,7 @@ export interface IAdmin extends Document {
   fullName: string;
   email: string;
   password?: string;
+  status: string;
   isVerified: boolean;
   activationCode?: string | null;
   activationCodeExpires?: Date | null;

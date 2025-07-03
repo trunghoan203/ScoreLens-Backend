@@ -169,14 +169,14 @@ export const logoutSuperAdmin = async (req: Request, res: Response): Promise<voi
 export const refreshAccessToken = async (req: Request, res: Response): Promise<void> => {
   try {
     const refresh_token = req.cookies.refresh_token;
-    
+
     if (!refresh_token) {
       res.status(401).json({ success: false, message: 'No refresh token provided' });
       return;
     }
 
     const decoded = jwt.verify(refresh_token, process.env.REFRESH_TOKEN as string) as { sAdminId: string };
-    
+
     const admin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
     if (!admin) {
       res.status(401).json({ success: false, message: 'Invalid refresh token' });
@@ -192,17 +192,17 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
 export const getProfile = async (req: Request & { superAdmin?: any }, res: Response): Promise<void> => {
   try {
     const superAdmin = req.superAdmin; // Giờ sẽ không báo lỗi
-    
+
     if (!superAdmin) {
-      res.status(401).json({ 
-        success: false, 
-        message: 'Not authenticated' 
+      res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
       });
       return;
     }
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       admin: {
         sAdminId: superAdmin.sAdminId,
         fullName: superAdmin.fullName,

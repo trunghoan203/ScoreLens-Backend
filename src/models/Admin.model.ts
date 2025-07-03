@@ -8,6 +8,11 @@ const adminSchema = new Schema<IAdmin>({
   fullName: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, select: false },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
   isVerified: { type: Boolean, default: false },
   activationCode: { type: String, select: false },
   activationCodeExpires: { type: Date, select: false },
