@@ -1,15 +1,23 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IBrand extends Document {
+  brandId: string;
   adminId: string;
   brandName: string;
+  numberPhone: string;
   website: string;
   logo_url: string;
+  citizenCode: string;
 }
 
 const BrandSchema = new Schema({
+  brandId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   adminId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'Admin',
     required: true
   },
@@ -17,11 +25,20 @@ const BrandSchema = new Schema({
     type: String,
     required: true
   },
-  website: {
-    type: String
-  },
   logo_url: {
     type: String
+  },
+  citizenCode: {
+    type: String,
+    required: true
+  },
+  numberPhone: {
+    type: String,
+    required: true
+  },
+  website: {
+    type: String,
+    required: true
   }
 }, {
   timestamps: true
