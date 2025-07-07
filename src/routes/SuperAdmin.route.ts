@@ -5,7 +5,11 @@ import {
   loginSuperAdmin,
   verifyLogin,
   logoutSuperAdmin,
-  getProfile
+  getProfile,
+  approveAdmin,
+  rejectAdmin,
+  listAdmins,
+  getAdminDetail
 } from '../controllers/SuperAdmin.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
@@ -20,5 +24,11 @@ superAdminRouter.post('/login/verify', verifyLogin);
 // Protected routes (require authentication)
 superAdminRouter.post('/logout', isAuthenticated, logoutSuperAdmin);
 superAdminRouter.get('/profile', isAuthenticated, getProfile);
+
+// Admin management routes
+superAdminRouter.post('/admin/approve/:adminId', isAuthenticated, approveAdmin);
+superAdminRouter.post('/admin/reject/:adminId', isAuthenticated, rejectAdmin);
+superAdminRouter.get('/admin/list', isAuthenticated, listAdmins);
+superAdminRouter.get('/admin/:adminId', isAuthenticated, getAdminDetail);
 
 export default superAdminRouter;

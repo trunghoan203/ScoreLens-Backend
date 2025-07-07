@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { SuperAdmin } from '../models/SuperAdmin.model';
+import { Admin } from '../models/Admin.model';
 import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
 import jwt from 'jsonwebtoken'
 
+//Authentication APIs
 export const registerSuperAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
     const { fullName, email } = req.body;
@@ -214,4 +216,58 @@ export const getProfile = async (req: Request & { superAdmin?: any }, res: Respo
   } catch (error) {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
+};
+
+//Manage Admin APIs
+// Approve admin
+export const approveAdmin = async (req: Request, res: Response): Promise<void> => {
+  const { adminId } = req.params;
+  const admin = await Admin.findOneAndUpdate(
+    { adminId },
+    { status: 'approved' },
+    { new: true }
+  );
+  if (!admin) {
+    res.status(404).json({ success: false, message: 'Admin not found' });
+    return;
+  }
+  res.json({ success: true, admin });
+};
+
+// Reject admin
+export const rejectAdmin = async (req: Request, res: Response): Promise<void> => {
+  const { adminId } = req.params;
+  const admin = await Admin.findOneAndUpdate(
+    { adminId },
+    { status: 'rejected' },
+    { new: true }
+  );
+  if (!admin) {
+    res.status(404).json({ success: false, message: 'Admin not found' });
+    return;
+  }
+  res.json({ success: true, admin });
+};
+
+// List admins with filter/search
+export const listAdmins = async (req: Request, res: Response): Promise<void> => {
+  const { search = '', status, page = 1, limit = 10 } = req.query;
+  const query: any = {};
+  if (status) query.status = status;
+  if (search) query.fullName = { $regex: search, $options: 'i' };
+  const admins = await Admin.find(query)
+    .skip((Number(page) - 1) * Number(limit))
+    .limit(Number(limit));
+  res.json({ success: true, admins });
+};
+
+// Admin detail
+export const getAdminDetail = async (req: Request, res: Response): Promise<void> => {
+  const { adminId } = req.params;
+  const admin = await Admin.findOne({ adminId });
+  if (!admin) {
+    res.status(404).json({ success: false, message: 'Admin not found' });
+    return;
+  }
+  res.json({ success: true, admin });
 };
