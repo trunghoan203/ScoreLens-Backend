@@ -16,7 +16,8 @@ const adminSchema = new Schema<IAdmin>({
   isVerified: { type: Boolean, default: false },
   activationCode: { type: String, select: false },
   activationCodeExpires: { type: Date, select: false },
-  lastLogin: { type: Date }
+  lastLogin: { type: Date },
+  brandId: { type: String, default: null, ref: 'Brand' }
 }, { timestamps: true });
 
 adminSchema.pre<IAdmin>('save', async function (next) {

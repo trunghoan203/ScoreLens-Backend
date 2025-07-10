@@ -1,11 +1,25 @@
 import { Request, Response } from 'express';
 import { Club } from '../models/Club.model';
 import { Brand } from '../models/Brand.model';
+import { Admin } from '../models/Admin.model';
 
 // Tạo club mới (hỗ trợ tạo 1 hoặc nhiều club)
 export const createClub = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
   try {
     const adminId = req.admin.adminId;
+    
+    // Kiểm tra admin có brandId chưa
+    const admin = await Admin.findOne({ adminId });
+    if (!admin) {
+      res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+      return;
+    }
+    
+    if (!admin.brandId) {
+      res.status(400).json({ success: false, message: 'Admin phải có brand mới được tạo club.' });
+      return;
+    }
+    
     // Kiểm tra admin đã có brand chưa
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
