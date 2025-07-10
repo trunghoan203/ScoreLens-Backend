@@ -1,5 +1,6 @@
 import express from 'express';
-import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, createBrand, updateBrand, getBrands } from '../controllers/Admin.controller';
+import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers } from '../controllers/Admin.controller';
+import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
 
@@ -21,6 +22,8 @@ adminRouter.delete('/managers/:managerId', isAuthenticated, deleteManager);
 adminRouter.post('/brands', isAuthenticated, createBrand);
 adminRouter.put('/brands/:brandId', isAuthenticated, updateBrand);
 adminRouter.get('/brands', isAuthenticated, getBrands);
+adminRouter.get('/brands/:brandId', isAuthenticated, getBrandDetail);
+adminRouter.delete('/brands/:brandId', isAuthenticated, deleteBrand);
 adminRouter.post('/clubs', isAuthenticated, createClub);
 adminRouter.put('/clubs/:clubId', isAuthenticated, updateClub);
 adminRouter.delete('/clubs/:clubId', isAuthenticated, deleteClub);
