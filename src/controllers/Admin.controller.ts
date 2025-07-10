@@ -349,6 +349,79 @@ export const createManager = catchAsync(async (req: Request & { admin?: any }, r
         data: newManager,
     });
 });
+
+export const updateManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const { managerId } = req.params;
+    const updateData = req.body;
+
+    const adminId = req.admin?.adminId;
+    if (!adminId) {
+        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+    }
+
+    if (!managerId) {
+        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+    }
+
+    const updatedManager = await AdminService.updateManagerByAdmin(adminId.toString(), managerId, updateData);
+
+    res.status(200).json({
+        success: true,
+        message: 'Thông tin Manager đã được cập nhật thành công.',
+        data: updatedManager,
+    });
+});
+
+export const deleteManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const { managerId } = req.params;
+
+    const adminId = req.admin?.adminId;
+    if (!adminId) {
+        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+    }
+
+    if (!managerId) {
+        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+    }
+
+    await AdminService.deleteManagerByAdmin(adminId.toString(), managerId);
+
+    res.status(200).json({
+        success: true,
+        message: 'Manager đã được xóa thành công.',
+    });
+});
+
+export const deactivateManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const { managerId } = req.params;
+
+    const adminId = req.admin?.adminId;
+    if (!adminId) {
+        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+    }
+
+    if (!managerId) {
+        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+    }
+
+    const deactivatedManager = await AdminService.deactivateManagerByAdmin(adminId.toString(), managerId);
+
+    res.status(200).json({
+        success: true,
+        message: 'Manager đã được vô hiệu hóa thành công.',
+        data: deactivatedManager,
+    });
+});
+
+export const getAllManagers = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    // Có thể kiểm tra quyền admin ở đây nếu cần
+    const managers = await AdminService.getAllManagersByAdmin();
+    res.status(200).json({
+        success: true,
+        data: managers,
+    });
+});
+
 // Tạo brand mới
 export const createBrand = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
     try {

@@ -7,6 +7,11 @@ const ManagerSchema: Schema<IManager> = new Schema({
         type: String,
         unique: true
     },
+    clubId: {
+        type: String,
+        ref: 'Club',
+        required: true
+    },
     fullName: {
         type: String,
         required: [true, 'Tên không được để trống'],
@@ -50,10 +55,6 @@ const ManagerSchema: Schema<IManager> = new Schema({
         type: String,
         required: [true, 'Địa chỉ không được để trống'],
         trim: true
-    },
-    clubId: {
-        type: String,
-        required: true
     },
     isActive: {
         type: Boolean,

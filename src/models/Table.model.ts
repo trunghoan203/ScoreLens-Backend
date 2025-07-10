@@ -9,7 +9,7 @@ export interface ITable extends Document {
 
 const TableSchema = new Schema({
   clubId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'Club',
     required: true
   },
