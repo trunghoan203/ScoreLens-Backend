@@ -373,8 +373,9 @@ export const updateManager = catchAsync(async (req: Request & { admin?: any }, r
 });
 
 export const deleteManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    console.log('Request Params:', req.params);
     const { managerId } = req.params;
-
+    console.log('Extracted managerId:', managerId); 
     const adminId = req.admin?.adminId;
     if (!adminId) {
         return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));

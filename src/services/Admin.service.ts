@@ -113,45 +113,46 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
 export const deleteManagerByAdmin = async (adminId: string, managerId: string): Promise<void> => {
     // Tìm manager bằng managerId
     const manager = await Manager.findOne({ managerId });
+        console.log({ managerId });
     if (!manager) {
         throw new ErrorHandler('Manager không tồn tại.', 404);
     }
 
-    const activeMatches = await Match.find({
-        managerId: managerId,
-        endTime: { $exists: false }
-    });
+    // const activeMatches = await Match.find({
+    //     managerId: managerId,
+    //     endTime: { $exists: false }
+    // });
 
-    if (activeMatches.length > 0) {
-        throw new ErrorHandler(
-            `Không thể xóa Manager vì đang có ${activeMatches.length} trận đấu đang diễn ra. Vui lòng kết thúc các trận đấu trước khi xóa.`,
-            409
-        );
-    }
+    // if (activeMatches.length > 0) {
+    //     throw new ErrorHandler(
+    //         `Không thể xóa Manager vì đang có ${activeMatches.length} trận đấu đang diễn ra. Vui lòng kết thúc các trận đấu trước khi xóa.`,
+    //         409
+    //     );
+    // }
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // const thirtyDaysAgo = new Date();
+    // thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentMatches = await Match.find({
-        managerId: managerId,
-        endTime: { $gte: thirtyDaysAgo }
-    });
+    // const recentMatches = await Match.find({
+    //     managerId: managerId,
+    //     endTime: { $gte: thirtyDaysAgo }
+    // });
 
-    if (recentMatches.length > 0) {
-        throw new ErrorHandler(
-            `Không thể xóa Manager vì có ${recentMatches.length} trận đấu đã diễn ra trong 30 ngày gần đây. Vui lòng chờ sau 30 ngày để xóa.`,
-            409
-        );
-    }
+    // if (recentMatches.length > 0) {
+    //     throw new ErrorHandler(
+    //         `Không thể xóa Manager vì có ${recentMatches.length} trận đấu đã diễn ra trong 30 ngày gần đây. Vui lòng chờ sau 30 ngày để xóa.`,
+    //         409
+    //     );
+    // }
 
-    const matchEvents = await MatchEvent.find({ managerId: managerId });
+    // const matchEvents = await MatchEvent.find({ managerId: managerId });
 
-    if (matchEvents.length > 0) {
-        throw new ErrorHandler(
-            `Không thể xóa Manager vì có ${matchEvents.length} sự kiện trận đấu được tạo bởi manager này. Vui lòng xóa các sự kiện trước.`,
-            409
-        );
-    }
+    // if (matchEvents.length > 0) {
+    //     throw new ErrorHandler(
+    //         `Không thể xóa Manager vì có ${matchEvents.length} sự kiện trận đấu được tạo bởi manager này. Vui lòng xóa các sự kiện trước.`,
+    //         409
+    //     );
+    // }
 
     if (manager.isActive) {
         throw new ErrorHandler(
@@ -159,7 +160,6 @@ export const deleteManagerByAdmin = async (adminId: string, managerId: string): 
             409
         );
     }
-
     // Xóa manager bằng managerId
     await Manager.deleteOne({ managerId });
 };
@@ -171,17 +171,17 @@ export const deactivateManagerByAdmin = async (adminId: string, managerId: strin
         throw new ErrorHandler('Manager không tồn tại.', 404);
     }
 
-    const activeMatches = await Match.find({
-        managerId: managerId,
-        endTime: { $exists: false }
-    });
+    // const activeMatches = await Match.find({
+    //     managerId: managerId,
+    //     endTime: { $exists: false }
+    // });
 
-    if (activeMatches.length > 0) {
-        throw new ErrorHandler(
-            `Không thể vô hiệu hóa Manager vì đang có ${activeMatches.length} trận đấu đang diễn ra. Vui lòng kết thúc các trận đấu trước khi vô hiệu hóa.`,
-            409
-        );
-    }
+    // if (activeMatches.length > 0) {
+    //     throw new ErrorHandler(
+    //         `Không thể vô hiệu hóa Manager vì đang có ${activeMatches.length} trận đấu đang diễn ra. Vui lòng kết thúc các trận đấu trước khi vô hiệu hóa.`,
+    //         409
+    //     );
+    // }
 
     // Vô hiệu hóa manager bằng managerId
     manager.isActive = false;
