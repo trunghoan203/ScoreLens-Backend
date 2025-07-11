@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers } from '../controllers/Admin.controller';
+import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
@@ -12,6 +12,8 @@ adminRouter.post('/login', loginAdmin);
 adminRouter.post('/forgotPassword', forgotPassword);
 adminRouter.post('/verify-resetCode', verifyResetCode);
 adminRouter.post('/set-newPassword', setNewPassword);
+adminRouter.post('/resend-verification', resendVerificationCode);
+adminRouter.post('/resend-reset-password', resendResetPasswordCode);
 adminRouter.post('/logout', isAuthenticated, logoutAdmin);
 adminRouter.get('/profile', isAuthenticated, getAdminProfile);
 adminRouter.get('/managers', isAuthenticated, getAllManagers);
