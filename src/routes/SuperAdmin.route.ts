@@ -9,7 +9,9 @@ import {
   approveAdmin,
   rejectAdmin,
   listAdmins,
-  getAdminDetail
+  getAdminDetail,
+  resendVerificationCode,
+  resendLoginCode
 } from '../controllers/SuperAdmin.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
@@ -20,6 +22,8 @@ superAdminRouter.post('/register', registerSuperAdmin);
 superAdminRouter.post('/verify', verifySuperAdmin);
 superAdminRouter.post('/login', loginSuperAdmin);
 superAdminRouter.post('/login/verify', verifyLogin);
+superAdminRouter.post('/resend-verification', resendVerificationCode);
+superAdminRouter.post('/resend-login-code', resendLoginCode);
 
 // Protected routes (require authentication)
 superAdminRouter.post('/logout', isAuthenticated, logoutSuperAdmin);
