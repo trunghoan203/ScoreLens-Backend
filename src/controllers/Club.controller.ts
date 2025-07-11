@@ -52,6 +52,12 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
         });
         createdClubs.push(club);
       }
+      
+      // Cập nhật clubIds cho brand
+      const clubIds = createdClubs.map(club => club.clubId);
+      brand.clubIds = [...brand.clubIds, ...clubIds];
+      await brand.save();
+      
       res.status(201).json({ success: true, clubs: createdClubs });
       return;
     }
@@ -71,6 +77,11 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
       tableNumber,
       status: status || 'maintenance'
     });
+    
+    // Cập nhật clubIds cho brand
+    brand.clubIds.push(club.clubId);
+    await brand.save();
+    
     res.status(201).json({ success: true, club });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -120,6 +131,11 @@ export const deleteClub = async (req: Request & { admin?: any }, res: Response):
       res.status(404).json({ success: false, message: 'Club không tồn tại hoặc không thuộc quyền quản lý.' });
       return;
     }
+    
+    // Xóa clubId khỏi mảng clubIds của brand
+    brand.clubIds = brand.clubIds.filter(id => id !== clubId);
+    await brand.save();
+    
     res.status(200).json({ success: true, message: 'Xóa club thành công.' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
