@@ -8,6 +8,7 @@ export interface IBrand extends Document {
   website: string;
   logo_url: string;
   citizenCode: string;
+  clubIds: string[];
 }
 
 const BrandSchema = new Schema({
@@ -39,6 +40,11 @@ const BrandSchema = new Schema({
   website: {
     type: String,
     required: true
+  },
+  clubIds: {
+    type: [String],
+    default: [],
+    ref: 'Club'
   }
 }, {
   timestamps: true
