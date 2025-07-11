@@ -271,3 +271,111 @@ export const getAdminDetail = async (req: Request, res: Response): Promise<void>
   }
   res.json({ success: true, admin });
 };
+
+// Resend verification code
+export const resendVerificationCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
+      return;
+    }
+
+    const superAdmin = await SuperAdmin.findOne({ email });
+    if (!superAdmin) {
+      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      return;
+    }
+
+    // Kiểm tra xem tài khoản đã được verify chưa
+    if (superAdmin.isVerified) {
+      res.status(400).json({ success: false, message: 'Account is already verified' });
+      return;
+    }
+
+    // Tạo mã xác thực mới
+    const activationCode = generateRandomCode(6);
+    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+
+    // Cập nhật mã xác thực mới
+    superAdmin.activationCode = activationCode;
+    superAdmin.activationCodeExpires = activationCodeExpires;
+    await superAdmin.save();
+
+    // Gửi email với mã mới
+    await sendMail({
+      email: superAdmin.email,
+      subject: 'ScoreLens - Mã Xác Thực Mới',
+      template: 'activation-mail.ejs',
+      data: {
+        user: { name: superAdmin.fullName },
+        activationCode
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code has been resent to your email. It will expire in 5 minutes.',
+      data: { email: superAdmin.email }
+    });
+
+  } catch (error: any) {
+    console.error('Resend verification code error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Resend login verification code
+export const resendLoginCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
+      return;
+    }
+
+    const superAdmin = await SuperAdmin.findOne({ email });
+    if (!superAdmin) {
+      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      return;
+    }
+
+    // Kiểm tra xem tài khoản đã được verify chưa
+    if (!superAdmin.isVerified) {
+      res.status(403).json({ success: false, message: 'Account is not verified. Please verify your account first.' });
+      return;
+    }
+
+    // Tạo mã xác thực đăng nhập mới
+    const activationCode = generateRandomCode(6);
+    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+
+    // Cập nhật mã xác thực mới
+    superAdmin.activationCode = activationCode;
+    superAdmin.activationCodeExpires = activationCodeExpires;
+    await superAdmin.save();
+
+    // Gửi email với mã mới
+    await sendMail({
+      email: superAdmin.email,
+      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập Mới',
+      template: 'activation-mail.ejs',
+      data: {
+        user: { name: superAdmin.fullName },
+        activationCode
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Login verification code has been resent to your email. It will expire in 5 minutes.',
+      data: { email: superAdmin.email }
+    });
+
+  } catch (error: any) {
+    console.error('Resend login code error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
