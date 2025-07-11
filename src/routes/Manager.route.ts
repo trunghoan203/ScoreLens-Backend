@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loginManager, verifyLogin, getProfile, logoutManager } from '../controllers/Manager.controller';
+import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
 import { listTables, createTable, updateTable, deleteTable } from '../controllers/Table.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
@@ -7,6 +7,7 @@ const managerRouter = Router();
 
 managerRouter.post('/login', loginManager);
 managerRouter.post('/login/verify', verifyLogin);
+managerRouter.post('/resend-login-code', resendLoginCode);
 
 // Protected routes (require authentication)
 managerRouter.post('/logout', isAuthenticated, logoutManager);
