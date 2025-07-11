@@ -11,7 +11,7 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Manager not found' });
       return;
     }
 
@@ -48,7 +48,7 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Manager not found' });
       return;
     }
 

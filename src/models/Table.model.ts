@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITable extends Document {
+  tableId: string;
   clubId: string;
   number: number;
   category: string;
@@ -8,6 +9,10 @@ export interface ITable extends Document {
 }
 
 const TableSchema = new Schema({
+  tableId: {
+    type: String,
+    unique: true
+  },
   clubId: {
     type: String,
     ref: 'Club',
@@ -30,6 +35,14 @@ const TableSchema = new Schema({
   }
 }, {
   timestamps: true
+});
+
+// Tự động sinh tableId trước khi save
+TableSchema.pre('save', function (next) {
+  if (!this.tableId) {
+    this.tableId = `TB-${Date.now()}`;
+  }
+  next();
 });
 
 export const Table = mongoose.model<ITable>('Table', TableSchema); 

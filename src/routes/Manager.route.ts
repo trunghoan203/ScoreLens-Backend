@@ -15,7 +15,7 @@ managerRouter.get('/profile', isAuthenticated, getProfile);
 // Table management routes for manager
 managerRouter.get('/table', isAuthenticated, listTables);
 managerRouter.post('/table', isAuthenticated, createTable);
-managerRouter.put('/table/:id', isAuthenticated, updateTable);
-managerRouter.delete('/table/:id', isAuthenticated, deleteTable);
+managerRouter.put('/table/:tableId', isAuthenticated, updateTable);
+managerRouter.delete('/table/:tableId', isAuthenticated, deleteTable);
 
 export default managerRouter;
