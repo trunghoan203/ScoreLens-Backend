@@ -33,11 +33,11 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
 // Sửa thông tin bàn
 export const updateTable = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
-        const { id } = req.params;
+        const { tableId } = req.params;
         const { number, category, status } = req.body;
         const clubId = req.manager.clubId;
         const table = await Table.findOneAndUpdate(
-            { _id: id, clubId },
+            { tableId, clubId },
             { number, category, status },
             { new: true }
         );
@@ -54,9 +54,9 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
 // Xóa bàn
 export const deleteTable = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
-        const { id } = req.params;
+        const { tableId } = req.params;
         const clubId = req.manager.clubId;
-        const table = await Table.findOneAndDelete({ _id: id, clubId });
+        const table = await Table.findOneAndDelete({ tableId, clubId });
         if (!table) {
             res.status(404).json({ success: false, message: 'Table not found' });
             return;
