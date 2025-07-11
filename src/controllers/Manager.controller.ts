@@ -116,7 +116,7 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
       });
       return;
     }
-
+    console.log(manager);
     res.status(200).json({
       success: true,
       manager: {
