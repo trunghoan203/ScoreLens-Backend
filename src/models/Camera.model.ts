@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICamera extends Document {
+  cameraId: string;
   tableId: string;
   IPAddress: string;
   username: string;
@@ -9,8 +10,12 @@ export interface ICamera extends Document {
 }
 
 const CameraSchema = new Schema({
+  cameraId: {
+    type: String,
+    unique: true
+  },
   tableId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'Table',
     required: true
   },
@@ -33,6 +38,13 @@ const CameraSchema = new Schema({
   }
 }, {
   timestamps: true
+});
+
+CameraSchema.pre('save', function (next) {
+  if (!this.cameraId) {
+    this.cameraId = `CAM-${Date.now()}`;
+  }
+  next();
 });
 
 export const Camera = mongoose.model<ICamera>('Camera', CameraSchema); 

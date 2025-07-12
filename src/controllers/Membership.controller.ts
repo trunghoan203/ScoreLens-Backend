@@ -61,7 +61,6 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
         res.json({ success: true, membership });
         return;
     } catch (error) {
-        console.log(error);
         res.status(500).json({ success: false, message: 'Internal server error' });
         return;
     }
