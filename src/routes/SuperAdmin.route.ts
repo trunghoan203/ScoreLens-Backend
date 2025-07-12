@@ -13,6 +13,7 @@ import {
   resendVerificationCode,
   resendLoginCode
 } from '../controllers/SuperAdmin.controller';
+import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
 const superAdminRouter = express.Router();
@@ -34,5 +35,10 @@ superAdminRouter.post('/admin/approve/:adminId', isAuthenticated, approveAdmin);
 superAdminRouter.post('/admin/reject/:adminId', isAuthenticated, rejectAdmin);
 superAdminRouter.get('/admin/list', isAuthenticated, listAdmins);
 superAdminRouter.get('/admin/:adminId', isAuthenticated, getAdminDetail);
+
+//Feedback management routes
+superAdminRouter.get('/feedback', isAuthenticated, getFeedbacks);
+superAdminRouter.get('/feedback/:feedbackId', isAuthenticated, getFeedbackDetail);;
+superAdminRouter.put('/feedback/:feedbackId', isAuthenticated, updateFeedback);
 
 export default superAdminRouter;

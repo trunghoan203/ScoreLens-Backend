@@ -1,9 +1,10 @@
 import express from 'express';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
 import { listTables, createTable, updateTable, deleteTable } from '../controllers/Table.controller';
-import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import { listCameras, createCamera, updateCamera, deleteCamera } from '../controllers/Camera.controller';
+import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
+import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
 const managerRouter = express.Router();
 
@@ -32,5 +33,10 @@ managerRouter.get('/camera', isAuthenticated, listCameras);
 managerRouter.post('/camera', isAuthenticated, createCamera);
 managerRouter.put('/camera/:cameraId', isAuthenticated, updateCamera);
 managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
+
+// Feedback management routes for manager
+managerRouter.get('/feedback', isAuthenticated, getFeedbacks);
+managerRouter.get('/feedback/:feedbackId', isAuthenticated, getFeedbackDetail);
+managerRouter.put('/feedback/:feedbackId', isAuthenticated, updateFeedback);
 
 export default managerRouter;
