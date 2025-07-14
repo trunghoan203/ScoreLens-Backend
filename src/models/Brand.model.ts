@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import bcrypt from 'bcrypt';
 
 export interface IBrand extends Document {
   brandId: string;
@@ -49,5 +50,17 @@ const BrandSchema = new Schema({
 }, {
   timestamps: true
 });
+
+BrandSchema.pre('save', async function (next) {
+  if (this.isModified('citizenCode')) {
+    const salt = await bcrypt.genSalt(10);
+    this.citizenCode = await bcrypt.hash(this.citizenCode, salt);
+  }
+  next();
+});
+
+BrandSchema.methods.compareCitizenCode = async function (candidateCode: string): Promise<boolean> {
+  return bcrypt.compare(candidateCode, this.citizenCode);
+};
 
 export const Brand = mongoose.model<IBrand>('Brand', BrandSchema); 
