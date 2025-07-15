@@ -146,14 +146,14 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const { citizenCode } = req.body;
+    const { email } = req.body;
 
-    if (!citizenCode) {
+    if (!email) {
       res.status(400).json({ success: false, message: 'Email is required' });
       return;
     }
 
-    const manager = await Manager.findOne({ citizenCode });
+    const manager = await Manager.findOne({ email });
     if (!manager) {
       res.status(404).json({ success: false, message: 'Manager not found' });
       return;
