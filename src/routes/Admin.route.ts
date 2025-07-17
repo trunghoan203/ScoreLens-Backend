@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode } from '../controllers/Admin.controller';
+import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -24,6 +24,7 @@ adminRouter.post('/managers', isAuthenticated, createManager);
 adminRouter.put('/managers/:managerId', isAuthenticated, updateManager);
 adminRouter.patch('/managers/:managerId/deactivate', isAuthenticated, deactivateManager);
 adminRouter.delete('/managers/:managerId', isAuthenticated, deleteManager);
+adminRouter.get('/managers/:managerId', isAuthenticated, getManagerDetail);
 
 //Brand Management
 adminRouter.post('/brands', isAuthenticated, createBrand);

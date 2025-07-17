@@ -1,7 +1,6 @@
 import { Schema, model } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { IManager } from '../interfaces/Manager.interface';
-import bcrypt from 'bcrypt';
 
 const ManagerSchema: Schema<IManager> = new Schema({
     managerId: {
@@ -11,6 +10,11 @@ const ManagerSchema: Schema<IManager> = new Schema({
     clubId: {
         type: String,
         ref: 'Club',
+        required: true
+    },
+    brandId: {
+        type: String,
+        ref: 'Brand',
         required: true
     },
     fullName: {
@@ -59,24 +63,9 @@ const ManagerSchema: Schema<IManager> = new Schema({
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: false
     }
 }, { timestamps: true });
-
-ManagerSchema.pre('save', async function (next) {
-    if (this.isModified('citizenCode')) {
-        const salt = await bcrypt.genSalt(10);
-        this.citizenCode = await bcrypt.hash(this.citizenCode, salt);
-    }
-    if (!this.managerId) {
-        this.managerId = `MNG-${Date.now()}`;
-    }
-    next();
-});
-
-ManagerSchema.methods.compareCitizenCode = async function (candidateCode: string): Promise<boolean> {
-    return bcrypt.compare(candidateCode, this.citizenCode);
-};
 
 ManagerSchema.methods.signAccessToken = function (): string {
     const accessTokenSecret = process.env.ACCESS_TOKEN;

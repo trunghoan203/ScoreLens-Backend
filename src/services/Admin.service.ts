@@ -3,6 +3,7 @@ import { IManager } from '../interfaces/Manager.interface';
 import ErrorHandler from '../utils/ErrorHandler';
 import { Match } from '../models/Match.model';
 import { MatchEvent } from '../models/MatchEvent.model';
+import { Club } from '../models/Club.model';
 
 interface CreateManagerInput {
     fullName: string;
@@ -26,7 +27,7 @@ interface UpdateManagerInput {
 }
 
 export const createManagerByAdmin = async (adminId: string, managerData: CreateManagerInput): Promise<Partial<IManager>> => {
-    const { email, citizenCode } = managerData;
+    const { email, citizenCode, clubId } = managerData;
 
     const existingManager = await Manager.findOne({ $or: [{ email }, { citizenCode }] });
     if (existingManager) {
@@ -38,7 +39,15 @@ export const createManagerByAdmin = async (adminId: string, managerData: CreateM
         }
     }
 
-    const newManager = await Manager.create(managerData);
+    // Lấy brandId từ club
+    const club = await Club.findOne({ clubId });
+    if (!club) {
+        throw new ErrorHandler('Club không tồn tại.', 404);
+    }
+    const brandId = club.brandId;
+
+    // Gán brandId vào managerData
+    const newManager = await Manager.create({ ...managerData, brandId });
 
     const managerObject = {
         _id: newManager._id,
@@ -49,6 +58,7 @@ export const createManagerByAdmin = async (adminId: string, managerData: CreateM
         citizenCode: newManager.citizenCode,
         address: newManager.address,
         clubId: newManager.clubId,
+        brandId: newManager.brandId,
         isActive: newManager.isActive,
         managerId: newManager.managerId
     };
@@ -84,9 +94,19 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
         }
     }
 
+    // Nếu update clubId thì đồng bộ lại brandId
+    let newBrandId = manager.brandId;
+    if (updateData.clubId && updateData.clubId !== manager.clubId) {
+        const club = await Club.findOne({ clubId: updateData.clubId });
+        if (!club) {
+            throw new ErrorHandler('Club không tồn tại.', 404);
+        }
+        newBrandId = club.brandId;
+    }
+
     const updatedManager = await Manager.findOneAndUpdate(
         { managerId },
-        updateData,
+        { ...updateData, brandId: newBrandId },
         { new: true, runValidators: true }
     );
 
@@ -103,6 +123,7 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
         citizenCode: updatedManager.citizenCode,
         address: updatedManager.address,
         clubId: updatedManager.clubId,
+        brandId: updatedManager.brandId,
         isActive: updatedManager.isActive,
         managerId: updatedManager.managerId
     };
@@ -203,8 +224,12 @@ export const deactivateManagerByAdmin = async (adminId: string, managerId: strin
     return managerObject;
 };
 
-export const getAllManagersByAdmin = async (): Promise<Partial<IManager>[]> => {
-    const managers = await Manager.find();
+export const getAllManagersByAdmin = async (brandId?: string): Promise<Partial<IManager>[]> => {
+    const filter: any = {};
+    if (brandId) {
+        filter.brandId = brandId;
+    }
+    const managers = await Manager.find(filter);
     return managers.map(m => ({
         _id: m._id,
         fullName: m.fullName,
@@ -214,7 +239,28 @@ export const getAllManagersByAdmin = async (): Promise<Partial<IManager>[]> => {
         citizenCode: m.citizenCode,
         address: m.address,
         clubId: m.clubId,
+        brandId: m.brandId,
         isActive: m.isActive,
         managerId: m.managerId
     }));
+};
+
+export const getManagerDetailByAdmin = async (managerId: string): Promise<Partial<IManager>> => {
+    const manager = await Manager.findOne({ managerId });
+    if (!manager) {
+        throw new ErrorHandler('Manager không tồn tại.', 404);
+    }
+    return {
+        _id: manager._id,
+        fullName: manager.fullName,
+        email: manager.email,
+        phoneNumber: manager.phoneNumber,
+        dateOfBirth: manager.dateOfBirth,
+        citizenCode: manager.citizenCode,
+        address: manager.address,
+        clubId: manager.clubId,
+        brandId: manager.brandId,
+        isActive: manager.isActive,
+        managerId: manager.managerId
+    };
 };
