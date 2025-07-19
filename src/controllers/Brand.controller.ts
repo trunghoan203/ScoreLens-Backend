@@ -12,8 +12,8 @@ export const createBrand = async (req: Request & { admin?: any }, res: Response)
             res.status(400).json({ success: false, message: 'Admin đã có brand, không thể tạo thêm.' });
             return;
         }
-        const { brandName, numberPhone, website, logo_url, citizenCode } = req.body;
-        if (!brandName || !numberPhone || !website || !citizenCode) {
+        const { brandName, phoneNumber, website, logo_url, citizenCode } = req.body;
+        if (!brandName || !phoneNumber || !website || !citizenCode) {
             res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin brand.' });
             return;
         }
@@ -22,18 +22,18 @@ export const createBrand = async (req: Request & { admin?: any }, res: Response)
             brandId,
             adminId,
             brandName,
-            numberPhone,
+            phoneNumber,
             website,
             logo_url,
             citizenCode
         });
-        
+
         // Cập nhật brandId cho admin
         await Admin.findOneAndUpdate(
             { adminId },
             { brandId: brand.brandId }
         );
-        
+
         res.status(201).json({ success: true, brand });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
@@ -45,14 +45,14 @@ export const updateBrand = async (req: Request & { admin?: any }, res: Response)
     try {
         const adminId = req.admin.adminId;
         const { brandId } = req.params;
-        const { brandName, numberPhone, website, logo_url, citizenCode } = req.body;
+        const { brandName, phoneNumber, website, logo_url, citizenCode } = req.body;
         const brand = await Brand.findOne({ brandId, adminId });
         if (!brand) {
             res.status(404).json({ success: false, message: 'Brand không tồn tại hoặc bạn không có quyền.' });
             return;
         }
         if (brandName !== undefined) brand.brandName = brandName;
-        if (numberPhone !== undefined) brand.numberPhone = numberPhone;
+        if (phoneNumber !== undefined) brand.phoneNumber = phoneNumber;
         if (website !== undefined) brand.website = website;
         if (logo_url !== undefined) brand.logo_url = logo_url;
         if (citizenCode !== undefined) brand.citizenCode = citizenCode;
@@ -100,13 +100,13 @@ export const deleteBrand = async (req: Request & { admin?: any }, res: Response)
             res.status(404).json({ success: false, message: 'Brand không tồn tại hoặc bạn không có quyền.' });
             return;
         }
-        
+
         // Cập nhật brandId về null cho admin
         await Admin.findOneAndUpdate(
             { adminId },
             { brandId: null }
         );
-        
+
         res.status(200).json({ success: true, message: 'Xóa brand thành công.' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
