@@ -5,7 +5,7 @@ export interface IBrand extends Document {
   brandId: string;
   adminId: string;
   brandName: string;
-  numberPhone: string;
+  phoneNumber: string;
   website: string;
   logo_url: string;
   citizenCode: string;
