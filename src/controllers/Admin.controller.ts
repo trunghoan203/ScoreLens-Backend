@@ -415,10 +415,23 @@ export const deactivateManager = catchAsync(async (req: Request & { admin?: any 
 
 export const getAllManagers = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     // Có thể kiểm tra quyền admin ở đây nếu cần
-    const managers = await AdminService.getAllManagersByAdmin();
+    const { brandId } = req.query;
+    const managers = await AdminService.getAllManagersByAdmin(brandId as string | undefined);
     res.status(200).json({
         success: true,
         data: managers,
+    });
+});
+
+export const getManagerDetail = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const { managerId } = req.params;
+    if (!managerId) {
+        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+    }
+    const manager = await AdminService.getManagerDetailByAdmin(managerId);
+    res.status(200).json({
+        success: true,
+        data: manager,
     });
 });
 
