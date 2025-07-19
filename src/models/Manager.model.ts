@@ -12,6 +12,11 @@ const ManagerSchema: Schema<IManager> = new Schema({
         ref: 'Club',
         required: true
     },
+    brandId: {
+        type: String,
+        ref: 'Brand',
+        required: true
+    },
     fullName: {
         type: String,
         required: [true, 'Tên không được để trống'],
@@ -58,16 +63,9 @@ const ManagerSchema: Schema<IManager> = new Schema({
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: false
     }
 }, { timestamps: true });
-
-ManagerSchema.pre('save', function (next) {
-    if (!this.managerId) {
-        this.managerId = `MNG-${Date.now()}`;
-    }
-    next();
-});
 
 ManagerSchema.methods.signAccessToken = function (): string {
     const accessTokenSecret = process.env.ACCESS_TOKEN;

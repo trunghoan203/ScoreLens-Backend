@@ -11,7 +11,7 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Manager not found' });
       return;
     }
 
@@ -48,7 +48,7 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Manager not found' });
       return;
     }
 
@@ -133,6 +133,66 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
       }
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Resend login verification code
+export const resendLoginCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Kiểm tra req.body có tồn tại không
+    if (!req.body) {
+      res.status(400).json({ success: false, message: 'Request body is required' });
+      return;
+    }
+
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Email is required' });
+      return;
+    }
+
+    const manager = await Manager.findOne({ email });
+    if (!manager) {
+      res.status(404).json({ success: false, message: 'Manager not found' });
+      return;
+    }
+
+    // Kiểm tra trạng thái hoạt động của manager
+    if (!manager.isActive) {
+      res.status(403).json({ success: false, message: 'Manager account is deactivated' });
+      return;
+    }
+
+    // Tạo mã xác thực đăng nhập mới
+    const activationCode = generateRandomCode(6);
+    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+
+    // Cập nhật mã xác thực mới
+    manager.activationCode = activationCode;
+    manager.activationCodeExpires = activationCodeExpires;
+    await manager.save();
+
+    // Gửi email với mã mới
+    await sendMail({
+      email: manager.email,
+      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập Mới',
+      template: 'activation-mail.ejs',
+      data: {
+        user: { name: manager.fullName },
+        activationCode
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Login verification code has been resent to your email. It will expire in 5 minutes.',
+      data: { email: manager.email }
+    });
+
+  } catch (error: any) {
+    console.error('Resend login code error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

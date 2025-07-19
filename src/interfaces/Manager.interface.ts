@@ -9,6 +9,7 @@ export interface IManager extends Document {
   citizenCode: string;
   address: string;
   clubId: string;
+  brandId: string;
   activationCode: string | null;
   activationCodeExpires: Date | null;
   isActive: boolean;

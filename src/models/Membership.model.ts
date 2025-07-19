@@ -1,14 +1,20 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMembership extends Document {
+  membershipId: string;
   brandId: string;
   fullName: string;
   phoneNumber: string;
+  totalPlayTime?: number;
 }
 
 const MembershipSchema = new Schema({
+  membershipId: {
+    type: String,
+    unique: true
+  },
   brandId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'Brand',
     required: true
   },
@@ -26,6 +32,14 @@ const MembershipSchema = new Schema({
   }
 }, {
   timestamps: true
+});
+
+// Tự động sinh membershipId trước khi save
+MembershipSchema.pre('save', function (next) {
+  if (!this.membershipId) {
+    this.membershipId = `MB-${Date.now()}`;
+  }
+  next();
 });
 
 export const Membership = mongoose.model<IMembership>('Membership', MembershipSchema); 

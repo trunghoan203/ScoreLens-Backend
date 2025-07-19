@@ -374,7 +374,7 @@ export const updateManager = catchAsync(async (req: Request & { admin?: any }, r
 export const deleteManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     console.log('Request Params:', req.params);
     const { managerId } = req.params;
-    console.log('Extracted managerId:', managerId); 
+    console.log('Extracted managerId:', managerId);
     const adminId = req.admin?.adminId;
     if (!adminId) {
         return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
@@ -415,9 +415,142 @@ export const deactivateManager = catchAsync(async (req: Request & { admin?: any 
 
 export const getAllManagers = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     // Có thể kiểm tra quyền admin ở đây nếu cần
-    const managers = await AdminService.getAllManagersByAdmin();
+    const { brandId } = req.query;
+    const managers = await AdminService.getAllManagersByAdmin(brandId as string | undefined);
     res.status(200).json({
         success: true,
         data: managers,
     });
 });
+
+export const getManagerDetail = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const { managerId } = req.params;
+    if (!managerId) {
+        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+    }
+    const manager = await AdminService.getManagerDetailByAdmin(managerId);
+    res.status(200).json({
+        success: true,
+        data: manager,
+    });
+});
+
+// Resend verification code (cho đăng ký)
+export const resendVerificationCode = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Kiểm tra req.body có tồn tại không
+        if (!req.body) {
+            res.status(400).json({ success: false, message: 'Request body is required' });
+            return;
+        }
+
+        const { email } = req.body;
+
+        if (!email) {
+            res.status(400).json({ success: false, message: 'Email is required' });
+            return;
+        }
+
+        const admin = await Admin.findOne({ email });
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Admin not found' });
+            return;
+        }
+
+        // Kiểm tra xem tài khoản đã được verify chưa
+        if (admin.isVerified) {
+            res.status(400).json({ success: false, message: 'Account is already verified' });
+            return;
+        }
+
+        // Tạo mã xác thực mới
+        const activationCode = generateRandomCode(6);
+        const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+
+        // Cập nhật mã xác thực mới
+        admin.activationCode = activationCode;
+        admin.activationCodeExpires = activationCodeExpires;
+        await admin.save({ validateBeforeSave: false });
+
+        // Gửi email với mã mới
+        await sendMail({
+            email: admin.email,
+            subject: 'ScoreLens - Admin Email Verification',
+            template: 'activation-mail.ejs',
+            data: {
+                user: { name: admin.fullName },
+                activationCode
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Verification code has been resent to your email. It will expire in 10 minutes.',
+            data: { email: admin.email }
+        });
+
+    } catch (error: any) {
+        console.error('Resend verification code error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// Resend reset password code
+export const resendResetPasswordCode = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Kiểm tra req.body có tồn tại không
+        if (!req.body) {
+            res.status(400).json({ success: false, message: 'Request body is required' });
+            return;
+        }
+
+        const { email } = req.body;
+
+        if (!email) {
+            res.status(400).json({ success: false, message: 'Email is required' });
+            return;
+        }
+
+        const admin = await Admin.findOne({ email });
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Admin not found' });
+            return;
+        }
+
+        // Kiểm tra xem tài khoản đã được verify chưa
+        if (!admin.isVerified) {
+            res.status(403).json({ success: false, message: 'Account is not verified. Please verify your account first.' });
+            return;
+        }
+
+        // Tạo mã reset password mới
+        const resetCode = generateRandomCode(6);
+        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+
+        // Cập nhật mã reset mới
+        admin.activationCode = resetCode;
+        admin.activationCodeExpires = resetCodeExpires;
+        await admin.save({ validateBeforeSave: false });
+
+        // Gửi email với mã mới
+        await sendMail({
+            email: admin.email,
+            subject: 'ScoreLens - Reset Password Code',
+            template: 'activation-mail.ejs',
+            data: {
+                user: { name: admin.fullName },
+                activationCode: resetCode
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset code has been resent to your email. It will expire in 10 minutes.',
+            data: { email: admin.email }
+        });
+
+    } catch (error: any) {
+        console.error('Resend reset password code error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
