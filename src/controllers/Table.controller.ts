@@ -9,7 +9,7 @@ export const listTables = async (req: Request & { manager?: any }, res: Response
         const query: any = { clubId };
         if (category) query.category = category;
         if (status) query.status = status;
-        if (search) query.number = Number(search);
+        if (search) query.name = Number(search);
         const tables = await Table.find(query);
         res.json({ success: true, tables });
     } catch (error) {
@@ -21,9 +21,9 @@ export const listTables = async (req: Request & { manager?: any }, res: Response
 // Thêm bàn mới
 export const createTable = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
-        const { number, category } = req.body;
+        const { name, category } = req.body;
         const clubId = req.manager.clubId;
-        const table = await Table.create({ clubId, number, category });
+        const table = await Table.create({ clubId, name, category });
         res.status(201).json({ success: true, table });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -34,11 +34,11 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
 export const updateTable = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const { tableId } = req.params;
-        const { number, category, status } = req.body;
+        const { name, category, status } = req.body;
         const clubId = req.manager.clubId;
         const table = await Table.findOneAndUpdate(
             { tableId, clubId },
-            { number, category, status },
+            { name, category, status },
             { new: true }
         );
         if (!table) {
