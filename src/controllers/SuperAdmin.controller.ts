@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { SuperAdmin } from '../models/SuperAdmin.model';
 import { Admin } from '../models/Admin.model';
+import { Brand } from '../models/Brand.model';
+import { Club } from '../models/Club.model';
 import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
@@ -218,60 +220,6 @@ export const getProfile = async (req: Request & { superAdmin?: any }, res: Respo
   }
 };
 
-//Manage Admin APIs
-// Approve admin
-export const approveAdmin = async (req: Request, res: Response): Promise<void> => {
-  const { adminId } = req.params;
-  const admin = await Admin.findOneAndUpdate(
-    { adminId },
-    { status: 'approved' },
-    { new: true }
-  );
-  if (!admin) {
-    res.status(404).json({ success: false, message: 'Admin not found' });
-    return;
-  }
-  res.json({ success: true, admin });
-};
-
-// Reject admin
-export const rejectAdmin = async (req: Request, res: Response): Promise<void> => {
-  const { adminId } = req.params;
-  const admin = await Admin.findOneAndUpdate(
-    { adminId },
-    { status: 'rejected' },
-    { new: true }
-  );
-  if (!admin) {
-    res.status(404).json({ success: false, message: 'Admin not found' });
-    return;
-  }
-  res.json({ success: true, admin });
-};
-
-// List admins with filter/search
-export const listAdmins = async (req: Request, res: Response): Promise<void> => {
-  const { search = '', status, page = 1, limit = 10 } = req.query;
-  const query: any = {};
-  if (status) query.status = status;
-  if (search) query.fullName = { $regex: search, $options: 'i' };
-  const admins = await Admin.find(query)
-    .skip((Number(page) - 1) * Number(limit))
-    .limit(Number(limit));
-  res.json({ success: true, admins });
-};
-
-// Admin detail
-export const getAdminDetail = async (req: Request, res: Response): Promise<void> => {
-  const { adminId } = req.params;
-  const admin = await Admin.findOne({ adminId });
-  if (!admin) {
-    res.status(404).json({ success: false, message: 'Admin not found' });
-    return;
-  }
-  res.json({ success: true, admin });
-};
-
 // Resend verification code
 export const resendVerificationCode = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -376,6 +324,121 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
   } catch (error: any) {
     console.error('Resend login code error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+//Manage Admin APIs
+// Approve admin
+export const approveAdmin = async (req: Request, res: Response): Promise<void> => {
+  const { adminId } = req.params;
+  const admin = await Admin.findOneAndUpdate(
+    { adminId },
+    { status: 'approved' },
+    { new: true }
+  );
+  if (!admin) {
+    res.status(404).json({ success: false, message: 'Admin not found' });
+    return;
+  }
+  res.json({ success: true, admin });
+};
+
+// Reject admin
+export const rejectAdmin = async (req: Request, res: Response): Promise<void> => {
+  const { adminId } = req.params;
+  const admin = await Admin.findOneAndUpdate(
+    { adminId },
+    { status: 'rejected' },
+    { new: true }
+  );
+  if (!admin) {
+    res.status(404).json({ success: false, message: 'Admin not found' });
+    return;
+  }
+  res.json({ success: true, admin });
+};
+
+// List admins with filter/search
+export const listAdmins = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { search = '', status, page = 1, limit = 10 } = req.query;
+    const query: any = {};
+
+    if (status) query.status = status;
+    if (search) query.fullName = { $regex: search, $options: 'i' };
+
+    const admins = await Admin.find(query)
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .lean();
+
+    // Get brand and clubs for each admin
+    const adminsWithDetails = await Promise.all(
+      admins.map(async (admin) => {
+        let brand: any = null;
+        let clubs: any[] = [];
+
+        if (admin.brandId) {
+          brand = await Brand.findOne({ brandId: admin.brandId }).lean();
+          clubs = await Club.find({ brandId: admin.brandId }).lean();
+        }
+
+        return {
+          ...admin,
+          brand,
+          clubs
+        };
+      })
+    );
+
+    const total = await Admin.countDocuments(query);
+
+    res.json({
+      success: true,
+      admins: adminsWithDetails,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error in listAdminsWithDetails:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Admin detail
+export const getAdminDetail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { adminId } = req.params;
+
+    const admin = await Admin.findOne({ adminId }).lean();
+    if (!admin) {
+      res.status(404).json({ success: false, message: 'Admin not found' });
+      return;
+    }
+
+    let brand: any = null;
+    let clubs: any[] = [];
+
+    if (admin.brandId) {
+      brand = await Brand.findOne({ brandId: admin.brandId }).lean();
+      clubs = await Club.find({ brandId: admin.brandId }).lean();
+    }
+
+    res.json({
+      success: true,
+      admin: {
+        ...admin,
+        brand,
+        clubs
+      }
+    });
+  } catch (error) {
+    console.error('Error in getAdminDetailWithBrandAndClub:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
