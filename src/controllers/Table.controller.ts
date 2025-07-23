@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { Table } from '../models/Table.model';
 
+const escapeRegex = (text: string): string => {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 // Lấy danh sách bàn (có tìm kiếm, lọc theo loại, trạng thái)
 export const listTables = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
@@ -9,7 +13,11 @@ export const listTables = async (req: Request & { manager?: any }, res: Response
         const query: any = { clubId };
         if (category) query.category = category;
         if (status) query.status = status;
-        if (search) query.name = Number(search);
+        if (search) {
+            const safeSearchString = escapeRegex(search as string);
+            const regex = new RegExp(safeSearchString, 'i');
+            query.name = { $regex: regex };
+        }
         const tables = await Table.find(query);
         res.json({ success: true, tables });
     } catch (error) {
