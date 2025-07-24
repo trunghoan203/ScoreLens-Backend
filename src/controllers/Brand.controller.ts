@@ -13,7 +13,7 @@ export const createBrand = async (req: Request & { admin?: any }, res: Response)
             return;
         }
         const { brandName, phoneNumber, website, logo_url, citizenCode } = req.body;
-        if (!brandName || !phoneNumber || !website || !citizenCode) {
+        if (!brandName || !phoneNumber || !citizenCode || !logo_url) {
             res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin brand.' });
             return;
         }
