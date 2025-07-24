@@ -18,8 +18,8 @@ const TableSchema = new Schema({
     ref: 'Club',
     required: true
   },
-  number: {
-    type: Number,
+  name: {
+    type: String,
     required: true
   },
   category: {
