@@ -42,7 +42,7 @@ const ClubSchema = new Schema({
     type: String,
     required: true,
     enum: ['open', 'closed', 'maintenance'],
-    default: 'maintenance'
+    default: 'open'
   }
 }, {
   timestamps: true

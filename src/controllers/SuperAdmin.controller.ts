@@ -81,7 +81,6 @@ export const verifySuperAdmin = async (req: Request, res: Response): Promise<voi
     admin.activationCodeExpires = null;
     await admin.save();
 
-    // sendAdminToken(admin, 200, res);
   } catch (error) {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -195,7 +194,7 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
 
 export const getProfile = async (req: Request & { superAdmin?: any }, res: Response): Promise<void> => {
   try {
-    const superAdmin = req.superAdmin; // Giờ sẽ không báo lỗi
+    const superAdmin = req.superAdmin;
 
     if (!superAdmin) {
       res.status(401).json({
@@ -244,7 +243,7 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
 
     // Tạo mã xác thực mới
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
 
     // Cập nhật mã xác thực mới
     superAdmin.activationCode = activationCode;
@@ -298,7 +297,7 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
     // Tạo mã xác thực đăng nhập mới
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
 
     // Cập nhật mã xác thực mới
     superAdmin.activationCode = activationCode;

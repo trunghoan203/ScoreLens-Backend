@@ -63,9 +63,16 @@ const ManagerSchema: Schema<IManager> = new Schema({
     },
     isActive: {
         type: Boolean,
-        default: false
+        default: true
     }
 }, { timestamps: true });
+
+ManagerSchema.pre('save', function (next) {
+    if (!this.managerId) {
+        this.managerId = `MNG-${Date.now()}`;
+    }
+    next();
+});
 
 ManagerSchema.methods.signAccessToken = function (): string {
     const accessTokenSecret = process.env.ACCESS_TOKEN;

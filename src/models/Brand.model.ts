@@ -33,13 +33,13 @@ const BrandSchema = new Schema({
     type: String,
     required: true
   },
-  numberPhone: {
+  phoneNumber: {
     type: String,
     required: true
   },
   website: {
     type: String,
-    required: true
+    required: false
   },
   clubIds: {
     type: [String],

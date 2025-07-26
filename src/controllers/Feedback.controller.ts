@@ -4,16 +4,23 @@ import { Feedback } from '../models/Feedback.model';
 // User tạo feedback
 export const createFeedback = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { clubId, tableId, content, createdBy } = req.body;
-        if (!clubId || !tableId || !content || !createdBy || !createdBy.type) {
-            res.status(400).json({ success: false, message: 'Thiếu thông tin.' });
+        const { clubInfo, tableInfo, content, createdBy } = req.body;
+
+        if (!clubInfo?.clubId || !tableInfo?.tableId || !content || !createdBy.type) {
+            res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
             return;
         }
+
         const feedback = await Feedback.create({
-            clubId, tableId, content, createdBy
+            createdBy,
+            clubId: clubInfo.clubId,
+            tableId: tableInfo.tableId,
+            content
         });
+
         res.status(201).json({ success: true, feedback });
     } catch (error: any) {
+        console.log(error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -21,18 +28,56 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
 // Lấy danh sách feedback (lọc theo club, status, ngày)
 export const getFeedbacks = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { clubId, status, date } = req.query;
-        const filter: any = {};
-        if (clubId) filter.clubId = clubId;
-        if (status) filter.status = status;
-        if (date) {
-            const d = new Date(date as string);
-            filter.createdAt = { $gte: new Date(d.setHours(0, 0, 0, 0)), $lte: new Date(d.setHours(23, 59, 59, 999)) };
-        }
-        const feedbacks = await Feedback.find(filter).sort({ createdAt: -1 });
+        const feedbacks = await Feedback.aggregate([
+            {
+                $lookup: {
+                    from: 'clubs',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'clubInfo'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'tables',
+                    localField: 'tableId',
+                    foreignField: 'tableId',
+                    as: 'tableInfo'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$clubInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
+                    path: '$tableInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    feedbackId: 1,
+                    content: 1,
+                    status: 1,
+                    createdAt: 1,
+                    'clubInfo.clubName': 1,
+                    'clubInfo.address': 1,
+                    'clubInfo.phoneNumber': 1,
+                    'tableInfo.name': 1,
+                    'tableInfo.category': 1
+                }
+            }
+        ]);
+
         res.json({ success: true, feedbacks });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };
 
@@ -40,11 +85,47 @@ export const getFeedbacks = async (req: Request, res: Response): Promise<void> =
 export const getFeedbackDetail = async (req: Request, res: Response): Promise<void> => {
     try {
         const { feedbackId } = req.params;
-        const feedback = await Feedback.findOne({ feedbackId });
-        if (!feedback) {
+        const result = await Feedback.aggregate([
+            { $match: { feedbackId } },
+            {
+                $lookup: {
+                    from: 'clubs',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'clubInfo'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'tables',
+                    localField: 'tableId',
+                    foreignField: 'tableId',
+                    as: 'tableInfo'
+                }
+            },
+            { $unwind: '$clubInfo' },
+            { $unwind: '$tableInfo' },
+            {
+                $project: {
+                    feedbackId: 1,
+                    content: 1,
+                    status: 1,
+                    createdAt: 1,
+                    'clubInfo.clubName': 1,
+                    'clubInfo.address': 1,
+                    'clubInfo.phoneNumber': 1,
+                    'tableInfo.name': 1,
+                    'tableInfo.category': 1
+                }
+            }
+        ]);
+
+        if (result.length === 0) {
             res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
             return;
-        } res.json({ success: true, feedback });
+        }
+
+        res.json({ success: true, feedback: result[0] });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -55,30 +136,38 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
     try {
         const { feedbackId } = req.params;
         const { note, status, needSupport } = req.body;
+
         const feedback = await Feedback.findOne({ feedbackId });
+
         if (!feedback) {
             res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
             return;
         }
-        // Xác định role và id
-        let by = '';
-        let role = '';
+
+        let byId = '';
+        let byName = '';
+        let byRole = '';
         if (req.manager) {
-            by = req.manager.managerId;
-            role = 'manager';
+            byId = req.manager.managerId;
+            byName = req.manager.fullName;
+            byRole = 'manager';
         } else if (req.admin) {
-            by = req.admin.adminId;
-            role = 'admin';
+            byId = req.admin.adminId;
+            byName = req.admin.fullName;
+            byRole = 'admin';
         } else if (req.superAdmin) {
-            by = req.superAdmin.sAdminId;
-            role = 'superadmin';
+            byId = req.superAdmin.sAdminId;
+            byName = req.superAdmin.fullName;
+            byRole = 'superadmin';
         }
 
+        const action = status ? `status:${status}` : needSupport ? 'needSupport:true' : 'updated';
         feedback.history.push({
-            by,
-            role,
-            action: needSupport ? 'need_support' : 'update',
-            note,
+            byId,
+            byName,
+            byRole,
+            action,
+            note: note || 'Cập nhật thông tin',
             date: new Date()
         });
 
