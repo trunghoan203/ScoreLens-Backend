@@ -6,8 +6,8 @@ export interface IFeedback extends Document {
         userId: string;
         type: 'guest' | 'membership';
     };
-    clubId: String;
-    tableId: String;
+    clubId: string;
+    tableId: string;
     content: string;
     status: 'pending' | 'managerP' | 'adminP' | 'superadminP' | 'resolved';
     needSupport: boolean;
@@ -55,7 +55,7 @@ const FeedbackSchema = new Schema<IFeedback>(
     { timestamps: true }
 );
 
-FeedbackSchema.pre('save', function (next) {
+FeedbackSchema.pre('save', function (this: IFeedback, next) {
     if (!this.feedbackId) {
         this.feedbackId = `FB-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     }
