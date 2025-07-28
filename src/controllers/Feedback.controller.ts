@@ -56,19 +56,6 @@ export const getFeedbacks = async (req: Request, res: Response): Promise<void> =
                     path: '$tableInfo',
                     preserveNullAndEmptyArrays: true
                 }
-            },
-            {
-                $project: {
-                    feedbackId: 1,
-                    content: 1,
-                    status: 1,
-                    createdAt: 1,
-                    'clubInfo.clubName': 1,
-                    'clubInfo.address': 1,
-                    'clubInfo.phoneNumber': 1,
-                    'tableInfo.name': 1,
-                    'tableInfo.category': 1
-                }
             }
         ]);
 
@@ -106,16 +93,13 @@ export const getFeedbackDetail = async (req: Request, res: Response): Promise<vo
             { $unwind: '$clubInfo' },
             { $unwind: '$tableInfo' },
             {
-                $project: {
-                    feedbackId: 1,
-                    content: 1,
-                    status: 1,
-                    createdAt: 1,
-                    'clubInfo.clubName': 1,
-                    'clubInfo.address': 1,
-                    'clubInfo.phoneNumber': 1,
-                    'tableInfo.name': 1,
-                    'tableInfo.category': 1
+                $addFields: {
+                    history: {
+                        $sortArray: {
+                            input: "$history",
+                            sortBy: { date: -1 }
+                        }
+                    }
                 }
             }
         ]);
@@ -161,17 +145,14 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
             byRole = 'superadmin';
         }
 
-        const action = status ? `status:${status}` : needSupport ? 'needSupport:true' : 'updated';
         feedback.history.push({
             byId,
             byName,
             byRole,
-            action,
-            note: note || 'Cập nhật thông tin',
+            note: note || '',
             date: new Date()
         });
 
-        if (note !== undefined) feedback.note = note;
         if (status) feedback.status = status;
         if (typeof needSupport === 'boolean') feedback.needSupport = needSupport;
 
