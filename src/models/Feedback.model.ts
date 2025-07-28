@@ -6,15 +6,16 @@ export interface IFeedback extends Document {
         userId: string;
         type: 'guest' | 'membership';
     };
-    clubId: string;
-    tableId: string;
+    clubId: String;
+    tableId: String;
     content: string;
-    status: 'pending' | 'manager_processing' | 'admin_processing' | 'superadmin_processing' | 'resolved';
+    status: 'pending' | 'managerP' | 'adminP' | 'superadminP' | 'resolved';
     needSupport: boolean;
     note?: string;
     history: Array<{
-        by: string;
-        role: string;
+        byId: string;
+        byName: string;
+        byRole: string;
         action: string;
         note?: string;
         date: Date;
@@ -30,20 +31,21 @@ const FeedbackSchema = new Schema<IFeedback>(
             userId: { type: String },
             type: { type: String, enum: ['guest', 'membership'], required: true }
         },
-        clubId: { type: String, required: true },
-        tableId: { type: String, required: true },
+        clubId: { type: String, ref: 'Club', required: true },
+        tableId: { type: String, ref: 'Table', required: true },
         content: { type: String, required: true },
         status: {
             type: String,
-            enum: ['pending', 'manager_processing', 'admin_processing', 'superadmin_processing', 'resolved'],
+            enum: ['pending', 'managerP', 'adminP', 'superadminP', 'resolved'],
             default: 'pending'
         },
         needSupport: { type: Boolean, default: false },
         note: { type: String },
         history: [
             {
-                by: String,
-                role: String,
+                byId: String,
+                byName: String,
+                byRole: String,
                 action: String,
                 note: String,
                 date: { type: Date, default: Date.now }
