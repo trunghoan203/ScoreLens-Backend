@@ -13,5 +13,6 @@ export interface IAdmin extends Document {
   brandId?: string | null; // brandId của brand mà admin thuộc về, mặc định null
   signAccessToken(): string;
   signRefreshToken(): string;
+  signRememberMeToken(): string;
   comparePassword(password: string): Promise<boolean>;
 } 
