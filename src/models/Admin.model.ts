@@ -34,14 +34,23 @@ adminSchema.methods.comparePassword = async function (enteredPassword: string): 
 };
 
 adminSchema.methods.signAccessToken = function (): string {
-  return jwt.sign({ adminId: this.adminId }, process.env.ACCESS_TOKEN as string, {
-    expiresIn: '15m'
+  const secret = process.env.JWT_SECRET || process.env.ACCESS_TOKEN || 'fallback-secret';
+  return (jwt as any).sign({ adminId: this.adminId }, secret, {
+    expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1d'
   });
 };
 
 adminSchema.methods.signRefreshToken = function (): string {
-  return jwt.sign({ adminId: this.adminId }, process.env.REFRESH_TOKEN as string, {
-    expiresIn: '7d'
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.REFRESH_TOKEN || 'fallback-refresh-secret';
+  return (jwt as any).sign({ adminId: this.adminId }, secret, {
+    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+  });
+};
+
+adminSchema.methods.signRememberMeToken = function (): string {
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.REFRESH_TOKEN || 'fallback-refresh-secret';
+  return (jwt as any).sign({ adminId: this.adminId }, secret, {
+    expiresIn: process.env.JWT_REMEMBER_ME_EXPIRES_IN || '30d'
   });
 };
 
