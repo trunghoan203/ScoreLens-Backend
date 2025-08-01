@@ -15,7 +15,10 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
 
     try {
       // Thử verify access token
-      const secret = process.env.ACCESS_TOKEN || 'fallback-secret';
+      const secret = process.env.ACCESS_TOKEN;
+      if (!secret) {
+        throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+      }
       const decoded = jwt.verify(token, secret) as { adminId?: string; sAdminId?: string; managerId?: string; iat: number, exp: number };
       
       // Token hợp lệ, tiếp tục
@@ -42,7 +45,10 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
             res.setHeader('x-new-refresh-token', newRefreshToken);
             
             // Decode admin info từ access token mới
-            const secret = process.env.ACCESS_TOKEN || 'fallback-secret';
+            const secret = process.env.ACCESS_TOKEN;
+            if (!secret) {
+              throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+            }
             const decoded = jwt.verify(accessToken, secret) as { adminId?: string; sAdminId?: string; managerId?: string };
             
             if (decoded.adminId) {

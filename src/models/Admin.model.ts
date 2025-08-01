@@ -34,16 +34,24 @@ adminSchema.methods.comparePassword = async function (enteredPassword: string): 
 };
 
 adminSchema.methods.signAccessToken = function (): string {
-  const secret = process.env.JWT_SECRET || process.env.ACCESS_TOKEN || 'fallback-secret';
+  const secret = process.env.ACCESS_TOKEN;
+  const expiresIn = process.env.ACCESS_TOKEN_EXPIRE || '1d';
+  if (!secret) {
+    throw new Error('ACCESS_TOKEN is not defined in environment variables');
+  }
   return (jwt as any).sign({ adminId: this.adminId }, secret, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1d'
+    expiresIn
   });
 };
 
 adminSchema.methods.signRefreshToken = function (): string {
-  const secret = process.env.JWT_REFRESH_SECRET || process.env.REFRESH_TOKEN || 'fallback-refresh-secret';
+  const secret = process.env.REFRESH_TOKEN;
+  const expiresIn = process.env.REFRESH_TOKEN_EXPIRE || '7d';
+  if (!secret) {
+    throw new Error('REFRESH_TOKEN is not defined in environment variables');
+  }
   return (jwt as any).sign({ adminId: this.adminId }, secret, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+    expiresIn
   });
 };
 
