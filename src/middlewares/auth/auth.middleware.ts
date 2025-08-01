@@ -16,8 +16,10 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    // Sử dụng any để bypass TypeScript issues
-    const secret = process.env.JWT_SECRET || process.env.ACCESS_TOKEN || 'fallback-secret';
+    const secret = process.env.ACCESS_TOKEN;
+    if (!secret) {
+      throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+    }
     const decoded = (jwt as any).verify(token, secret) as { sAdminId?: string; adminId?: string; managerId?: string; iat: number, exp: number };
 
     if (decoded.sAdminId) {
