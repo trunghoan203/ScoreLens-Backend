@@ -1,6 +1,6 @@
 import express from 'express';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
-import { listTables, createTable, updateTable, deleteTable, verifyTable, getTableById, getTablesByClub } from '../controllers/Table.controller';
+import { listTables, createTable, updateTable, deleteTable, getTableById, getTablesByClub } from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import { listCameras, createCamera, updateCamera, deleteCamera } from '../controllers/Camera.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -13,7 +13,13 @@ import {
     startMatch,
     endMatch,
     cancelMatch,
-    getMatchesByTable
+    getMatchesByTable,
+    verifyTable,
+    joinMatch,
+    requestPermission,
+    approveRejectPermission,
+    getMatchHistory,
+    getMatchPermissions
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
@@ -65,5 +71,13 @@ managerRouter.put('/matches/:id/start', isAuthenticated, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, endMatch);
 managerRouter.put('/matches/:id/cancel', isAuthenticated, cancelMatch);
 managerRouter.get('/matches/table/:tableId', getMatchesByTable);
+
+// New APIs for enhanced match management
+managerRouter.post('/matches/verify-table', verifyTable);
+managerRouter.post('/matches/join', isAuthenticated, joinMatch);
+managerRouter.post('/matches/:id/request-permission', isAuthenticated, requestPermission);
+managerRouter.put('/matches/:id/permission/:requestId', isAuthenticated, approveRejectPermission);
+managerRouter.get('/matches/history/:membershipId', getMatchHistory);
+managerRouter.get('/matches/:id/permissions', isAuthenticated, getMatchPermissions);
 
 export default managerRouter;

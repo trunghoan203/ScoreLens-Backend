@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMatchTeamMember {
   membershipId?: string;
+  guestId?: string;
   guestName?: string;
 }
 
@@ -12,16 +13,32 @@ export interface IMatchTeam {
   members: IMatchTeamMember[];
 }
 
+export interface IPermissionRequest {
+  id: string;
+  requesterId: string;
+  requesterType: 'membership' | 'guest';
+  action: string;
+  data: any;
+  reason?: string;
+  status: 'pending' | 'approve' | 'reject';
+  createdAt: Date;
+  reviewedBy?: string;
+  reviewedAt?: Date;
+  reviewReason?: string;
+}
+
 export interface IMatch extends Document {
   matchId: string;
   tableId: string;
   managerId?: string;
   createdByMembershipId?: string;
+  guestId?: string;
   isAiAssisted: boolean;
   gameType: 'pool-8' | 'carom';
   status: 'pending' | 'ongoing' | 'completed' | 'cancelled';
   matchCode: string;
   teams: IMatchTeam[];
+  permissionRequests?: IPermissionRequest[];
   startTime?: Date;
   endTime?: Date;
   createdAt: Date;
@@ -33,6 +50,10 @@ const MatchTeamMemberSchema = new Schema({
   membershipId: {
     type: String,
     ref: 'Membership',
+    default: null,
+  },
+  guestId: {
+    type: String,
     default: null,
   },
   guestName: {
@@ -79,6 +100,10 @@ const MatchSchema = new Schema({
     ref: 'Membership',
     default: null,
   },
+  guestId: {
+    type: String,
+    default: null,
+  },
   isAiAssisted: {
     type: Boolean,
     default: false,
@@ -99,6 +124,19 @@ const MatchSchema = new Schema({
     required: true,
   },
   teams: [MatchTeamSchema],
+  permissionRequests: [{
+    id: { type: String, required: true },
+    requesterId: { type: String, required: true },
+    requesterType: { type: String, enum: ['membership', 'guest'], required: true },
+    action: { type: String, required: true },
+    data: { type: Schema.Types.Mixed, required: true },
+    reason: { type: String },
+    status: { type: String, enum: ['pending', 'approve', 'reject'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+    reviewedBy: { type: String },
+    reviewedAt: { type: Date },
+    reviewReason: { type: String }
+  }],
   startTime: { type: Date },
   endTime: { type: Date },
 }, { timestamps: true });

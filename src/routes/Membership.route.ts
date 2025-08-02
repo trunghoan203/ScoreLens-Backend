@@ -10,7 +10,13 @@ import {
     startMatch,
     endMatch,
     cancelMatch,
-    getMatchesByTable
+    getMatchesByTable,
+    verifyTable,
+    joinMatch,
+    requestPermission,
+    approveRejectPermission,
+    getMatchHistory,
+    getMatchPermissions
 } from '../controllers/Match.controller';
 import { isGuestOrAuthenticated } from '../middlewares/auth/guestAuth.middleware';
 
@@ -33,5 +39,13 @@ membershipRoute.put('/matches/:id/start', isGuestOrAuthenticated, startMatch);
 membershipRoute.put('/matches/:id/end', isGuestOrAuthenticated, endMatch);
 membershipRoute.put('/matches/:id/cancel', isGuestOrAuthenticated, cancelMatch);
 membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
+
+// New APIs for enhanced match management
+membershipRoute.post('/matches/verify-table', verifyTable);
+membershipRoute.post('/matches/join', isGuestOrAuthenticated, joinMatch);
+membershipRoute.post('/matches/:id/request-permission', isGuestOrAuthenticated, requestPermission);
+membershipRoute.put('/matches/:id/permission/:requestId', isGuestOrAuthenticated, approveRejectPermission);
+membershipRoute.get('/matches/history/:membershipId', getMatchHistory);
+membershipRoute.get('/matches/:id/permissions', isGuestOrAuthenticated, getMatchPermissions);
 
 export default membershipRoute;
