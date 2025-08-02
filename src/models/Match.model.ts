@@ -1,38 +1,106 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IMatch extends Document {
-  tableId: string;
-  membershipId: string;
-  managerId: string;
-  startTime: Date;
-  endTime: Date;
+export interface IMatchTeamMember {
+  membershipId?: string;
+  guestName?: string;
 }
 
-const MatchSchema = new Schema({
-  tableId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Table',
-    required: true
-  },
+export interface IMatchTeam {
+  teamName: string;
+  score: number;
+  isWinner: boolean;
+  members: IMatchTeamMember[];
+}
+
+export interface IMatch extends Document {
+  matchId: string;
+  tableId: string;
+  managerId?: string;
+  createdByMembershipId?: string;
+  isAiAssisted: boolean;
+  gameType: 'pool-8' | 'carom';
+  status: 'pending' | 'ongoing' | 'completed' | 'cancelled';
+  matchCode: string;
+  teams: IMatchTeam[];
+  startTime?: Date;
+  endTime?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Schema con cho thành viên trong đội
+const MatchTeamMemberSchema = new Schema({
   membershipId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'Membership',
-    required: true
+    default: null,
   },
-  managerId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Manager',
-    required: true
+  guestName: {
+    type: String,
+    trim: true,
   },
-  startTime: {
-    type: Date,
-    required: true
+}, { _id: false });
+
+// Schema con cho đội trong trận đấu
+const MatchTeamSchema = new Schema({
+  teamName: {
+    type: String,
+    required: true,
   },
-  endTime: {
-    type: Date
-  }
-}, {
-  timestamps: true
+  score: {
+    type: Number,
+    default: 0,
+  },
+  isWinner: {
+    type: Boolean,
+    default: false,
+  },
+  members: [MatchTeamMemberSchema],
 });
 
-export const Match = mongoose.model<IMatch>('Match', MatchSchema); 
+const MatchSchema = new Schema({
+  matchId: {
+    type: String,
+    unique: true,
+    required: true,
+  },
+  tableId: {
+    type: String,
+    ref: 'Table',
+    required: true,
+  },
+  managerId: {
+    type: String,
+    ref: 'Manager',
+    default: null,
+  },
+  createdByMembershipId: {
+    type: String,
+    ref: 'Membership',
+    default: null,
+  },
+  isAiAssisted: {
+    type: Boolean,
+    default: false,
+  },
+  gameType: {
+    type: String,
+    enum: ['pool-8', 'carom'],
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'ongoing', 'completed', 'cancelled'],
+    default: 'pending',
+  },
+  matchCode: {
+    type: String,
+    unique: true,
+    required: true,
+  },
+  teams: [MatchTeamSchema],
+  startTime: { type: Date },
+  endTime: { type: Date },
+}, { timestamps: true });
+
+export const Match = mongoose.model<IMatch>('Match', MatchSchema);

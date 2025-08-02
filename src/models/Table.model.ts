@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ITable extends Document {
   tableId: string;
   clubId: string;
-  number: number;
+  name: string;
   category: string;
   status: string;
 }
