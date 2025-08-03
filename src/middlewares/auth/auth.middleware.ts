@@ -51,23 +51,23 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
     next();
   } catch (error: any) {
     console.error('Auth middleware error:', error);
-    
+
     // Phân loại lỗi cụ thể
     if (error.name === 'TokenExpiredError') {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         message: 'Token has expired, please login again.',
         code: 'TOKEN_EXPIRED'
       });
     } else if (error.name === 'JsonWebTokenError') {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         message: 'Invalid token format.',
         code: 'INVALID_TOKEN'
       });
     } else {
-      res.status(401).json({ 
-        success: false, 
+      res.status(401).json({
+        success: false,
         message: 'Not authorized to access this resource.',
         code: 'UNAUTHORIZED',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined

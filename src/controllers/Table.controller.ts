@@ -73,4 +73,109 @@ export const deleteTable = async (req: Request & { manager?: any }, res: Respons
     } catch (error) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
+};
+
+// @desc    Xác thực bàn chơi bằng QR code
+// @route   POST /api/tables/verify
+// @access  Public
+export const verifyTable = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { tableId } = req.body;
+
+        if (!tableId) {
+            res.status(400).json({
+                success: false,
+                message: 'Vui lòng cung cấp tableId.'
+            });
+            return;
+        }
+
+        const table = await Table.findOne({ tableId });
+        if (!table) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy bàn chơi với mã này.'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                tableId: table.tableId,
+                name: table.name,
+                category: table.category,
+                status: table.status,
+                clubId: table.clubId
+            }
+        });
+    } catch (error: any) {
+        console.error('Error verifying table:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Lấy thông tin bàn chơi
+// @route   GET /api/tables/:id
+// @access  Public
+export const getTableById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const table = await Table.findById(req.params.id);
+
+        if (!table) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy bàn chơi.'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: table
+        });
+    } catch (error: any) {
+        console.error('Error getting table:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Lấy danh sách bàn chơi theo club
+// @route   GET /api/tables/club/:clubId
+// @access  Public
+export const getTablesByClub = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { clubId } = req.params;
+        const { status, category } = req.query;
+
+        const query: any = { clubId };
+        if (status) {
+            query.status = status;
+        }
+        if (category) {
+            query.category = category;
+        }
+
+        const tables = await Table.find(query).sort({ name: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: tables
+        });
+    } catch (error: any) {
+        console.error('Error getting tables by club:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
+    }
 }; 
