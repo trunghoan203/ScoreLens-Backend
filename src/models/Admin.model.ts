@@ -13,6 +13,7 @@ const adminSchema = new Schema<IAdmin>({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  rejectedReason: { type: String, default: null },
   isVerified: { type: Boolean, default: false },
   activationCode: { type: String, select: false },
   activationCodeExpires: { type: Date, select: false },

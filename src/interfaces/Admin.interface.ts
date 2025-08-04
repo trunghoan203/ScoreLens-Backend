@@ -6,11 +6,12 @@ export interface IAdmin extends Document {
   email: string;
   password?: string;
   status: string;
+  rejectedReason?: string | null;
   isVerified: boolean;
   activationCode?: string | null;
   activationCodeExpires?: Date | null;
   lastLogin?: Date;
-  brandId?: string | null; // brandId của brand mà admin thuộc về, mặc định null
+  brandId?: string | null;
   signAccessToken(): string;
   signRefreshToken(): string;
   signRememberMeToken(): string;
