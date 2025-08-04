@@ -346,9 +346,14 @@ export const approveAdmin = async (req: Request, res: Response): Promise<void> =
 // Reject admin
 export const rejectAdmin = async (req: Request, res: Response): Promise<void> => {
   const { adminId } = req.params;
+  const { rejectedReason } = req.body;
+  
   const admin = await Admin.findOneAndUpdate(
     { adminId },
-    { status: 'rejected' },
+    { 
+      status: 'rejected',
+      rejectedReason: rejectedReason || null
+    },
     { new: true }
   );
   if (!admin) {
