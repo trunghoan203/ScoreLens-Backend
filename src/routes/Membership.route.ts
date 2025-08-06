@@ -2,6 +2,7 @@ import express from 'express';
 import { createFeedback } from '../controllers/Feedback.controller';
 import { searchMembership, getMembershipById } from '../controllers/Membership.controller';
 import {
+    verifyMembership,
     createMatch,
     getMatchById,
     getMatchByCode,
@@ -9,16 +10,13 @@ import {
     updateTeamMembers,
     startMatch,
     endMatch,
-    cancelMatch,
+    deleteMatch,
     getMatchesByTable,
     verifyTable,
     joinMatch,
-    requestPermission,
-    approveRejectPermission,
     getMatchHistory,
-    getMatchPermissions
 } from '../controllers/Match.controller';
-import { isGuestOrAuthenticated } from '../middlewares/auth/guestAuth.middleware';
+import { isMatchCreator } from '../middlewares/auth/matchAuth.middleware';
 
 const membershipRoute = express.Router();
 
@@ -29,23 +27,21 @@ membershipRoute.get('/:id', getMembershipById);
 // Protected routes
 membershipRoute.post('/feedback', createFeedback);
 
-// Match management routes (cho cả Membership và Guest)
-membershipRoute.post('/matches', isGuestOrAuthenticated, createMatch);
+//Match Management
+membershipRoute.post('/matches/verify-table', verifyTable); 
+membershipRoute.post('/matches/verify-membership', verifyMembership);
+membershipRoute.post('/matches', createMatch);
 membershipRoute.get('/matches/:id', getMatchById);
 membershipRoute.get('/matches/code/:matchCode', getMatchByCode);
-membershipRoute.put('/matches/:id/score', isGuestOrAuthenticated, updateScore);
-membershipRoute.put('/matches/:id/teams/:teamIndex/members', isGuestOrAuthenticated, updateTeamMembers);
-membershipRoute.put('/matches/:id/start', isGuestOrAuthenticated, startMatch);
-membershipRoute.put('/matches/:id/end', isGuestOrAuthenticated, endMatch);
-membershipRoute.put('/matches/:id/cancel', isGuestOrAuthenticated, cancelMatch);
-membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
+membershipRoute.post('/matches/join', joinMatch);
+membershipRoute.put('/matches/:id/score', isMatchCreator, updateScore);
+membershipRoute.put('/matches/:id/teams/:teamIndex/members', isMatchCreator, updateTeamMembers);
+membershipRoute.put('/matches/:id/start', isMatchCreator, startMatch);
+membershipRoute.put('/matches/:id/end', isMatchCreator, endMatch);
+membershipRoute.delete('/matches/:id', isMatchCreator, deleteMatch);
 
-// New APIs for enhanced match management
-membershipRoute.post('/matches/verify-table', verifyTable);
-membershipRoute.post('/matches/join', isGuestOrAuthenticated, joinMatch);
-membershipRoute.post('/matches/:id/request-permission', isGuestOrAuthenticated, requestPermission);
-membershipRoute.put('/matches/:id/permission/:requestId', isGuestOrAuthenticated, approveRejectPermission);
+// History and other getters
+membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
 membershipRoute.get('/matches/history/:membershipId', getMatchHistory);
-membershipRoute.get('/matches/:id/permissions', isGuestOrAuthenticated, getMatchPermissions);
 
 export default membershipRoute;

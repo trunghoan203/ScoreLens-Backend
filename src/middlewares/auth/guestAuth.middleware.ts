@@ -1,41 +1,50 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { Membership } from '../../models/Membership.model';
 
 export const isGuestOrAuthenticated = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        // Kiểm tra xem có token không
-        let token = req.cookies?.access_token;
+        let token = req.cookies?.access_token || req.header('Authorization')?.replace('Bearer ', '');
+
         if (!token) {
-            token = req.header('Authorization')?.replace('Bearer ', '');
+            (req as any).isGuest = true;
+            (req as any).user = null;
+            return next();
         }
 
-        // Nếu có token, thử xác thực
-        if (token) {
-            // Kiểm tra token có hợp lệ không bằng cách verify
-            const jwt = require('jsonwebtoken');
-            const secret = process.env.ACCESS_TOKEN;
+        const secret = process.env.ACCESS_TOKEN;
+        if (!secret) {
+            throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+        }
 
-            try {
-                const decoded = jwt.verify(token, secret);
-                // Nếu token hợp lệ, thực hiện xác thực bình thường
-                const { isAuthenticated } = await import('./auth.middleware');
-                return isAuthenticated(req, res, next);
-            } catch (jwtError) {
-                // Nếu token không hợp lệ, cho phép truy cập như guest
-                console.log('Invalid token, allowing as guest');
+        const decoded = jwt.verify(token, secret) as any;
+
+        if (decoded.membershipId) {
+            const membership = await Membership.findOne({ membershipId: decoded.membershipId });
+            if (!membership) {
+                res.status(401).json({ success: false, message: 'Invalid token: Membership not found.' });
+                return;
             }
+            (req as any).isGuest = false;
+            (req as any).membershipId = membership.membershipId;
+            (req as any).membership = membership;
+        } else if (decoded.managerId) {
+            (req as any).isGuest = false;
+            (req as any).managerId = decoded.managerId;
+        } else {
+             res.status(401).json({ success: false, message: 'Invalid token payload.' });
+             return;
         }
 
-        // Nếu không có token hoặc token không hợp lệ, cho phép truy cập như guest
-        (req as any).isGuest = true;
-        (req as any).guestId = `GUEST-${Date.now()}-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
         next();
 
     } catch (error: any) {
-        console.error('Guest auth middleware error:', error);
-        // Nếu có lỗi, vẫn cho phép truy cập như guest
-        (req as any).isGuest = true;
-        (req as any).guestId = `GUEST-${Date.now()}-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
-        next();
+        console.error('Auth middleware error:', error.name);
+        res.status(401).json({
+            success: false,
+            message: `Authentication failed: ${error.message}`,
+            code: error.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN'
+        });
     }
 };
 

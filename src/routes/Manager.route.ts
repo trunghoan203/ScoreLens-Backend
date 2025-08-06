@@ -12,14 +12,10 @@ import {
     updateTeamMembers,
     startMatch,
     endMatch,
-    cancelMatch,
+    deleteMatch,
     getMatchesByTable,
     verifyTable,
-    joinMatch,
-    requestPermission,
-    approveRejectPermission,
     getMatchHistory,
-    getMatchPermissions
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
@@ -69,15 +65,9 @@ managerRouter.put('/matches/:id/score', isAuthenticated, updateScore);
 managerRouter.put('/matches/:id/teams/:teamIndex/members', isAuthenticated, updateTeamMembers);
 managerRouter.put('/matches/:id/start', isAuthenticated, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, endMatch);
-managerRouter.put('/matches/:id/cancel', isAuthenticated, cancelMatch);
+managerRouter.put('/matches/:id/cancel', isAuthenticated, deleteMatch);
 managerRouter.get('/matches/table/:tableId', getMatchesByTable);
-
-// New APIs for enhanced match management
-managerRouter.post('/matches/verify-table', verifyTable);
-managerRouter.post('/matches/join', isAuthenticated, joinMatch);
-managerRouter.post('/matches/:id/request-permission', isAuthenticated, requestPermission);
-managerRouter.put('/matches/:id/permission/:requestId', isAuthenticated, approveRejectPermission);
 managerRouter.get('/matches/history/:membershipId', getMatchHistory);
-managerRouter.get('/matches/:id/permissions', isAuthenticated, getMatchPermissions);
+
 
 export default managerRouter;
