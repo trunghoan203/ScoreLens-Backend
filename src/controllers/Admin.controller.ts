@@ -635,3 +635,25 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
+
+export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
+    try {
+        const adminId = req.admin?.adminId;
+        if (!adminId) {
+            res.status(401).json({ success: false, message: 'Unauthorized' });
+            return;
+        }
+        const admin = await Admin.findOneAndUpdate(
+            { adminId },
+            { status: 'pending', rejectedReason: null },
+            { new: true }
+        );
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+            return;
+        }
+        res.json({ success: true, admin });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
