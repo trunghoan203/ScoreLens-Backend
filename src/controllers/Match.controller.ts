@@ -1,27 +1,24 @@
 import { Request, Response } from 'express';
-import { Match, IMatch, IMatchTeam } from '../models/Match.model';
+import { Match, IMatchTeamMember, IMatch, IMatchTeam } from '../models/Match.model';
 import { Table } from '../models/Table.model';
 import { Membership } from '../models/Membership.model';
 import { generateMatchCode } from '../utils/generateCode';
+import { getIO } from '../socket';
+import { randomBytes } from 'crypto';
 
-// @desc    Tạo một trận đấu mới
-// @route   POST /api/matches
-// @access  Private (Manager hoặc Membership/Guest)
+// Tạo một trận đấu mới
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tableId, gameType, isAiAssisted, teams } = req.body;
-        const { managerId, membershipId, isGuest, guestId } = req as any; // Lấy từ middleware xác thực
+        const { tableId, gameType, createdByMembershipId, isAiAssisted, teams  } = req.body;
 
-        // 1. Kiểm tra đầu vào
         if (!tableId || !gameType || !teams || !Array.isArray(teams) || teams.length < 2) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp đủ thông tin: tableId, gameType, teams (ít nhất 2 đội).'
+                message: 'Vui lòng cung cấp đủ thông tin: tableId, gameType, teams.'
             });
             return;
         }
 
-        // 2. Kiểm tra bàn có tồn tại và đang rảnh không?
         const table = await Table.findOne({ tableId: tableId });
         if (!table) {
             res.status(404).json({
@@ -38,8 +35,58 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        // 3. Tạo matchId và matchCode duy nhất
-        const matchId = `MT-${Date.now()}-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+        let creatorMembership = null;
+        if (createdByMembershipId) {
+            creatorMembership = await Membership.findOne({ membershipId: createdByMembershipId });
+            if (!creatorMembership) {
+                res.status(400).json({ success: false, message: `Người tạo với ID ${createdByMembershipId} không tồn tại.` });
+                return;
+            }
+        }
+
+        const processedTeams: IMatchTeam[] = [];
+        for (const inputTeam of teams) {
+            const processedMembers: IMatchTeamMember[] = [];
+            if (inputTeam.members && Array.isArray(inputTeam.members)) {
+                for (const member of inputTeam.members) {
+                    if (member.membershipName) {
+                        const foundMembership = await Membership.findOne({ fullName: member.membershipName });
+                        if (foundMembership) {
+                            processedMembers.push({
+                                membershipId: foundMembership.membershipId,
+                                membershipName: foundMembership.fullName,
+                            });
+                        } else {
+                            processedMembers.push({ guestName: member.membershipName });
+                        }
+                    } 
+                    else if (member.guestName) {
+                        processedMembers.push({ guestName: member.guestName });
+                    }
+                }
+            }
+            processedTeams.push({
+                teamName: inputTeam.teamName,
+                score: 0,
+                isWinner: false,
+                members: processedMembers
+            });
+        }
+
+        if (creatorMembership) {
+            const isCreatorInTeam = processedTeams.some(team => 
+                team.members.some(m => m.membershipId === creatorMembership.membershipId)
+            );
+            
+            if (!isCreatorInTeam && processedTeams.length > 0) {
+                processedTeams[0].members.unshift({
+                    membershipId: creatorMembership.membershipId,
+                    membershipName: creatorMembership.fullName,
+                });
+            }
+        }
+
+        const matchId = `MT-${Date.now()}`;
         let matchCode = '';
         let isCodeUnique = false;
         while (!isCodeUnique) {
@@ -48,47 +95,41 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             if (!existingMatch) {
                 isCodeUnique = true;
             }
+        };
+
+        let guestToken: string | null = null;
+        if (!createdByMembershipId) {
+            guestToken = randomBytes(16).toString('hex');
         }
 
-        // 4. Tạo đối tượng trận đấu mới
         const newMatch = new Match({
             matchId,
             tableId,
             gameType,
             isAiAssisted,
-            teams,
+            teams: processedTeams,
             matchCode,
-            managerId: managerId || null,
-            createdByMembershipId: membershipId || null,
-            // Nếu là guest, lưu thông tin guest
-            ...(isGuest && { guestId }),
-            startTime: new Date(),
+            createdByMembershipId: createdByMembershipId || null,
+            creatorGuestToken: guestToken,
             status: 'pending'
         });
-
+        
         const savedMatch = await newMatch.save();
-
-        // 5. Cập nhật trạng thái của bàn thành "inuse"
         await Table.findOneAndUpdate({ tableId: tableId }, { status: 'inuse' });
 
-        res.status(201).json({
-            success: true,
-            data: savedMatch
+        res.status(201).json({ 
+            success: true, 
+            data: savedMatch.toObject(),
+            creatorGuestToken: guestToken
         });
 
     } catch (error: any) {
         console.error('Error creating match:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server khi tạo trận đấu',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi server khi tạo trận đấu', error: error.message });
     }
 };
 
-// @desc    Lấy thông tin chi tiết một trận đấu
-// @route   GET /api/matches/:id
-// @access  Public
+// Lấy thông tin chi tiết một trận đấu
 export const getMatchById = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = await Match.findOne({ matchId: req.params.id });
@@ -115,9 +156,7 @@ export const getMatchById = async (req: Request, res: Response): Promise<void> =
     }
 };
 
-// @desc    Lấy trận đấu theo mã
-// @route   GET /api/matches/code/:matchCode
-// @access  Public
+// Lấy trận đấu theo mã
 export const getMatchByCode = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchCode } = req.params;
@@ -146,13 +185,11 @@ export const getMatchByCode = async (req: Request, res: Response): Promise<void>
     }
 };
 
-// @desc    Cập nhật điểm số cho một đội
-// @route   PUT /api/matches/:id/score
-// @access  Private
+// Cập nhật điểm số cho một đội
 export const updateScore = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { teamIndex, score, notes } = req.body;
-        const matchId = req.params.id;
+        const { teamIndex, score } = req.body;
+        const match = (req as any).match as IMatch;
 
         if (teamIndex === undefined || score === undefined) {
             res.status(400).json({
@@ -162,7 +199,6 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        const match = await Match.findOne({ matchId: matchId });
         if (!match) {
             res.status(404).json({
                 success: false,
@@ -171,8 +207,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        // Kiểm tra trạng thái trận đấu
-        if (match.status === 'completed' || match.status === 'cancelled') {
+        if (match.status === 'completed') {
             res.status(400).json({
                 success: false,
                 message: 'Không thể cập nhật thông tin trận đấu đã hoàn thành hoặc đã bị hủy.'
@@ -188,15 +223,11 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        // Cập nhật điểm số
         match.teams[teamIndex].score = score;
 
-        // Cập nhật ghi chú nếu có
-        if (notes) {
-            (match as any).notes = notes;
-        }
-
         const updatedMatch = await match.save();
+
+        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
         res.status(200).json({
             success: true,
@@ -212,16 +243,13 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// @desc    Cập nhật thành viên trong đội
-// @route   PUT /api/matches/:id/teams/:teamIndex/members
-// @access  Private
+// Cập nhật thành viên trong đội
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { teamIndex } = req.params;
-        const { members } = req.body || {};
-        const matchId = req.params.id;
+        const { members } = req.body;
+        const match = (req as any).match as IMatch;
 
-        // Kiểm tra req.body có tồn tại không
         if (!req.body) {
             res.status(400).json({
                 success: false,
@@ -238,7 +266,6 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        const match = await Match.findOne({ matchId: matchId });
         if (!match) {
             res.status(404).json({
                 success: false,
@@ -247,8 +274,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Kiểm tra trạng thái trận đấu
-        if (match.status === 'completed' || match.status === 'cancelled') {
+        if (match.status === 'completed') {
             res.status(400).json({
                 success: false,
                 message: 'Không thể cập nhật thông tin trận đấu đã hoàn thành hoặc đã bị hủy.'
@@ -265,10 +291,11 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Cập nhật thành viên
         match.teams[teamIndexNum].members = members;
 
         const updatedMatch = await match.save();
+
+        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
         res.status(200).json({
             success: true,
@@ -284,14 +311,11 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
     }
 };
 
-// @desc    Bắt đầu trận đấu
-// @route   PUT /api/matches/:id/start
-// @access  Private
+// Bắt đầu trận đấu
 export const startMatch = async (req: Request, res: Response): Promise<void> => {
     try {
-        const matchId = req.params.id;
+        const match = (req as any).match as IMatch;
 
-        const match = await Match.findOne({ matchId: matchId });
         if (!match) {
             res.status(404).json({
                 success: false,
@@ -308,7 +332,6 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Kiểm tra xem có đủ thành viên không
         const hasMembers = match.teams.every(team => team.members.length > 0);
         if (!hasMembers) {
             res.status(400).json({
@@ -322,6 +345,8 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
         match.startTime = new Date();
 
         const updatedMatch = await match.save();
+
+        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
         res.status(200).json({
             success: true,
@@ -337,13 +362,10 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-// @desc    Kết thúc trận đấu
-// @route   PUT /api/matches/:id/end
-// @access  Private
+// Kết thúc trận đấu
 export const endMatch = async (req: Request, res: Response): Promise<void> => {
     try {
-        const matchId = req.params.id;
-        const match = await Match.findOne({ matchId: matchId });
+        const match = (req as any).match as IMatch;
 
         if (!match) {
             res.status(404).json({
@@ -361,15 +383,6 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        if (match.status === 'cancelled') {
-            res.status(400).json({
-                success: false,
-                message: 'Không thể kết thúc trận đấu đã bị hủy.'
-            });
-            return;
-        }
-
-        // Xác định đội thắng
         let winningTeamIndex = -1;
         let highestScore = -1;
 
@@ -380,18 +393,17 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
             }
         });
 
-        // Cập nhật đội thắng
         if (winningTeamIndex >= 0) {
             match.teams[winningTeamIndex].isWinner = true;
         }
 
-        // Cập nhật trạng thái trận đấu
         match.status = 'completed';
         match.endTime = new Date();
 
         const finishedMatch = await match.save();
 
-        // Cập nhật trạng thái bàn về 'empty'
+        getIO().to(finishedMatch.matchId).emit('match_updated', finishedMatch);
+
         await Table.findOneAndUpdate({ tableId: match.tableId }, { status: 'empty' });
 
         res.status(200).json({
@@ -408,61 +420,33 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-// @desc    Hủy trận đấu
-// @route   PUT /api/matches/:id/cancel
-// @access  Private
-export const cancelMatch = async (req: Request, res: Response): Promise<void> => {
+// Xóa trận đấu
+export const deleteMatch = async (req: Request, res: Response): Promise<void> => {
     try {
-        const matchId = req.params.id;
-        const match = await Match.findOne({ matchId: matchId });
+        const match = (req as any).match as IMatch;
+        const matchIdToDelete = match.matchId;
 
-        if (!match) {
-            res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy trận đấu.'
-            });
-            return;
-        }
-
-        if (match.status === 'completed') {
-            res.status(400).json({
-                success: false,
-                message: 'Không thể hủy trận đấu đã kết thúc.'
-            });
-            return;
-        }
-
-        if (match.status === 'cancelled') {
-            res.status(400).json({
-                success: false,
-                message: 'Trận đấu đã bị hủy rồi.'
-            });
-            return;
-        }
-
-        match.status = 'cancelled';
-        const cancelledMatch = await match.save();
-
-        // Cập nhật trạng thái bàn về 'empty'
         await Table.findOneAndUpdate({ tableId: match.tableId }, { status: 'empty' });
+
+        await Match.deleteOne({ matchId: match.matchId });
+
+        getIO().to(matchIdToDelete).emit('match_deleted', { matchId: matchIdToDelete, message: 'Trận đấu đã bị người tham gia hủy.' });
 
         res.status(200).json({
             success: true,
-            data: cancelledMatch
+            message: 'Trận đấu đã được xóa thành công.'
         });
     } catch (error: any) {
-        console.error('Error cancelling match:', error);
+        console.error('Error deleting match:', error);
         res.status(500).json({
             success: false,
-            message: 'Lỗi server',
+            message: 'Lỗi server khi xóa trận đấu',
             error: error.message
         });
     }
 };
 
-// @desc    Lấy danh sách trận đấu theo bàn
-// @route   GET /api/matches/table/:tableId
-// @access  Public
+// Lấy danh sách trận đấu theo bàn
 export const getMatchesByTable = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tableId } = req.params;
@@ -500,9 +484,7 @@ export const getMatchesByTable = async (req: Request, res: Response): Promise<vo
     }
 };
 
-// @desc    Xác thực bàn chơi qua QR code
-// @route   POST /api/matches/verify-table
-// @access  Public
+// Xác thực bàn chơi qua QR code
 export const verifyTable = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tableId } = req.body;
@@ -520,6 +502,15 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             res.status(404).json({
                 success: false,
                 message: 'Không tìm thấy bàn chơi.'
+            });
+            return;
+        }
+
+        // Kiểm tra bàn có đang rảnh không
+        if (table.status !== 'empty') {
+            res.status(409).json({
+                success: false,
+                message: 'Bàn này hiện đang được sử dụng.'
             });
             return;
         }
@@ -544,271 +535,124 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// @desc    Tham gia trận đấu bằng mã code hoặc QR
-// @route   POST /api/matches/join
-// @access  Private (Membership/Guest)
-export const joinMatch = async (req: Request, res: Response): Promise<void> => {
+//Xác thực membership
+export const verifyMembership = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { matchCode } = req.body;
-        const { membershipId, isGuest, guestId } = req as any;
+        const { phoneNumber } = req.body;
 
-        if (!matchCode) {
+        if (!phoneNumber) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp mã trận đấu.'
+                message: 'Vui lòng cung cấp số điện thoại.'
             });
+            return;
+        }
+
+        const membership = await Membership.findOne({ phoneNumber });
+        
+        if (!membership) {
+            res.status(200).json({
+                success: true,
+                isMember: false,
+                message: 'Không tìm thấy hội viên, bạn có thể chơi với vai trò khách.'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            isMember: true,
+            data: {
+                membershipId: membership.membershipId,
+                fullName: membership.fullName,
+                phoneNumber: membership.phoneNumber
+            }
+        });
+    } catch (error: any) {
+        console.error('Error verifying membership:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
+    }
+};
+
+// Tham gia trận đấu bằng mã code hoặc QR
+export const joinMatch = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { matchCode, teamIndex = 0, joinerInfo } = req.body;
+
+        if (!matchCode || !joinerInfo || (!joinerInfo.phoneNumber && !joinerInfo.guestName)) {
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp matchCode và joinerInfo (phoneNumber hoặc guestName).' });
             return;
         }
 
         const match = await Match.findOne({ matchCode: matchCode });
         if (!match) {
-            res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy trận đấu với mã này.'
-            });
+            res.status(404).json({ success: false, message: 'Không tìm thấy trận đấu với mã này.' });
             return;
         }
-
-        if (match.status === 'completed' || match.status === 'cancelled') {
-            res.status(400).json({
-                success: false,
-                message: 'Không thể tham gia trận đấu đã kết thúc hoặc bị hủy.'
-            });
+        if (match.status !== 'pending') {
+            res.status(400).json({ success: false, message: 'Chỉ có thể tham gia trận đấu đang ở trạng thái chờ.' });
             return;
         }
+        if (teamIndex < 0 || teamIndex >= match.teams.length) {
+            res.status(400).json({ success: false, message: 'Chỉ số đội không hợp lệ.' });
+            return;
+        }
+        
+        let newMember: IMatchTeamMember;
+        let isAlreadyJoined = false;
 
-        // Kiểm tra xem người dùng đã tham gia chưa
-        const isAlreadyJoined = match.teams.some(team =>
-            team.members.some(member =>
-                (membershipId && member.membershipId === membershipId) ||
-                (isGuest && member.guestId === guestId)
-            )
-        );
+        if (joinerInfo.phoneNumber) {
+            const membership = await Membership.findOne({ phoneNumber: joinerInfo.phoneNumber });
+            if (!membership) {
+                res.status(404).json({ success: false, message: `Không tìm thấy hội viên với SĐT ${joinerInfo.phoneNumber}.` });
+                return;
+            }
+            isAlreadyJoined = match.teams.some(team => team.members.some(member => member.membershipId === membership.membershipId));
+            newMember = { membershipId: membership.membershipId, membershipName: membership.fullName };
+        } else {
+            newMember = { guestName: joinerInfo.guestName };
+        }
 
         if (isAlreadyJoined) {
-            res.status(400).json({
-                success: false,
-                message: 'Bạn đã tham gia trận đấu này rồi.'
-            });
+            res.status(409).json({ success: false, message: 'Bạn đã tham gia trận đấu này rồi.' });
             return;
         }
 
-        res.status(200).json({
-            success: true,
-            data: match,
-            message: 'Tham gia trận đấu thành công.'
-        });
+        match.teams[teamIndex].members.push(newMember);
+        const updatedMatch = await match.save();
+
+        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
+
+        res.status(200).json({ success: true, data: updatedMatch, message: 'Tham gia trận đấu thành công.' });
     } catch (error: any) {
         console.error('Error joining match:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi server khi tham gia trận đấu', error: error.message });
     }
 };
 
-// @desc    Yêu cầu quyền sửa thông tin trận đấu
-// @route   POST /api/matches/:id/request-permission
-// @access  Private
-export const requestPermission = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { matchId } = req.params;
-        const { action, data, reason } = req.body;
-        const { membershipId, isGuest, guestId } = req as any;
 
-        if (!action || !data) {
-            res.status(400).json({
-                success: false,
-                message: 'Vui lòng cung cấp action và data.'
-            });
-            return;
-        }
-
-        const match = await Match.findOne({ matchId: matchId });
-        if (!match) {
-            res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy trận đấu.'
-            });
-            return;
-        }
-
-        if (match.status === 'completed' || match.status === 'cancelled') {
-            res.status(400).json({
-                success: false,
-                message: 'Không thể yêu cầu quyền cho trận đấu đã kết thúc hoặc bị hủy.'
-            });
-            return;
-        }
-
-        // Kiểm tra xem người yêu cầu có phải là người tạo trận không
-        const isCreator = match.createdByMembershipId === membershipId ||
-            (isGuest && match.guestId === guestId);
-
-        if (isCreator) {
-            res.status(400).json({
-                success: false,
-                message: 'Người tạo trận không cần yêu cầu quyền.'
-            });
-            return;
-        }
-
-        // Tạo request permission
-        const permissionRequest = {
-            id: `PR-${Date.now()}-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
-            requesterId: membershipId || guestId,
-            requesterType: isGuest ? 'guest' : 'membership',
-            action: action,
-            data: data,
-            reason: reason || '',
-            status: 'pending',
-            createdAt: new Date()
-        };
-
-        // Thêm vào match (cần cập nhật model để có field permissionRequests)
-        if (!(match as any).permissionRequests) {
-            (match as any).permissionRequests = [];
-        }
-        (match as any).permissionRequests.push(permissionRequest);
-
-        await match.save();
-
-        res.status(200).json({
-            success: true,
-            data: permissionRequest,
-            message: 'Yêu cầu quyền đã được gửi.'
-        });
-    } catch (error: any) {
-        console.error('Error requesting permission:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
-    }
-};
-
-// @desc    Phê duyệt/từ chối yêu cầu quyền
-// @route   PUT /api/matches/:id/permission/:requestId
-// @access  Private (Chỉ người tạo trận)
-export const approveRejectPermission = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { matchId, requestId } = req.params;
-        const { action, reason } = req.body; // action: 'approve' hoặc 'reject'
-        const { membershipId, isGuest, guestId } = req as any;
-
-        if (!action || !['approve', 'reject'].includes(action)) {
-            res.status(400).json({
-                success: false,
-                message: 'Action phải là approve hoặc reject.'
-            });
-            return;
-        }
-
-        const match = await Match.findOne({ matchId: matchId });
-        if (!match) {
-            res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy trận đấu.'
-            });
-            return;
-        }
-
-        // Kiểm tra xem người thực hiện có phải là người tạo trận không
-        const isCreator = match.createdByMembershipId === membershipId ||
-            (isGuest && match.guestId === guestId);
-
-        if (!isCreator) {
-            res.status(403).json({
-                success: false,
-                message: 'Chỉ người tạo trận mới có quyền phê duyệt/từ chối.'
-            });
-            return;
-        }
-
-        const permissionRequests = (match as any).permissionRequests || [];
-        const requestIndex = permissionRequests.findIndex((req: any) => req.id === requestId);
-
-        if (requestIndex === -1) {
-            res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy yêu cầu quyền.'
-            });
-            return;
-        }
-
-        const request = permissionRequests[requestIndex];
-        if (request.status !== 'pending') {
-            res.status(400).json({
-                success: false,
-                message: 'Yêu cầu này đã được xử lý rồi.'
-            });
-            return;
-        }
-
-        // Cập nhật trạng thái yêu cầu
-        request.status = action;
-        request.reviewedBy = membershipId || guestId;
-        request.reviewedAt = new Date();
-        request.reviewReason = reason || '';
-
-        // Nếu được phê duyệt, thực hiện thay đổi
-        if (action === 'approve') {
-            if (request.action === 'updateScore') {
-                const { teamIndex, score } = request.data;
-                if (teamIndex >= 0 && teamIndex < match.teams.length) {
-                    match.teams[teamIndex].score = score;
-                }
-            } else if (request.action === 'updateTeamMembers') {
-                const { teamIndex, members } = request.data;
-                if (teamIndex >= 0 && teamIndex < match.teams.length) {
-                    match.teams[teamIndex].members = members;
-                }
-            }
-        }
-
-        await match.save();
-
-        res.status(200).json({
-            success: true,
-            data: request,
-            message: `Yêu cầu đã được ${action === 'approve' ? 'phê duyệt' : 'từ chối'}.`
-        });
-    } catch (error: any) {
-        console.error('Error approving/rejecting permission:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
-    }
-};
-
-// @desc    Lấy lịch sử trận đấu của membership
-// @route   GET /api/matches/history/:membershipId
-// @access  Private
 export const getMatchHistory = async (req: Request, res: Response): Promise<void> => {
     try {
         const { membershipId } = req.params;
         const { limit = 10, page = 1 } = req.query;
 
-        const matches = await Match.find({
+         const query = {
             $or: [
                 { createdByMembershipId: membershipId },
                 { 'teams.members.membershipId': membershipId }
             ]
-        })
+        };
+
+        const matches = await Match.find(query)
             .sort({ createdAt: -1 })
             .limit(parseInt(limit as string))
             .skip((parseInt(page as string) - 1) * parseInt(limit as string));
 
-        const total = await Match.countDocuments({
-            $or: [
-                { createdByMembershipId: membershipId },
-                { 'teams.members.membershipId': membershipId }
-            ]
-        });
+        const total = await Match.countDocuments(query);
 
         res.status(200).json({
             success: true,
@@ -830,47 +674,3 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
     }
 };
 
-// @desc    Lấy danh sách yêu cầu quyền của trận đấu
-// @route   GET /api/matches/:id/permissions
-// @access  Private (Chỉ người tạo trận)
-export const getMatchPermissions = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { matchId } = req.params;
-        const { membershipId, isGuest, guestId } = req as any;
-
-        const match = await Match.findOne({ matchId: matchId });
-        if (!match) {
-            res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy trận đấu.'
-            });
-            return;
-        }
-
-        // Kiểm tra xem người thực hiện có phải là người tạo trận không
-        const isCreator = match.createdByMembershipId === membershipId ||
-            (isGuest && match.guestId === guestId);
-
-        if (!isCreator) {
-            res.status(403).json({
-                success: false,
-                message: 'Chỉ người tạo trận mới có quyền xem danh sách yêu cầu.'
-            });
-            return;
-        }
-
-        const permissionRequests = (match as any).permissionRequests || [];
-
-        res.status(200).json({
-            success: true,
-            data: permissionRequests
-        });
-    } catch (error: any) {
-        console.error('Error getting match permissions:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
-    }
-};
