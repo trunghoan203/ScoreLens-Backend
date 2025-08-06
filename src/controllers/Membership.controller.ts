@@ -82,3 +82,75 @@ export const deleteMembership = async (req: Request & { manager?: any }, res: Re
         return;
     }
 };
+
+// @desc    Tìm kiếm membership theo mã
+// @route   GET /api/memberships/search/:membershipId
+// @access  Public
+export const searchMembership = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { membershipId } = req.params;
+
+        if (!membershipId) {
+            res.status(400).json({
+                success: false,
+                message: 'Vui lòng cung cấp membershipId.'
+            });
+            return;
+        }
+
+        const membership = await Membership.findOne({ membershipId });
+        if (!membership) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy hội viên với mã này.'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                membershipId: membership.membershipId,
+                fullName: membership.fullName,
+                phoneNumber: membership.phoneNumber,
+                brandId: membership.brandId
+            }
+        });
+    } catch (error: any) {
+        console.error('Error searching membership:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Lấy thông tin membership
+// @route   GET /api/memberships/:id
+// @access  Public
+export const getMembershipById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const membership = await Membership.findById(req.params.id);
+
+        if (!membership) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy hội viên.'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: membership
+        });
+    } catch (error: any) {
+        console.error('Error getting membership:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server',
+            error: error.message
+        });
+    }
+};

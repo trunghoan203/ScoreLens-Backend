@@ -13,6 +13,7 @@ const adminSchema = new Schema<IAdmin>({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  rejectedReason: { type: String, default: null },
   isVerified: { type: Boolean, default: false },
   activationCode: { type: String, select: false },
   activationCodeExpires: { type: Date, select: false },
@@ -34,14 +35,31 @@ adminSchema.methods.comparePassword = async function (enteredPassword: string): 
 };
 
 adminSchema.methods.signAccessToken = function (): string {
-  return jwt.sign({ adminId: this.adminId }, process.env.ACCESS_TOKEN as string, {
-    expiresIn: '15m'
+  const secret = process.env.ACCESS_TOKEN;
+  const expiresIn = process.env.ACCESS_TOKEN_EXPIRE || '1d';
+  if (!secret) {
+    throw new Error('ACCESS_TOKEN is not defined in environment variables');
+  }
+  return (jwt as any).sign({ adminId: this.adminId }, secret, {
+    expiresIn
   });
 };
 
 adminSchema.methods.signRefreshToken = function (): string {
-  return jwt.sign({ adminId: this.adminId }, process.env.REFRESH_TOKEN as string, {
-    expiresIn: '7d'
+  const secret = process.env.REFRESH_TOKEN;
+  const expiresIn = process.env.REFRESH_TOKEN_EXPIRE || '7d';
+  if (!secret) {
+    throw new Error('REFRESH_TOKEN is not defined in environment variables');
+  }
+  return (jwt as any).sign({ adminId: this.adminId }, secret, {
+    expiresIn
+  });
+};
+
+adminSchema.methods.signRememberMeToken = function (): string {
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.REFRESH_TOKEN || 'fallback-refresh-secret';
+  return (jwt as any).sign({ adminId: this.adminId }, secret, {
+    expiresIn: process.env.JWT_REMEMBER_ME_EXPIRES_IN || '30d'
   });
 };
 

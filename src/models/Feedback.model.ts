@@ -11,12 +11,10 @@ export interface IFeedback extends Document {
     content: string;
     status: 'pending' | 'managerP' | 'adminP' | 'superadminP' | 'resolved';
     needSupport: boolean;
-    note?: string;
     history: Array<{
         byId: string;
         byName: string;
         byRole: string;
-        action: string;
         note?: string;
         date: Date;
     }>;
@@ -40,19 +38,27 @@ const FeedbackSchema = new Schema<IFeedback>(
             default: 'pending'
         },
         needSupport: { type: Boolean, default: false },
-        note: { type: String },
         history: [
             {
                 byId: String,
                 byName: String,
                 byRole: String,
-                action: String,
                 note: String,
                 date: { type: Date, default: Date.now }
             }
         ]
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+        toJSON: {
+            transform: function (doc, ret) {
+                if (ret.history) {
+                    ret.history.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                }
+                return ret;
+            }
+        }
+    }
 );
 
 FeedbackSchema.pre('save', function (this: IFeedback, next) {

@@ -1,9 +1,22 @@
 import express from 'express';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
-import { listTables, createTable, updateTable, deleteTable } from '../controllers/Table.controller';
+import { listTables, createTable, updateTable, deleteTable, getTableById, getTablesByClub } from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import { listCameras, createCamera, updateCamera, deleteCamera } from '../controllers/Camera.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
+import {
+    createMatch,
+    getMatchById,
+    getMatchByCode,
+    updateScore,
+    updateTeamMembers,
+    startMatch,
+    endMatch,
+    deleteMatch,
+    getMatchesByTable,
+    verifyTable,
+    getMatchHistory,
+} from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 
 const managerRouter = express.Router();
@@ -22,6 +35,11 @@ managerRouter.post('/table', isAuthenticated, createTable);
 managerRouter.put('/table/:tableId', isAuthenticated, updateTable);
 managerRouter.delete('/table/:tableId', isAuthenticated, deleteTable);
 
+// Public table routes (không cần xác thực)
+managerRouter.post('/table/verify', verifyTable);
+managerRouter.get('/table/:id', getTableById);
+managerRouter.get('/table/club/:clubId', getTablesByClub);
+
 // Membership management routes for manager
 managerRouter.get('/membership', isAuthenticated, listMemberships);
 managerRouter.post('/membership', isAuthenticated, createMembership);
@@ -38,5 +56,18 @@ managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
 managerRouter.get('/feedback', isAuthenticated, getFeedbacks);
 managerRouter.get('/feedback/:feedbackId', isAuthenticated, getFeedbackDetail);
 managerRouter.put('/feedback/:feedbackId', isAuthenticated, updateFeedback);
+
+// Match management routes for manager
+managerRouter.post('/matches', isAuthenticated, createMatch);
+managerRouter.get('/matches/:id', getMatchById);
+managerRouter.get('/matches/code/:matchCode', getMatchByCode);
+managerRouter.put('/matches/:id/score', isAuthenticated, updateScore);
+managerRouter.put('/matches/:id/teams/:teamIndex/members', isAuthenticated, updateTeamMembers);
+managerRouter.put('/matches/:id/start', isAuthenticated, startMatch);
+managerRouter.put('/matches/:id/end', isAuthenticated, endMatch);
+managerRouter.put('/matches/:id/cancel', isAuthenticated, deleteMatch);
+managerRouter.get('/matches/table/:tableId', getMatchesByTable);
+managerRouter.get('/matches/history/:membershipId', getMatchHistory);
+
 
 export default managerRouter;

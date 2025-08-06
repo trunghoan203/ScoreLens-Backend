@@ -97,7 +97,7 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
 export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
 
         if (!email || !password) {
             res.status(400).json({ success: false, message: 'Please provide email and password' });
@@ -124,20 +124,101 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
         admin.lastLogin = new Date();
         await admin.save();
 
-        sendToken(admin, 200, res);
+        // Tạo access token
+        const accessToken = admin.signAccessToken();
+        
+        // Tạo refresh token với remember me option
+        const { RememberPasswordService } = await import('../services/RememberPassword.service');
+        const { token: refreshToken, expiresAt } = await RememberPasswordService.createRefreshToken(
+            admin.adminId, 
+            rememberMe === true
+        );
+
+        // Tính thời gian hết hạn
+        const accessTokenExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN || '1d';
+        const expiresIn = parseExpiresIn(accessTokenExpiresIn);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                accessToken,
+                refreshToken,
+                expiresIn,
+                refreshExpiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
+                admin: {
+                    id: admin.adminId,
+                    email: admin.email,
+                    fullName: admin.fullName,
+                    brandId: admin.brandId
+                }
+            }
+        });
 
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
+// Helper function để parse expiresIn
+function parseExpiresIn(expiresIn: string): number {
+    if (expiresIn.includes('d')) {
+        return parseInt(expiresIn) * 24 * 60 * 60;
+    } else if (expiresIn.includes('h')) {
+        return parseInt(expiresIn) * 60 * 60;
+    } else if (expiresIn.includes('m')) {
+        return parseInt(expiresIn) * 60;
+    } else {
+        return parseInt(expiresIn);
+    }
+}
+
 export const logoutAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
+        const { refreshToken } = req.body;
+        
+        if (refreshToken) {
+            const { RememberPasswordService } = await import('../services/RememberPassword.service');
+            await RememberPasswordService.revokeRefreshToken(refreshToken);
+        }
+        
         res.cookie('access_token', '', { maxAge: 1 });
         res.cookie('refresh_token', '', { maxAge: 1 });
         res.status(200).json({ success: true, message: 'Logged out successfully' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            res.status(400).json({ success: false, message: 'Refresh token is required' });
+            return;
+        }
+
+        const { RememberPasswordService } = await import('../services/RememberPassword.service');
+        const { accessToken, refreshToken: newRefreshToken } = await RememberPasswordService.refreshAccessToken(refreshToken);
+
+        const accessTokenExpiresIn = process.env.JWT_ACCESS_EXPIRES_IN || '1d';
+        const expiresIn = parseExpiresIn(accessTokenExpiresIn);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                accessToken,
+                refreshToken: newRefreshToken,
+                expiresIn
+            }
+        });
+
+    } catch (error: any) {
+        if (error.message.includes('Invalid') || error.message.includes('expired') || error.message.includes('revoked')) {
+            res.status(401).json({ success: false, message: error.message });
+        } else {
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
     }
 };
 

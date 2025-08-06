@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 import app from './app';
 import { connectDB } from './utils/db';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import { initializeSocket } from './socket';
 
 dotenv.config();
 
@@ -11,9 +14,19 @@ export const startServer = async () => {
 
         console.log('MongoDB database connection established successfully');
 
-        app?.listen(process.env.PORT, () => {
+        const httpServer = http.createServer(app);
+        const io = new SocketIOServer(httpServer, {
+            cors: {
+                origin: process.env.ORIGIN?.split(',') || ["http://localhost:3000"],
+                methods: ["GET", "POST"]
+            }
+        });
+        initializeSocket(io);
+        const PORT = process.env.PORT;
+        httpServer.listen(PORT, () => {
             console.log(`Server is listening on port: http://localhost:${process.env.PORT} ....`);
         });
+        
     } catch (error: any) {
         console.log('MongoDB connection error. Please make sure MongoDB is running: ');
     }

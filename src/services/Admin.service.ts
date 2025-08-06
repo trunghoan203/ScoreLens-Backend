@@ -1,8 +1,6 @@
 import { Manager } from '../models/Manager.model';
 import { IManager } from '../interfaces/Manager.interface';
 import ErrorHandler from '../utils/ErrorHandler';
-import { Match } from '../models/Match.model';
-import { MatchEvent } from '../models/MatchEvent.model';
 import { Club } from '../models/Club.model';
 
 interface CreateManagerInput {

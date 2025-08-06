@@ -16,7 +16,11 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN as string) as { sAdminId?: string; adminId?: string; managerId?: string; iat: number, exp: number };
+    const secret = process.env.ACCESS_TOKEN;
+    if (!secret) {
+      throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+    }
+    const decoded = (jwt as any).verify(token, secret) as { sAdminId?: string; adminId?: string; managerId?: string; iat: number, exp: number };
 
     if (decoded.sAdminId) {
       const superAdmin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
@@ -45,7 +49,29 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
     }
 
     next();
-  } catch (error) {
-    res.status(401).json({ success: false, message: 'Not authorized to access this resource.' });
+  } catch (error: any) {
+    console.error('Auth middleware error:', error);
+
+    // Phân loại lỗi cụ thể
+    if (error.name === 'TokenExpiredError') {
+      res.status(401).json({
+        success: false,
+        message: 'Token has expired, please login again.',
+        code: 'TOKEN_EXPIRED'
+      });
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token format.',
+        code: 'INVALID_TOKEN'
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        message: 'Not authorized to access this resource.',
+        code: 'UNAUTHORIZED',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
 };
