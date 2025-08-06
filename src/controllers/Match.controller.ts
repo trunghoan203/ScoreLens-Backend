@@ -625,17 +625,6 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         match.teams[teamIndex].members.push(newMember);
         const updatedMatch = await match.save();
 
-        console.log('[DEBUG] -----------------------------------------');
-console.log('[DEBUG] API joinMatch successful. Preparing to emit socket event.');
-console.log('[DEBUG] Attempting to emit to room ID:', updatedMatch.matchId);
-console.log('[DEBUG] Event name to be emitted:', 'match_updated');
-// In ra một phần dữ liệu để chắc chắn nó không rỗng
-console.log('[DEBUG] Data to be emitted (partial):', { 
-    status: updatedMatch.status, 
-    teamsCount: updatedMatch.teams.length 
-});
-console.log('[DEBUG] -----------------------------------------');
-
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
         res.status(200).json({ success: true, data: updatedMatch, message: 'Tham gia trận đấu thành công.' });

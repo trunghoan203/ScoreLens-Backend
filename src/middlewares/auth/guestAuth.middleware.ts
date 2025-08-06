@@ -50,13 +50,11 @@ export const isGuestOrAuthenticated = async (req: Request, res: Response, next: 
 
 export const isGuestOnly = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        // Kiểm tra xem có token không
         let token = req.cookies?.access_token;
         if (!token) {
             token = req.header('Authorization')?.replace('Bearer ', '');
         }
 
-        // Nếu có token, từ chối truy cập
         if (token) {
             res.status(403).json({
                 success: false,
@@ -66,7 +64,6 @@ export const isGuestOnly = async (req: Request, res: Response, next: NextFunctio
             return;
         }
 
-        // Nếu không có token, cho phép truy cập như guest
         (req as any).isGuest = true;
         (req as any).guestId = `GUEST-${Date.now()}-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
 
