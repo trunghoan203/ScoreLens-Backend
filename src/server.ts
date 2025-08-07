@@ -17,8 +17,10 @@ export const startServer = async () => {
         const httpServer = http.createServer(app);
         const io = new SocketIOServer(httpServer, {
             cors: {
-                origin: process.env.ORIGIN?.split(',') || ["http://localhost:3000"],
-                methods: ["GET", "POST"]
+                origin: process.env.ORIGIN?.split(',') || ["http://localhost:3000", "https://scorelens-backend.onrender.com"],
+                methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+                allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+                credentials: true
             }
         });
         initializeSocket(io);
