@@ -11,6 +11,8 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
     try {
         const { tableId, gameType, createdByMembershipId, isAiAssisted, teams  } = req.body;
 
+        const { managerId } = req as any;
+
         if (!tableId || !gameType || !teams || !Array.isArray(teams) || teams.length < 2) {
             res.status(400).json({
                 success: false,
@@ -27,10 +29,18 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             });
             return;
         }
-        if (table.status !== 'empty') {
+        if (table.status == 'inuse') {
             res.status(409).json({
                 success: false,
                 message: 'Bàn này hiện đang được sử dụng.'
+            });
+            return;
+        }
+
+        if (table.status == 'maintenance') {
+            res.status(409).json({
+                success: false,
+                message: 'Bàn này hiện đang được bảo trì.'
             });
             return;
         }
@@ -49,15 +59,16 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             const processedMembers: IMatchTeamMember[] = [];
             if (inputTeam.members && Array.isArray(inputTeam.members)) {
                 for (const member of inputTeam.members) {
-                    if (member.membershipName) {
-                        const foundMembership = await Membership.findOne({ fullName: member.membershipName });
+                    if (member.phoneNumber) {
+                        const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                         if (foundMembership) {
                             processedMembers.push({
                                 membershipId: foundMembership.membershipId,
                                 membershipName: foundMembership.fullName,
                             });
                         } else {
-                            processedMembers.push({ guestName: member.membershipName });
+                            console.warn(`[createMatch] Membership with phone ${member.phoneNumber} not found. Treating as guest.`);
+                            processedMembers.push({ guestName: `Guest ${member.phoneNumber}` });
                         }
                     } 
                     else if (member.guestName) {
@@ -111,6 +122,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             matchCode,
             createdByMembershipId: createdByMembershipId || null,
             creatorGuestToken: guestToken,
+            managerId: managerId || null,
             status: 'pending'
         });
         
@@ -247,7 +259,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { teamIndex } = req.params;
-        const { members } = req.body;
+        const { members: rawMembers } = req.body;
         const match = (req as any).match as IMatch;
 
         if (!req.body) {
@@ -258,7 +270,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        if (!members || !Array.isArray(members)) {
+        if (!rawMembers || !Array.isArray(rawMembers)) {
             res.status(400).json({
                 success: false,
                 message: 'Members phải là một mảng.'
@@ -291,23 +303,35 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        match.teams[teamIndexNum].members = members;
+        const processedMembers: IMatchTeamMember[] = [];
+        for (const member of rawMembers) {
+            if (member.phoneNumber) {
+                const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
+                if (foundMembership) {
+                    processedMembers.push({
+                        membershipId: foundMembership.membershipId,
+                        membershipName: foundMembership.fullName,
+                    });
+                } else {
+                    console.warn(`Membership with ID ${member.phoneNumber} not found during team update.`);
+                }
+            } 
+            else if (member.guestName) {
+                processedMembers.push({
+                    guestName: member.guestName,
+                });
+            }
+        }
+
+        match.teams[teamIndexNum].members = processedMembers;
 
         const updatedMatch = await match.save();
 
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
-
-        res.status(200).json({
-            success: true,
-            data: updatedMatch
-        });
+        res.status(200).json({ success: true, data: updatedMatch });
     } catch (error: any) {
         console.error('Error updating team members:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
     }
 };
 
@@ -506,11 +530,18 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        // Kiểm tra bàn có đang rảnh không
-        if (table.status !== 'empty') {
+        if (table.status == 'inuse') {
             res.status(409).json({
                 success: false,
                 message: 'Bàn này hiện đang được sử dụng.'
+            });
+            return;
+        }
+
+        if (table.status == 'maintenance') {
+            res.status(409).json({
+                success: false,
+                message: 'Bàn này hiện đang được bảo trì.'
             });
             return;
         }
