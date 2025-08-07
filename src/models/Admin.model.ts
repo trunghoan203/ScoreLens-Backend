@@ -11,7 +11,7 @@ const adminSchema = new Schema<IAdmin>({
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
+    default: null
   },
   rejectedReason: { type: String, default: null },
   isVerified: { type: Boolean, default: false },
