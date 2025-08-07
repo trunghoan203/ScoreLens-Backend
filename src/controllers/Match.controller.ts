@@ -11,7 +11,8 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
     try {
         const { tableId, gameType, createdByMembershipId, isAiAssisted, teams  } = req.body;
 
-        const { managerId } = req as any;
+        const { manager } = req as any;
+        const managerIdFromToken = manager ? manager.managerId : null;
 
         if (!tableId || !gameType || !teams || !Array.isArray(teams) || teams.length < 2) {
             res.status(400).json({
@@ -109,7 +110,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         };
 
         let guestToken: string | null = null;
-        if (!createdByMembershipId) {
+        if (!createdByMembershipId && !managerIdFromToken) { 
             guestToken = randomBytes(16).toString('hex');
         }
 
@@ -122,7 +123,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             matchCode,
             createdByMembershipId: createdByMembershipId || null,
             creatorGuestToken: guestToken,
-            managerId: managerId || null,
+            managerId: managerIdFromToken,
             status: 'pending'
         });
         
@@ -704,4 +705,3 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
         });
     }
 };
-
