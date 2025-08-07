@@ -18,6 +18,7 @@ import {
     getMatchHistory,
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
+import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
 
 const managerRouter = express.Router();
 
@@ -59,15 +60,17 @@ managerRouter.put('/feedback/:feedbackId', isAuthenticated, updateFeedback);
 
 // Match management routes for manager
 managerRouter.post('/matches', isAuthenticated, createMatch);
-managerRouter.get('/matches/:id', getMatchById);
-managerRouter.get('/matches/code/:matchCode', getMatchByCode);
+managerRouter.get('/matches/:id', isAuthenticated, getMatchById);
+managerRouter.get('/matches/code/:matchCode', isAuthenticated, getMatchByCode);
 managerRouter.put('/matches/:id/score', isAuthenticated, updateScore);
-managerRouter.put('/matches/:id/teams/:teamIndex/members', isAuthenticated, updateTeamMembers);
-managerRouter.put('/matches/:id/start', isAuthenticated, startMatch);
-managerRouter.put('/matches/:id/end', isAuthenticated, endMatch);
-managerRouter.put('/matches/:id/cancel', isAuthenticated, deleteMatch);
-managerRouter.get('/matches/table/:tableId', getMatchesByTable);
-managerRouter.get('/matches/history/:membershipId', getMatchHistory);
+managerRouter.get('/matches/table/:tableId', isAuthenticated, getMatchesByTable);
+managerRouter.get('/matches/history/:membershipId', isAuthenticated, getMatchHistory);
+
+managerRouter.put('/matches/:id/score', isAuthenticated, findMatchById, updateScore);
+managerRouter.put('/matches/:id/teams/:teamIndex/members', isAuthenticated, findMatchById, updateTeamMembers);
+managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMatch);
+managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
+managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
 
 
 export default managerRouter;
