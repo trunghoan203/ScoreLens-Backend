@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tài khoản đã được duyệt</title>
+    <style type="text/css">
+        body { margin: 0; padding: 0; min-width: 100%; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; background-color: #fafafa; color: #222; }
+        .email-wrapper { max-width: 600px; margin: 0 auto; }
+        .email-header { background-color: #e27447; padding: 24px; color: #fff; }
+        .email-body { padding: 24px; background-color: #fff; }
+        .email-footer { background-color: #f6f6f6; padding: 24px; }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-header">
+            <h1>Tài khoản đã được duyệt</h1>
+        </div>
+        <div class="email-body">
+            <p>Xin chào <%= user.name %>,</p>
+            <p>Tài khoản của bạn đã được duyệt thành công. Bạn có thể đăng nhập và sử dụng hệ thống ScoreLens ngay bây giờ.</p>
+            <p>Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ <a href="mailto:support@scorelens.com">support@scorelens.com</a>.</p>
+        </div>
+        <div class="email-footer">
+            <p>Cảm ơn bạn đã sử dụng ScoreLens!</p>
+        </div>
+    </div>
+</body>
+</html>

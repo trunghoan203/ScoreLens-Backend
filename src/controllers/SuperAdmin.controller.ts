@@ -341,6 +341,12 @@ export const approveAdmin = async (req: Request, res: Response): Promise<void> =
     return;
   }
   res.json({ success: true, admin });
+  sendMail({
+    email: admin.email,
+    subject: 'ScoreLens - Tài khoản của bạn đã được duyệt.',
+    template: 'approved-success.ejs',
+    data: { user: { name: admin.fullName } }
+  }).catch(() => {});
 };
 
 // Reject admin
@@ -361,6 +367,12 @@ export const rejectAdmin = async (req: Request, res: Response): Promise<void> =>
     return;
   }
   res.json({ success: true, admin });
+  sendMail({
+    email: admin.email,
+    subject: 'ScoreLens - Tài khoản của bạn đã bị từ chối.',
+    template: 'rejected-success.ejs',
+    data: { user: { name: admin.fullName }, rejectedReason: admin.rejectedReason }
+  }).catch(() => {});
 };
 
 // List admins with filter/search
