@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const allowedOrigins = process.env.ORIGIN?.split(',') || [];
-allowedOrigins.push('http://localhost:3000');
+allowedOrigins.push('http://localhost:3000', 'https://scorelens-omega.vercel.app');
 
 // cors
 app.use(
