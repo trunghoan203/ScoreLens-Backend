@@ -62,7 +62,6 @@ managerRouter.put('/feedback/:feedbackId', isAuthenticated, updateFeedback);
 managerRouter.post('/matches', isAuthenticated, createMatch);
 managerRouter.get('/matches/:id', isAuthenticated, getMatchById);
 managerRouter.get('/matches/code/:matchCode', isAuthenticated, getMatchByCode);
-managerRouter.put('/matches/:id/score', isAuthenticated, updateScore);
 managerRouter.get('/matches/table/:tableId', isAuthenticated, getMatchesByTable);
 managerRouter.get('/matches/history/:membershipId', isAuthenticated, getMatchHistory);
 
