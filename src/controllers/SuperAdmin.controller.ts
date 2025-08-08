@@ -161,11 +161,18 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
 export const logoutSuperAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      const { RememberPasswordService } = await import('../services/RememberPassword.service');
+      await RememberPasswordService.revokeRefreshToken(refreshToken);
+    }
+
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
     res.status(200).json({ success: true, message: 'Logged out successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -347,10 +354,10 @@ export const approveAdmin = async (req: Request, res: Response): Promise<void> =
 export const rejectAdmin = async (req: Request, res: Response): Promise<void> => {
   const { adminId } = req.params;
   const { rejectedReason } = req.body;
-  
+
   const admin = await Admin.findOneAndUpdate(
     { adminId },
-    { 
+    {
       status: 'rejected',
       rejectedReason: rejectedReason || null
     },
