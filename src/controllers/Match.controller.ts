@@ -9,7 +9,7 @@ import { randomBytes } from 'crypto';
 // Tạo một trận đấu mới
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tableId, gameType, createdByMembershipId, isAiAssisted, teams  } = req.body;
+        const { tableId, gameType, createdByMembershipId, isAiAssisted, teams } = req.body;
 
         const { manager } = req as any;
         const managerIdFromToken = manager ? manager.managerId : null;
@@ -71,7 +71,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                             console.warn(`[createMatch] Membership with phone ${member.phoneNumber} not found. Treating as guest.`);
                             processedMembers.push({ guestName: `Guest ${member.phoneNumber}` });
                         }
-                    } 
+                    }
                     else if (member.guestName) {
                         processedMembers.push({ guestName: member.guestName });
                     }
@@ -86,10 +86,10 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         }
 
         if (creatorMembership) {
-            const isCreatorInTeam = processedTeams.some(team => 
+            const isCreatorInTeam = processedTeams.some(team =>
                 team.members.some(m => m.membershipId === creatorMembership.membershipId)
             );
-            
+
             if (!isCreatorInTeam && processedTeams.length > 0) {
                 processedTeams[0].members.unshift({
                     membershipId: creatorMembership.membershipId,
@@ -110,7 +110,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         };
 
         let guestToken: string | null = null;
-        if (!createdByMembershipId && !managerIdFromToken) { 
+        if (!createdByMembershipId && !managerIdFromToken) {
             guestToken = randomBytes(16).toString('hex');
         }
 
@@ -126,12 +126,12 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             managerId: managerIdFromToken,
             status: 'pending'
         });
-        
+
         const savedMatch = await newMatch.save();
         await Table.findOneAndUpdate({ tableId: tableId }, { status: 'inuse' });
 
-        res.status(201).json({ 
-            success: true, 
+        res.status(201).json({
+            success: true,
             data: savedMatch.toObject(),
             creatorGuestToken: guestToken
         });
@@ -257,10 +257,10 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
 };
 
 // Cập nhật thành viên trong đội
+
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { teamIndex } = req.params;
-        const { members: rawMembers } = req.body;
+        const { teams } = req.body;
         const match = (req as any).match as IMatch;
 
         if (!req.body) {
@@ -271,10 +271,10 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        if (!rawMembers || !Array.isArray(rawMembers)) {
+        if (!teams || !Array.isArray(teams) || teams.length !== 2) {
             res.status(400).json({
                 success: false,
-                message: 'Members phải là một mảng.'
+                message: 'Teams phải là một mảng có 2 phần tử.'
             });
             return;
         }
@@ -295,43 +295,45 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        const teamIndexNum = parseInt(teamIndex);
-        if (teamIndexNum < 0 || teamIndexNum >= match.teams.length) {
-            res.status(400).json({
-                success: false,
-                message: 'Chỉ số đội không hợp lệ.'
-            });
-            return;
-        }
-
-        const processedMembers: IMatchTeamMember[] = [];
-        for (const member of rawMembers) {
-            if (member.phoneNumber) {
-                const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
-                if (foundMembership) {
-                    processedMembers.push({
-                        membershipId: foundMembership.membershipId,
-                        membershipName: foundMembership.fullName,
-                    });
-                } else {
-                    console.warn(`Membership with ID ${member.phoneNumber} not found during team update.`);
-                }
-            } 
-            else if (member.guestName) {
-                processedMembers.push({
-                    guestName: member.guestName,
+        for (let teamIndex = 0; teamIndex < 2; teamIndex++) {
+            const rawMembers = teams[teamIndex];
+            if (!rawMembers || !Array.isArray(rawMembers)) {
+                res.status(400).json({
+                    success: false,
+                    message: `Members cho đội ${teamIndex} phải là một mảng.`
                 });
+                return;
             }
-        }
 
-        match.teams[teamIndexNum].members = processedMembers;
+            const processedMembers: IMatchTeamMember[] = [];
+            for (const member of rawMembers) {
+                if (member.phoneNumber) {
+                    const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
+                    if (foundMembership) {
+                        processedMembers.push({
+                            membershipId: foundMembership.membershipId,
+                            membershipName: foundMembership.fullName,
+                        });
+                    } else {
+                        console.warn(`Membership with phone ${member.phoneNumber} not found during team update.`);
+                    }
+                }
+                else if (member.guestName) {
+                    processedMembers.push({
+                        guestName: member.guestName,
+                    });
+                }
+            }
+
+            match.teams[teamIndex].members = processedMembers;
+        }
 
         const updatedMatch = await match.save();
 
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
         res.status(200).json({ success: true, data: updatedMatch });
     } catch (error: any) {
-        console.error('Error updating team members:', error);
+        console.error('Error updating both teams:', error);
         res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
     }
 };
@@ -581,7 +583,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
         }
 
         const membership = await Membership.findOne({ phoneNumber });
-        
+
         if (!membership) {
             res.status(200).json({
                 success: true,
@@ -633,7 +635,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
             res.status(400).json({ success: false, message: 'Chỉ số đội không hợp lệ.' });
             return;
         }
-        
+
         let newMember: IMatchTeamMember;
         let isAlreadyJoined = false;
 
@@ -672,7 +674,7 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
         const { membershipId } = req.params;
         const { limit = 10, page = 1 } = req.query;
 
-         const query = {
+        const query = {
             $or: [
                 { createdByMembershipId: membershipId },
                 { 'teams.members.membershipId': membershipId }
