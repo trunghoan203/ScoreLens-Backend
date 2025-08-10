@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Feedback } from '../models/Feedback.model';
+import { Brand } from '../models/Brand.model';
 
 // User tạo feedback
 export const createFeedback = async (req: Request, res: Response): Promise<void> => {
@@ -26,9 +27,38 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
 };
 
 // Lấy danh sách feedback (lọc theo club, status, ngày)
-export const getFeedbacks = async (req: Request, res: Response): Promise<void> => {
+export const getFeedbacks = async (req: Request & { manager?: any; admin?: any; superAdmin?: any }, res: Response): Promise<void> => {
     try {
-        const feedbacks = await Feedback.aggregate([
+        // Tạo match condition dựa trên role
+        let matchCondition: any = {};
+
+        if (req.manager) {
+            // Manager chỉ xem feedback của Club mà họ quản lý
+            matchCondition.clubId = req.manager.clubId;
+        } else if (req.admin) {
+            // Admin xem feedback của tất cả Club thuộc Brand họ quản lý
+            // Cần lookup để lấy danh sách clubIds từ brandId
+
+            const brand = await Brand.findOne({ brandId: req.admin.brandId });
+            if (brand && brand.clubIds && brand.clubIds.length > 0) {
+                matchCondition.clubId = { $in: brand.clubIds };
+            } else {
+                // Nếu không có club nào thuộc brand này, trả về mảng rỗng
+                res.json({ success: true, feedbacks: [] });
+                return;
+            }
+        }
+        // SuperAdmin có thể xem tất cả feedback (không cần match condition)
+
+        const pipeline: any[] = [];
+
+        // Thêm match condition nếu có
+        if (Object.keys(matchCondition).length > 0) {
+            pipeline.push({ $match: matchCondition });
+        }
+
+        // Thêm các lookup operations
+        pipeline.push(
             {
                 $lookup: {
                     from: 'clubs',
@@ -57,7 +87,9 @@ export const getFeedbacks = async (req: Request, res: Response): Promise<void> =
                     preserveNullAndEmptyArrays: true
                 }
             }
-        ]);
+        );
+
+        const feedbacks = await Feedback.aggregate(pipeline);
 
         res.json({ success: true, feedbacks });
     } catch (error: any) {
@@ -69,11 +101,32 @@ export const getFeedbacks = async (req: Request, res: Response): Promise<void> =
 };
 
 // Lấy chi tiết feedback
-export const getFeedbackDetail = async (req: Request, res: Response): Promise<void> => {
+export const getFeedbackDetail = async (req: Request & { manager?: any; admin?: any; superAdmin?: any }, res: Response): Promise<void> => {
     try {
         const { feedbackId } = req.params;
+
+        // Tạo match condition dựa trên role
+        let matchCondition: any = { feedbackId };
+
+        if (req.manager) {
+            // Manager chỉ xem feedback của Club mà họ quản lý
+            matchCondition.clubId = req.manager.clubId;
+        } else if (req.admin) {
+            // Admin xem feedback của tất cả Club thuộc Brand họ quản lý
+
+            const brand = await Brand.findOne({ brandId: req.admin.brandId });
+            if (brand && brand.clubIds && brand.clubIds.length > 0) {
+                matchCondition.clubId = { $in: brand.clubIds };
+            } else {
+                // Nếu không có club nào thuộc brand này, trả về không tìm thấy
+                res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
+                return;
+            }
+        }
+        // SuperAdmin có thể xem tất cả feedback (chỉ cần match feedbackId)
+
         const result = await Feedback.aggregate([
-            { $match: { feedbackId } },
+            { $match: matchCondition },
             {
                 $lookup: {
                     from: 'clubs',
@@ -121,7 +174,27 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
         const { feedbackId } = req.params;
         const { note, status, needSupport } = req.body;
 
-        const feedback = await Feedback.findOne({ feedbackId });
+        // Tạo query condition dựa trên role
+        let queryCondition: any = { feedbackId };
+
+        if (req.manager) {
+            // Manager chỉ cập nhật feedback của Club mà họ quản lý
+            queryCondition.clubId = req.manager.clubId;
+        } else if (req.admin) {
+            // Admin cập nhật feedback của tất cả Club thuộc Brand họ quản lý
+
+            const brand = await Brand.findOne({ brandId: req.admin.brandId });
+            if (brand && brand.clubIds && brand.clubIds.length > 0) {
+                queryCondition.clubId = { $in: brand.clubIds };
+            } else {
+                // Nếu không có club nào thuộc brand này, trả về không tìm thấy
+                res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
+                return;
+            }
+        }
+        // SuperAdmin có thể cập nhật tất cả feedback (chỉ cần match feedbackId)
+
+        const feedback = await Feedback.findOne(queryCondition);
 
         if (!feedback) {
             res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
