@@ -747,3 +747,33 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
         session.endSession();
     }
 });
+
+// SendRegisterSuccessMail
+export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
+    try {
+        const adminId = req.admin.adminId;
+        const admin = await Admin.findOne({ adminId });
+        
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+            return;
+        }
+
+        const template = 'register-success.ejs';
+        const subject = 'ScoreLens - Đơn đăng ký thành công.';
+        
+        await sendMail({
+            email: admin.email,
+            subject,
+            template,
+            data: { user: { name: admin.fullName } }
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Email thông báo đăng ký thành công đã được gửi.' 
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
