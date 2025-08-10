@@ -374,8 +374,8 @@ export const rejectAdmin = async (req: Request, res: Response): Promise<void> =>
     return;
   }
   res.json({ success: true, admin });
-  const frontendUrl = 'http://localhost:3000';
-  const reviewUrl = `${frontendUrl}/admin/reform?adminId=${admin.adminId}`;
+  const frontEndUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const reviewUrl = `${frontEndUrl}/admin/reform?adminId=${admin.adminId}`;
   sendMail({
     email: admin.email,
     subject: 'ScoreLens - Tài khoản của bạn đã bị từ chối.',
