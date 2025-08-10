@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf } from '../controllers/Admin.controller';
+import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf, deleteAdminAccount } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -31,6 +31,9 @@ adminRouter.post('/upload-image', upload.single('image'), (req: Request, res: Re
   res.json({ success: true, url: fileUrl });
 });
 adminRouter.patch('/status/pending', isAuthenticated, setStatusPendingSelf);
+
+// Delete admin account and all related data
+adminRouter.delete('/delete-account', isAuthenticated, deleteAdminAccount);
 
 //Manager Management
 adminRouter.get('/managers', isAuthenticated, getAllManagers);
