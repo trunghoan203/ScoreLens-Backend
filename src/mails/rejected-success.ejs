@@ -10,6 +10,7 @@
         .email-header { background-color: #e27447; padding: 24px; color: #fff; }
         .email-body { padding: 24px; background-color: #fff; }
         .email-footer { background-color: #f6f6f6; padding: 24px; }
+        .button { display: inline-block; background-color: #e27447; color: #fff; font-size: 16px; font-weight: 700; text-align: center; text-decoration: none; padding: 12px 24px; border-radius: 4px; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -23,6 +24,7 @@
             <% if (rejectedReason) { %>
             <p>Lý do từ chối: <b><%= rejectedReason %></b></p>
             <% } %>
+            <p>Bạn muốn đăng ký lại thì vui lòng nhấn <a href="<%= registerUrl %>" class="button">tại đây</a></p>
             <p>Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ <a href="mailto:support@scorelens.com">support@scorelens.com</a>.</p>
         </div>
         <div class="email-footer">
