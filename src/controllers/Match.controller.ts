@@ -533,22 +533,6 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        if (table.status == 'inuse') {
-            res.status(409).json({
-                success: false,
-                message: 'Bàn này hiện đang được sử dụng.'
-            });
-            return;
-        }
-
-        if (table.status == 'maintenance') {
-            res.status(409).json({
-                success: false,
-                message: 'Bàn này hiện đang được bảo trì.'
-            });
-            return;
-        }
-
         res.status(200).json({
             success: true,
             data: {
