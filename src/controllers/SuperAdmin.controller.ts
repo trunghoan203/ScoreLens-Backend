@@ -374,11 +374,17 @@ export const rejectAdmin = async (req: Request, res: Response): Promise<void> =>
     return;
   }
   res.json({ success: true, admin });
+  const frontendUrl = 'http://localhost:3000';
+  const reviewUrl = `${frontendUrl}/admin/reform?adminId=${admin.adminId}`;
   sendMail({
     email: admin.email,
     subject: 'ScoreLens - Tài khoản của bạn đã bị từ chối.',
     template: 'rejected-success.ejs',
-    data: { user: { name: admin.fullName }, rejectedReason: admin.rejectedReason }
+    data: { 
+      user: { name: admin.fullName }, 
+      rejectedReason: admin.rejectedReason,
+      registerUrl: reviewUrl
+    }
   }).catch(() => {});
 };
 
