@@ -66,7 +66,7 @@ managerRouter.get('/matches/table/:tableId', isAuthenticated, getMatchesByTable)
 managerRouter.get('/matches/history/:membershipId', isAuthenticated, getMatchHistory);
 
 managerRouter.put('/matches/:id/score', isAuthenticated, findMatchById, updateScore);
-managerRouter.put('/matches/:id/teams/:teamIndex/members', isAuthenticated, findMatchById, updateTeamMembers);
+managerRouter.put('/matches/:id/teams', isAuthenticated, findMatchById, updateTeamMembers);
 managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
 managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
