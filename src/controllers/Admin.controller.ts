@@ -6,6 +6,14 @@ import sendMail from '../utils/sendMail';
 import * as AdminService from '../services/Admin.service';
 import ErrorHandler from '../utils/ErrorHandler';
 import { catchAsync } from '../utils/catchAsync';
+import { Brand } from '../models/Brand.model';
+import { Club } from '../models/Club.model';
+import { Manager } from '../models/Manager.model';
+import { Membership } from '../models/Membership.model';
+import { Table } from '../models/Table.model';
+import { Camera } from '../models/Camera.model';
+import { Feedback } from '../models/Feedback.model';
+import { Match } from '../models/Match.model';
 
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -653,6 +661,118 @@ export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: 
             return;
         }
         res.json({ success: true, admin });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Delete admin account and all related data
+export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    const adminId = req.admin?.adminId;
+    if (!adminId) {
+        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+    }
+
+    const admin = await Admin.findOne({ adminId });
+    if (!admin) {
+        return next(new ErrorHandler('Admin không tồn tại.', 404));
+    }
+
+    const brandId = admin.brandId;
+    if (!brandId) {
+        return next(new ErrorHandler('Admin chưa có brand được gán.', 400));
+    }
+
+    const session = await Admin.db.startSession();
+    session.startTransaction();
+
+    try {
+        const brand = await Brand.findOne({ brandId }).session(session);
+        if (!brand) {
+            throw new Error('Brand không tồn tại.');
+        }
+
+        const clubIds = brand.clubIds || [];
+
+        const managersCount = await Manager.countDocuments({ brandId }).session(session);
+        const membershipsCount = await Membership.countDocuments({ brandId }).session(session);
+        const feedbacksCount = await Feedback.countDocuments({ clubId: { $in: clubIds } }).session(session);
+
+        const tables = await Table.find({ clubId: { $in: clubIds } }).session(session);
+        const tableIds = tables.map(table => table.tableId);
+
+        const camerasCount = await Camera.countDocuments({ tableId: { $in: tableIds } }).session(session);
+        const matchesCount = await Match.countDocuments({ tableId: { $in: tableIds } }).session(session);
+
+        await Feedback.deleteMany({ clubId: { $in: clubIds } }).session(session);
+
+        await Match.deleteMany({ tableId: { $in: tableIds } }).session(session);
+
+        await Camera.deleteMany({ tableId: { $in: tableIds } }).session(session);
+
+        await Table.deleteMany({ clubId: { $in: clubIds } }).session(session);
+
+        await Manager.deleteMany({ brandId }).session(session);
+
+        await Membership.deleteMany({ brandId }).session(session);
+
+        await Club.deleteMany({ brandId }).session(session);
+
+        await Brand.deleteOne({ brandId }).session(session);
+
+        await Admin.deleteOne({ adminId }).session(session);
+
+        await session.commitTransaction();
+
+        res.status(200).json({
+            success: true,
+            message: 'Tài khoản Admin và tất cả dữ liệu liên quan đã được xóa thành công.',
+            deletedData: {
+                admin: 1,
+                brand: 1,
+                clubs: clubIds.length,
+                managers: managersCount,
+                memberships: membershipsCount,
+                tables: tableIds.length,
+                cameras: camerasCount,
+                matches: matchesCount,
+                feedbacks: feedbacksCount
+            }
+        });
+
+    } catch (error: any) {
+        await session.abortTransaction();
+        return next(new ErrorHandler(`Lỗi khi xóa tài khoản admin: ${error.message}`, 500));
+    } finally {
+        session.endSession();
+    }
+});
+
+// SendRegisterSuccessMail
+export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
+    try {
+        const adminId = req.admin.adminId;
+        const admin = await Admin.findOne({ adminId });
+        
+        if (!admin) {
+            res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+            return;
+        }
+
+        const template = 'register-success.ejs';
+        const subject = 'ScoreLens - Đơn đăng ký thành công.';
+        
+        await sendMail({
+            email: admin.email,
+            subject,
+            template,
+            data: { user: { name: admin.fullName } }
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Email thông báo đăng ký thành công đã được gửi.' 
+        });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }

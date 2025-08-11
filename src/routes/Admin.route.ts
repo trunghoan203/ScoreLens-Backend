@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf } from '../controllers/Admin.controller';
+import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf, deleteAdminAccount, sendRegisterSuccessMail } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -25,12 +25,16 @@ adminRouter.post('/upload-image', upload.single('image'), (req: Request, res: Re
     res.status(400).json({ success: false, message: 'Không có file được upload.' });
     return;
   }
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const fileUrl = `${protocol}://${host}/static/uploads/${req.file.filename}`;
+  const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+  const fileUrl = `${backendUrl}/static/uploads/${req.file.filename}`;
   res.json({ success: true, url: fileUrl });
 });
 adminRouter.patch('/status/pending', isAuthenticated, setStatusPendingSelf);
+
+// Delete admin account and all related data
+adminRouter.delete('/delete-account', isAuthenticated, deleteAdminAccount);
+
+adminRouter.post('/sendmail', isAuthenticated, sendRegisterSuccessMail);
 
 //Manager Management
 adminRouter.get('/managers', isAuthenticated, getAllManagers);

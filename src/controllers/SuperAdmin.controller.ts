@@ -161,11 +161,18 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
 export const logoutSuperAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      const { RememberPasswordService } = await import('../services/RememberPassword.service');
+      await RememberPasswordService.revokeRefreshToken(refreshToken);
+    }
+
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
     res.status(200).json({ success: true, message: 'Logged out successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -341,16 +348,22 @@ export const approveAdmin = async (req: Request, res: Response): Promise<void> =
     return;
   }
   res.json({ success: true, admin });
+  sendMail({
+    email: admin.email,
+    subject: 'ScoreLens - Tài khoản của bạn đã được duyệt.',
+    template: 'approved-success.ejs',
+    data: { user: { name: admin.fullName } }
+  }).catch(() => {});
 };
 
 // Reject admin
 export const rejectAdmin = async (req: Request, res: Response): Promise<void> => {
   const { adminId } = req.params;
   const { rejectedReason } = req.body;
-  
+
   const admin = await Admin.findOneAndUpdate(
     { adminId },
-    { 
+    {
       status: 'rejected',
       rejectedReason: rejectedReason || null
     },
@@ -361,6 +374,18 @@ export const rejectAdmin = async (req: Request, res: Response): Promise<void> =>
     return;
   }
   res.json({ success: true, admin });
+  const frontEndUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const reviewUrl = `${frontEndUrl}/admin/reform?adminId=${admin.adminId}`;
+  sendMail({
+    email: admin.email,
+    subject: 'ScoreLens - Tài khoản của bạn đã bị từ chối.',
+    template: 'rejected-success.ejs',
+    data: { 
+      user: { name: admin.fullName }, 
+      rejectedReason: admin.rejectedReason,
+      registerUrl: reviewUrl
+    }
+  }).catch(() => {});
 };
 
 // List admins with filter/search

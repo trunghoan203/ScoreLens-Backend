@@ -8,7 +8,6 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
   try {
     const adminId = req.admin.adminId;
     
-    // Kiểm tra admin có brandId chưa
     const admin = await Admin.findOne({ adminId });
     if (!admin) {
       res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
@@ -20,7 +19,6 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
       return;
     }
     
-    // Kiểm tra admin đã có brand chưa
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
       res.status(400).json({ success: false, message: 'Admin chưa có brand, không thể tạo club.' });
@@ -53,12 +51,12 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
         createdClubs.push(club);
       }
       
-      // Cập nhật clubIds cho brand
       const clubIds = createdClubs.map(club => club.clubId);
       brand.clubIds = [...brand.clubIds, ...clubIds];
       await brand.save();
       
       res.status(201).json({ success: true, clubs: createdClubs });
+      
       return;
     }
     // Nếu body là object: tạo 1 club
@@ -78,11 +76,11 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
       status: status || 'maintenance'
     });
     
-    // Cập nhật clubIds cho brand
     brand.clubIds.push(club.clubId);
     await brand.save();
-    
+
     res.status(201).json({ success: true, club });
+
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
