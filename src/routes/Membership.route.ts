@@ -17,6 +17,7 @@ import {
     getMatchHistory,
 } from '../controllers/Match.controller';
 import { isMatchCreator } from '../middlewares/auth/matchAuth.middleware';
+import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
 
 const membershipRoute = express.Router();
 
@@ -43,5 +44,11 @@ membershipRoute.delete('/matches/:id', isMatchCreator, deleteMatch);
 // History and other getters
 membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
 membershipRoute.get('/matches/history/:membershipId', getMatchHistory);
+
+// Additional Match routes with findMatchById middleware
+membershipRoute.patch('/matches/:id/score', findMatchById, updateScore);
+membershipRoute.patch('/matches/:id/teams', findMatchById, updateTeamMembers);
+membershipRoute.patch('/matches/:id/start', findMatchById, startMatch);
+membershipRoute.patch('/matches/:id/end', findMatchById, endMatch);
 
 export default membershipRoute;
