@@ -25,9 +25,8 @@ adminRouter.post('/upload-image', upload.single('image'), (req: Request, res: Re
     res.status(400).json({ success: false, message: 'Không có file được upload.' });
     return;
   }
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const fileUrl = `${protocol}://${host}/static/uploads/${req.file.filename}`;
+  const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+  const fileUrl = `${backendUrl}/static/uploads/${req.file.filename}`;
   res.json({ success: true, url: fileUrl });
 });
 adminRouter.patch('/status/pending', isAuthenticated, setStatusPendingSelf);
