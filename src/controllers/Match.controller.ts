@@ -110,7 +110,9 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         };
 
         let guestToken: string | null = null;
+
         if (!createdByMembershipId && !managerIdFromToken) {
+
             guestToken = randomBytes(16).toString('hex');
         }
 
@@ -331,6 +333,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         const updatedMatch = await match.save();
 
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
+        
         res.status(200).json({ success: true, data: updatedMatch });
     } catch (error: any) {
         console.error('Error updating both teams:', error);
