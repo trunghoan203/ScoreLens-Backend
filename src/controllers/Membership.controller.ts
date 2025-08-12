@@ -6,7 +6,6 @@ import { Club } from '../models/Club.model';
 export const listMemberships = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const manager = req.manager;
-        // Lấy clubId từ manager, sau đó lấy brandId từ club
         const club = await Club.findOne({ clubId: manager.clubId });
         if (!club) {
             res.status(404).json({ success: false, message: 'Club not found' });
@@ -26,7 +25,7 @@ export const listMemberships = async (req: Request & { manager?: any }, res: Res
 // Thêm hội viên
 export const createMembership = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
-        const { fullName, phoneNumber } = req.body;
+        const { fullName, phoneNumber, status = 'active' } = req.body;
         const manager = req.manager;
         const club = await Club.findOne({ clubId: manager.clubId });
         if (!club) {
@@ -35,7 +34,7 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         }
         const brandId = club.brandId;
 
-        const membership = await Membership.create({ brandId, fullName, phoneNumber });
+        const membership = await Membership.create({ brandId, fullName, phoneNumber, status });
         res.status(201).json({ success: true, membership });
         return;
     } catch (error) {
@@ -48,10 +47,10 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
 export const updateMembership = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const { membershipId } = req.params;
-        const { fullName, phoneNumber } = req.body;
+        const { fullName, phoneNumber, status } = req.body;
         const membership = await Membership.findOneAndUpdate(
             { membershipId },
-            { fullName, phoneNumber },
+            { fullName, phoneNumber, status },
             { new: true }
         );
         if (!membership) {

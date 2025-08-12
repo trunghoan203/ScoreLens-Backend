@@ -46,7 +46,7 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
           address,
           phoneNumber,
           tableNumber,
-          status: status || 'maintenance'
+          status: status || 'open'
         });
         createdClubs.push(club);
       }
