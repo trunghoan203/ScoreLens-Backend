@@ -5,6 +5,7 @@ import { Membership } from '../models/Membership.model';
 import { generateMatchCode } from '../utils/generateCode';
 import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
+import { Club } from '../models/Club.model';
 
 // Tạo một trận đấu mới
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
@@ -60,6 +61,15 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 });
                 return;
             }
+
+            const club = await Club.findOne({ clubId: table.clubId });
+            if (club && creatorMembership.brandId !== club.brandId) {
+                res.status(403).json({
+                    success: false,
+                    message: `Không tìm thấy hội viên.`
+                });
+                return;
+            }
         }
 
         const processedTeams: IMatchTeam[] = [];
@@ -77,6 +87,16 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                                 });
                                 return;
                             }
+
+                            const club = await Club.findOne({ clubId: table.clubId });
+                            if (club && foundMembership.brandId !== club.brandId) {
+                                res.status(403).json({
+                                    success: false,
+                                    message: `Hội viên ${foundMembership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                                });
+                                return;
+                            }
+
                             processedMembers.push({
                                 membershipId: foundMembership.membershipId,
                                 membershipName: foundMembership.fullName,
@@ -330,6 +350,19 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                             });
                             return;
                         }
+
+                        const table = await Table.findOne({ tableId: match.tableId });
+                        if (table) {
+                            const club = await Club.findOne({ clubId: table.clubId });
+                            if (club && foundMembership.brandId !== club.brandId) {
+                                res.status(403).json({
+                                    success: false,
+                                    message: `Hội viên ${foundMembership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                                });
+                                return;
+                            }
+                        }
+
                         processedMembers.push({
                             membershipId: foundMembership.membershipId,
                             membershipName: foundMembership.fullName,
@@ -690,6 +723,19 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 });
                 return;
             }
+
+            const table = await Table.findOne({ tableId: match.tableId });
+            if (table) {
+                const club = await Club.findOne({ clubId: table.clubId });
+                if (club && membership.brandId !== club.brandId) {
+                    res.status(403).json({
+                        success: false,
+                        message: `Hội viên ${membership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                    });
+                    return;
+                }
+            }
+
             isAlreadyJoined = match.teams.some(team => team.members.some(member => member.membershipId === membership.membershipId));
             newMember = { membershipId: membership.membershipId, membershipName: membership.fullName };
         } else {
@@ -744,6 +790,21 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                     member.membershipId && member.membershipId === leaverInfo.phoneNumber
                 );
                 if (foundMemberIndex !== -1) {
+                    const membership = await Membership.findOne({ membershipId: leaverInfo.phoneNumber });
+                    if (membership) {
+                        const table = await Table.findOne({ tableId: match.tableId });
+                        if (table) {
+                            const club = await Club.findOne({ clubId: table.clubId });
+                            if (club && membership.brandId !== club.brandId) {
+                                res.status(403).json({
+                                    success: false,
+                                    message: `Hội viên ${membership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                                });
+                                return;
+                            }
+                        }
+                    }
+
                     memberToRemove = match.teams[i].members[foundMemberIndex];
                     teamIndex = i;
                     memberIndex = foundMemberIndex;
