@@ -14,6 +14,7 @@ import {
     getMatchesByTable,
     verifyTable,
     joinMatch,
+    leaveMatch,
     getMatchHistory,
 } from '../controllers/Match.controller';
 import { isMatchCreator } from '../middlewares/auth/matchAuth.middleware';
@@ -29,12 +30,13 @@ membershipRoute.get('/:id', getMembershipById);
 membershipRoute.post('/feedback', createFeedback);
 
 //Match Management
-membershipRoute.post('/matches/verify-table', verifyTable); 
+membershipRoute.post('/matches/verify-table', verifyTable);
 membershipRoute.post('/matches/verify-membership', verifyMembership);
 membershipRoute.post('/matches', createMatch);
 membershipRoute.get('/matches/:id', getMatchById);
 membershipRoute.get('/matches/code/:matchCode', getMatchByCode);
 membershipRoute.post('/matches/join', joinMatch);
+membershipRoute.post('/matches/leave', leaveMatch);
 membershipRoute.put('/matches/:id/score', isMatchCreator, updateScore);
 membershipRoute.put('/matches/:id/teams/:teamIndex/members', isMatchCreator, updateTeamMembers);
 membershipRoute.put('/matches/:id/start', isMatchCreator, startMatch);

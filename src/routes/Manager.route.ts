@@ -16,6 +16,7 @@ import {
     getMatchesByTable,
     verifyTable,
     getMatchHistory,
+    joinMatch,
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
@@ -45,7 +46,7 @@ managerRouter.get('/table/club/:clubId', getTablesByClub);
 managerRouter.get('/membership', isAuthenticated, listMemberships);
 managerRouter.post('/membership', isAuthenticated, createMembership);
 managerRouter.put('/membership/:membershipId', isAuthenticated, updateMembership);
-managerRouter.delete('/membership/:membershipId', isAuthenticated, deleteMembership);
+managerRouter.delete('/membership/:membershipId', isAuthenticated, deleteMembership)
 
 // Camera management routes for manager
 managerRouter.get('/camera', isAuthenticated, listCameras);
@@ -70,6 +71,9 @@ managerRouter.put('/matches/:id/teams', isAuthenticated, findMatchById, updateTe
 managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
 managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
+
+// Public match routes (không cần xác thực)
+managerRouter.post('/matches/join', joinMatch);
 
 
 export default managerRouter;
