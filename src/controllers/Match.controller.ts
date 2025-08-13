@@ -514,6 +514,10 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
         const finishedMatch = await match.save();
 
         getIO().to(finishedMatch.matchId).emit('match_updated', finishedMatch);
+        getIO().to(finishedMatch.matchId).emit('match_ended', {
+            matchId: finishedMatch.matchId,
+            data: finishedMatch,
+        });
 
         await Table.findOneAndUpdate({ tableId: match.tableId }, { status: 'empty' });
 
