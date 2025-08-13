@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { Manager } from '../models/Manager.model';
 import { Club } from '../models/Club.model';
+import { Membership } from '../models/Membership.model';
 import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs';
 
 export const loginManager = async (req: Request, res: Response): Promise<void> => {
   try {
