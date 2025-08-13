@@ -38,7 +38,7 @@ membershipRoute.get('/matches/code/:matchCode', getMatchByCode);
 membershipRoute.post('/matches/join', joinMatch);
 membershipRoute.post('/matches/leave', leaveMatch);
 membershipRoute.put('/matches/:id/score', isMatchCreator, updateScore);
-membershipRoute.put('/matches/:id/teams/:teamIndex/members', isMatchCreator, updateTeamMembers);
+membershipRoute.put('/matches/:id/teams', isMatchCreator, updateTeamMembers);
 membershipRoute.put('/matches/:id/start', isMatchCreator, startMatch);
 membershipRoute.put('/matches/:id/end', isMatchCreator, endMatch);
 membershipRoute.delete('/matches/:id', isMatchCreator, deleteMatch);
