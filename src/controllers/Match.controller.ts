@@ -53,7 +53,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 res.status(400).json({ success: false, message: `Người tạo với ID ${createdByMembershipId} không tồn tại.` });
                 return;
             }
-            // Kiểm tra status của membership
             if (creatorMembership.status === 'inactive') {
                 res.status(403).json({
                     success: false,
@@ -71,7 +70,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                     if (member.phoneNumber) {
                         const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                         if (foundMembership) {
-                            // Kiểm tra status của membership
                             if (foundMembership.status === 'inactive') {
                                 res.status(403).json({
                                     success: false,
@@ -273,7 +271,6 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
 };
 
 // Cập nhật thành viên trong đội
-
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { teams } = req.body;
@@ -326,7 +323,6 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                 if (member.phoneNumber) {
                     const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                     if (foundMembership) {
-                        // Kiểm tra status của membership
                         if (foundMembership.status === 'inactive') {
                             res.status(403).json({
                                 success: false,
@@ -383,7 +379,6 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Kiểm tra có ít nhất 1 người ở bất kỳ team nào
         const totalMembers = match.teams.reduce((total, team) => total + team.members.length, 0);
         if (totalMembers === 0) {
             res.status(400).json({
@@ -393,7 +388,6 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Kiểm tra mỗi team không quá 4 người
         for (let i = 0; i < match.teams.length; i++) {
             if (match.teams[i].members.length > 4) {
                 res.status(400).json({
@@ -404,12 +398,10 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             }
         }
 
-        // Nếu chỉ có 1 người, tự động đưa vào Team A
         if (totalMembers === 1) {
             let foundMember = null;
             let foundTeamIndex = -1;
 
-            // Tìm người chơi duy nhất
             for (let i = 0; i < match.teams.length; i++) {
                 if (match.teams[i].members.length > 0) {
                     foundMember = match.teams[i].members[0];
@@ -418,11 +410,8 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
                 }
             }
 
-            // Nếu người chơi không ở Team A, di chuyển họ vào Team A
             if (foundTeamIndex !== 0 && foundMember) {
-                // Xóa khỏi team hiện tại
                 match.teams[foundTeamIndex].members = [];
-                // Thêm vào Team A
                 match.teams[0].members = [foundMember];
             }
         }
@@ -680,7 +669,6 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Kiểm tra số lượng người chơi trong team
         if (match.teams[teamIndex].members.length >= 4) {
             res.status(400).json({ success: false, message: `Team ${teamIndex + 1} đã đủ 4 người chơi.` });
             return;
@@ -695,7 +683,6 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 res.status(404).json({ success: false, message: `Không tìm thấy hội viên với SĐT ${joinerInfo.phoneNumber}.` });
                 return;
             }
-            // Kiểm tra status của membership
             if (membership.status === 'inactive') {
                 res.status(403).json({
                     success: false,
@@ -751,9 +738,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         let teamIndex = -1;
         let memberIndex = -1;
 
-        // Tìm người chơi cần rời khỏi
         if (leaverInfo.phoneNumber) {
-            // Tìm membership
             for (let i = 0; i < match.teams.length; i++) {
                 const foundMemberIndex = match.teams[i].members.findIndex(member =>
                     member.membershipId && member.membershipId === leaverInfo.phoneNumber
@@ -766,7 +751,6 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                 }
             }
         } else if (leaverInfo.guestName) {
-            // Tìm guest
             for (let i = 0; i < match.teams.length; i++) {
                 const foundMemberIndex = match.teams[i].members.findIndex(member =>
                     member.guestName === leaverInfo.guestName
@@ -785,7 +769,6 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Xóa người chơi khỏi team
         match.teams[teamIndex].members.splice(memberIndex, 1);
 
         const updatedMatch = await match.save();
