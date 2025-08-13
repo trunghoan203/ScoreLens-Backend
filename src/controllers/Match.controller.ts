@@ -92,7 +92,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                             if (club && foundMembership.brandId !== club.brandId) {
                                 res.status(403).json({
                                     success: false,
-                                    message: `Hội viên ${foundMembership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                                    message: `Không tìm thấy hội viên`
                                 });
                                 return;
                             }
@@ -357,7 +357,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                             if (club && foundMembership.brandId !== club.brandId) {
                                 res.status(403).json({
                                     success: false,
-                                    message: `Hội viên ${foundMembership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                                    message: `Không tìm thấy hội viên.`
                                 });
                                 return;
                             }
@@ -730,7 +730,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 if (club && membership.brandId !== club.brandId) {
                     res.status(403).json({
                         success: false,
-                        message: `Hội viên ${membership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                        message: `Không tìm thấy hội viên.`
                     });
                     return;
                 }
@@ -798,7 +798,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                             if (club && membership.brandId !== club.brandId) {
                                 res.status(403).json({
                                     success: false,
-                                    message: `Hội viên ${membership.fullName} không thể tham gia trận đấu ở club này. Hội viên chỉ có thể chơi ở các club thuộc cùng thương hiệu.`
+                                    message: `Không tìm thấy hội viên.`
                                 });
                                 return;
                             }
