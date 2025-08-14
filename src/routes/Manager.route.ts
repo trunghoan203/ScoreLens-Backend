@@ -1,6 +1,14 @@
 import express from 'express';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
-import { listTables, createTable, updateTable, deleteTable, getTableById, getTablesByClub } from '../controllers/Table.controller';
+import {
+    listTables,
+    createTable,
+    updateTable,
+    deleteTable,
+    getTableById,
+    getTablesByClub,
+    verifyTable
+} from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import { listCameras, createCamera, updateCamera, deleteCamera } from '../controllers/Camera.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -14,7 +22,6 @@ import {
     endMatch,
     deleteMatch,
     getMatchesByTable,
-    verifyTable,
     getMatchHistory,
     joinMatch,
 } from '../controllers/Match.controller';
@@ -39,8 +46,8 @@ managerRouter.delete('/table/:tableId', isAuthenticated, deleteTable);
 
 // Public table routes (không cần xác thực)
 managerRouter.post('/table/verify', verifyTable);
-managerRouter.get('/table/:id', getTableById);
 managerRouter.get('/table/club/:clubId', getTablesByClub);
+managerRouter.get('/table/:tableId', getTableById);
 
 // Membership management routes for manager
 managerRouter.get('/membership', isAuthenticated, listMemberships);

@@ -6,6 +6,7 @@ export interface ITable extends Document {
   name: string;
   category: string;
   status: string;
+  qrCodeData?: string;
 }
 
 const TableSchema = new Schema({
@@ -32,15 +33,28 @@ const TableSchema = new Schema({
     required: true,
     enum: ['empty', 'inuse', 'maintenance'],
     default: 'empty'
+  },
+  qrCodeData: {
+    type: String
   }
 }, {
   timestamps: true
 });
 
-// Tự động sinh tableId trước khi save
 TableSchema.pre('save', function (next) {
   if (!this.tableId) {
     this.tableId = `TB-${Date.now()}`;
+  }
+
+  const baseUrl = process.env.FRONTEND_URL;
+
+  if (this.isModified('tableId') || this.isModified('name') || !this.qrCodeData) {
+    const params = new URLSearchParams({
+      tableId: this.tableId,
+      tableName: encodeURIComponent(this.name)
+    });
+
+    this.qrCodeData = `${baseUrl}/user/login?${params.toString()}`;
   }
   next();
 });
