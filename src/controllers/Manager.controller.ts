@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Manager } from '../models/Manager.model';
+import { Club } from '../models/Club.model';
 import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
@@ -116,7 +117,20 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
       });
       return;
     }
-    console.log(manager);
+
+    let clubName = 'Club không xác định';
+    if (manager.clubId) {
+      const clubId = manager.clubId.replace(',', '');
+      try {
+        const club = await Club.findOne({ clubId: clubId });
+        if (club) {
+          clubName = club.clubName;
+        }
+      } catch (clubError) {
+        console.error('Error fetching club:', clubError);
+      }
+    }
+
     res.status(200).json({
       success: true,
       manager: {
@@ -128,6 +142,7 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
         citizenCode: manager.citizenCode,
         address: manager.address,
         clubId: manager.clubId,
+        clubName: clubName,
         isActive: manager.isActive,
         lastLogin: manager.lastLogin || null
       }
@@ -140,7 +155,6 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
 // Resend login verification code
 export const resendLoginCode = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Kiểm tra req.body có tồn tại không
     if (!req.body) {
       res.status(400).json({ success: false, message: 'Request body is required' });
       return;
@@ -159,22 +173,18 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Kiểm tra trạng thái hoạt động của manager
     if (!manager.isActive) {
       res.status(403).json({ success: false, message: 'Manager account is deactivated' });
       return;
     }
 
-    // Tạo mã xác thực đăng nhập mới
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Cập nhật mã xác thực mới
     manager.activationCode = activationCode;
     manager.activationCodeExpires = activationCodeExpires;
     await manager.save();
 
-    // Gửi email với mã mới
     await sendMail({
       email: manager.email,
       subject: 'ScoreLens - Mã Xác Thực Đăng Nhập Mới',

@@ -31,8 +31,13 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
     try {
         const { name, category } = req.body;
         const clubId = req.manager.clubId;
+
         const table = await Table.create({ clubId, name, category });
-        res.status(201).json({ success: true, table });
+
+        res.status(201).json({
+            success: true,
+            table
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -44,16 +49,22 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
         const { tableId } = req.params;
         const { name, category, status } = req.body;
         const clubId = req.manager.clubId;
+
         const table = await Table.findOneAndUpdate(
             { tableId, clubId },
             { name, category, status },
             { new: true }
         );
+
         if (!table) {
             res.status(404).json({ success: false, message: 'Table not found' });
             return;
         }
-        res.json({ success: true, table });
+
+        res.json({
+            success: true,
+            table
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -64,33 +75,44 @@ export const deleteTable = async (req: Request & { manager?: any }, res: Respons
     try {
         const { tableId } = req.params;
         const clubId = req.manager.clubId;
-        const table = await Table.findOneAndDelete({ tableId, clubId });
+
+        const table = await Table.findOne({ tableId, clubId });
         if (!table) {
             res.status(404).json({ success: false, message: 'Table not found' });
             return;
         }
+
+        await Table.findOneAndDelete({ tableId, clubId });
         res.json({ success: true, message: 'Table deleted' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 
-// @desc    Xác thực bàn chơi bằng QR code
-// @route   POST /api/tables/verify
-// @access  Public
+// Xác thực bàn chơi bằng QR code
 export const verifyTable = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tableId } = req.body;
+        const { qrData } = req.body;
 
-        if (!tableId) {
+        if (!qrData) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp tableId.'
+                message: 'Vui lòng cung cấp QR code data.'
             });
             return;
         }
 
-        const table = await Table.findOne({ tableId });
+        const [tableId, clubId] = qrData.split('|');
+
+        if (!tableId || !clubId) {
+            res.status(400).json({
+                success: false,
+                message: 'QR code không hợp lệ.'
+            });
+            return;
+        }
+
+        const table = await Table.findOne({ tableId, clubId });
         if (!table) {
             res.status(404).json({
                 success: false,
@@ -119,9 +141,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// @desc    Lấy thông tin bàn chơi
-// @route   GET /api/tables/:id
-// @access  Public
+// Lấy thông tin bàn chơi bằng Id
 export const getTableById = async (req: Request, res: Response): Promise<void> => {
     try {
         const table = await Table.findById(req.params.id);
@@ -148,9 +168,7 @@ export const getTableById = async (req: Request, res: Response): Promise<void> =
     }
 };
 
-// @desc    Lấy danh sách bàn chơi theo club
-// @route   GET /api/tables/club/:clubId
-// @access  Public
+// Lấy danh sách bàn chơi theo club
 export const getTablesByClub = async (req: Request, res: Response): Promise<void> => {
     try {
         const { clubId } = req.params;
@@ -178,4 +196,4 @@ export const getTablesByClub = async (req: Request, res: Response): Promise<void
             error: error.message
         });
     }
-}; 
+};

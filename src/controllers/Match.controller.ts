@@ -5,6 +5,7 @@ import { Membership } from '../models/Membership.model';
 import { generateMatchCode } from '../utils/generateCode';
 import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
+import { Club } from '../models/Club.model';
 
 // Tạo một trận đấu mới
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
@@ -30,6 +31,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             });
             return;
         }
+
         if (table.status == 'inuse') {
             res.status(409).json({
                 success: false,
@@ -48,10 +50,30 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
 
         let creatorMembership = null;
         if (createdByMembershipId) {
+            // Tìm creator membership theo membershipId (không cần kiểm tra brandId vì đã có ID cụ thể)
             creatorMembership = await Membership.findOne({ membershipId: createdByMembershipId });
             if (!creatorMembership) {
                 res.status(400).json({ success: false, message: `Người tạo với ID ${createdByMembershipId} không tồn tại.` });
                 return;
+            }
+            if (creatorMembership.status === 'inactive') {
+                res.status(403).json({
+                    success: false,
+                    message: `Tài khoản hội viên của ${creatorMembership.fullName} đang bị cấm`
+                });
+                return;
+            }
+
+            // Kiểm tra xem creator có thuộc cùng brand với club không
+            const club = await Club.findOne({ clubId: table.clubId });
+            if (club) {
+                if (creatorMembership.brandId !== club.brandId) {
+                    res.status(403).json({
+                        success: false,
+                        message: `Người tạo không thuộc cùng brand với bàn chơi (creator brandId: ${creatorMembership.brandId}, club brandId: ${club.brandId})`
+                    });
+                    return;
+                }
             }
         }
 
@@ -61,14 +83,34 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             if (inputTeam.members && Array.isArray(inputTeam.members)) {
                 for (const member of inputTeam.members) {
                     if (member.phoneNumber) {
-                        const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
+                        const club = await Club.findOne({ clubId: table.clubId });
+                        let foundMembership = null;
+
+                        if (club) {
+                            foundMembership = await Membership.findOne({
+                                phoneNumber: member.phoneNumber,
+                                brandId: club.brandId
+                            });
+                        } else {
+                            // Fallback: tìm theo phoneNumber nếu không có club
+                            foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
+                        }
+
                         if (foundMembership) {
+                            if (foundMembership.status === 'inactive') {
+                                res.status(403).json({
+                                    success: false,
+                                    message: `Tài khoản hội viên của ${foundMembership.fullName} đang bị cấm`
+                                });
+                                return;
+                            }
+
+                            // Không cần kiểm tra brandId nữa vì đã tìm theo brandId đúng
                             processedMembers.push({
                                 membershipId: foundMembership.membershipId,
                                 membershipName: foundMembership.fullName,
                             });
                         } else {
-                            console.warn(`[createMatch] Membership with phone ${member.phoneNumber} not found. Treating as guest.`);
                             processedMembers.push({ guestName: `Guest ${member.phoneNumber}` });
                         }
                     }
@@ -112,7 +154,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         let guestToken: string | null = null;
 
         if (!createdByMembershipId && !managerIdFromToken) {
-
             guestToken = randomBytes(16).toString('hex');
         }
 
@@ -259,7 +300,6 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
 };
 
 // Cập nhật thành viên trong đội
-
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { teams } = req.body;
@@ -312,12 +352,32 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                 if (member.phoneNumber) {
                     const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                     if (foundMembership) {
+                        if (foundMembership.status === 'inactive') {
+                            res.status(403).json({
+                                success: false,
+                                message: `Tài khoản hội viên của ${foundMembership.fullName} đang bị cấm`
+                            });
+                            return;
+                        }
+
+                        const table = await Table.findOne({ tableId: match.tableId });
+                        if (table) {
+                            const club = await Club.findOne({ clubId: table.clubId });
+                            if (club && foundMembership.brandId !== club.brandId) {
+                                res.status(403).json({
+                                    success: false,
+                                    message: `Không tìm thấy hội viên.`
+                                });
+                                return;
+                            }
+                        }
+
                         processedMembers.push({
                             membershipId: foundMembership.membershipId,
                             membershipName: foundMembership.fullName,
                         });
                     } else {
-                        console.warn(`Membership with phone ${member.phoneNumber} not found during team update.`);
+                        // Membership không tìm thấy, bỏ qua
                     }
                 }
                 else if (member.guestName) {
@@ -333,7 +393,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         const updatedMatch = await match.save();
 
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
-        
+
         res.status(200).json({ success: true, data: updatedMatch });
     } catch (error: any) {
         console.error('Error updating both teams:', error);
@@ -362,13 +422,41 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const hasMembers = match.teams.every(team => team.members.length > 0);
-        if (!hasMembers) {
+        const totalMembers = match.teams.reduce((total, team) => total + team.members.length, 0);
+        if (totalMembers === 0) {
             res.status(400).json({
                 success: false,
-                message: 'Tất cả các đội phải có ít nhất một thành viên.'
+                message: 'Phải có ít nhất 1 người chơi để bắt đầu trận đấu.'
             });
             return;
+        }
+
+        for (let i = 0; i < match.teams.length; i++) {
+            if (match.teams[i].members.length > 4) {
+                res.status(400).json({
+                    success: false,
+                    message: `Team ${i + 1} chỉ được có tối đa 4 người chơi.`
+                });
+                return;
+            }
+        }
+
+        if (totalMembers === 1) {
+            let foundMember = null;
+            let foundTeamIndex = -1;
+
+            for (let i = 0; i < match.teams.length; i++) {
+                if (match.teams[i].members.length > 0) {
+                    foundMember = match.teams[i].members[0];
+                    foundTeamIndex = i;
+                    break;
+                }
+            }
+
+            if (foundTeamIndex !== 0 && foundMember) {
+                match.teams[foundTeamIndex].members = [];
+                match.teams[0].members = [foundMember];
+            }
         }
 
         match.status = 'ongoing';
@@ -657,6 +745,11 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        if (match.teams[teamIndex].members.length >= 4) {
+            res.status(400).json({ success: false, message: `Team ${teamIndex + 1} đã đủ 4 người chơi.` });
+            return;
+        }
+
         let newMember: IMatchTeamMember;
         let isAlreadyJoined = false;
 
@@ -666,6 +759,26 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 res.status(404).json({ success: false, message: `Không tìm thấy hội viên với SĐT ${joinerInfo.phoneNumber}.` });
                 return;
             }
+            if (membership.status === 'inactive') {
+                res.status(403).json({
+                    success: false,
+                    message: `Tài khoản hội viên của ${membership.fullName} đang bị cấm`
+                });
+                return;
+            }
+
+            const table = await Table.findOne({ tableId: match.tableId });
+            if (table) {
+                const club = await Club.findOne({ clubId: table.clubId });
+                if (club && membership.brandId !== club.brandId) {
+                    res.status(403).json({
+                        success: false,
+                        message: `Không tìm thấy hội viên.`
+                    });
+                    return;
+                }
+            }
+
             isAlreadyJoined = match.teams.some(team => team.members.some(member => member.membershipId === membership.membershipId));
             newMember = { membershipId: membership.membershipId, membershipName: membership.fullName };
         } else {
@@ -686,6 +799,94 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
     } catch (error: any) {
         console.error('Error joining match:', error);
         res.status(500).json({ success: false, message: 'Lỗi server khi tham gia trận đấu', error: error.message });
+    }
+};
+
+// Rời khỏi trận đấu (chỉ áp dụng khi trận đấu chưa bắt đầu)
+export const leaveMatch = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { matchCode, leaverInfo } = req.body;
+
+        if (!matchCode || !leaverInfo || (!leaverInfo.phoneNumber && !leaverInfo.guestName)) {
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp matchCode và leaverInfo (phoneNumber hoặc guestName).' });
+            return;
+        }
+
+        const match = await Match.findOne({ matchCode: matchCode });
+        if (!match) {
+            res.status(404).json({ success: false, message: 'Không tìm thấy trận đấu với mã này.' });
+            return;
+        }
+
+        if (match.status !== 'pending') {
+            res.status(400).json({ success: false, message: 'Chỉ có thể rời khỏi trận đấu khi đang ở trạng thái chờ.' });
+            return;
+        }
+
+        let memberToRemove: IMatchTeamMember | null = null;
+        let teamIndex = -1;
+        let memberIndex = -1;
+
+        if (leaverInfo.phoneNumber) {
+            for (let i = 0; i < match.teams.length; i++) {
+                const foundMemberIndex = match.teams[i].members.findIndex(member =>
+                    member.membershipId && member.membershipId === leaverInfo.phoneNumber
+                );
+                if (foundMemberIndex !== -1) {
+                    const membership = await Membership.findOne({ membershipId: leaverInfo.phoneNumber });
+                    if (membership) {
+                        const table = await Table.findOne({ tableId: match.tableId });
+                        if (table) {
+                            const club = await Club.findOne({ clubId: table.clubId });
+                            if (club && membership.brandId !== club.brandId) {
+                                res.status(403).json({
+                                    success: false,
+                                    message: `Không tìm thấy hội viên.`
+                                });
+                                return;
+                            }
+                        }
+                    }
+
+                    memberToRemove = match.teams[i].members[foundMemberIndex];
+                    teamIndex = i;
+                    memberIndex = foundMemberIndex;
+                    break;
+                }
+            }
+        } else if (leaverInfo.guestName) {
+            for (let i = 0; i < match.teams.length; i++) {
+                const foundMemberIndex = match.teams[i].members.findIndex(member =>
+                    member.guestName === leaverInfo.guestName
+                );
+                if (foundMemberIndex !== -1) {
+                    memberToRemove = match.teams[i].members[foundMemberIndex];
+                    teamIndex = i;
+                    memberIndex = foundMemberIndex;
+                    break;
+                }
+            }
+        }
+
+        if (!memberToRemove || teamIndex === -1) {
+            res.status(404).json({ success: false, message: 'Không tìm thấy người chơi này trong trận đấu.' });
+            return;
+        }
+
+        match.teams[teamIndex].members.splice(memberIndex, 1);
+
+        const updatedMatch = await match.save();
+
+        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
+
+        res.status(200).json({
+            success: true,
+            data: updatedMatch,
+            message: 'Rời khỏi trận đấu thành công.'
+        });
+    } catch (error: any) {
+        console.error('Error leaving match:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi rời khỏi trận đấu', error: error.message });
     }
 };
 
