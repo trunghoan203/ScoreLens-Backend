@@ -655,9 +655,9 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
 //Xác thực membership
 export const verifyMembership = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { phoneNumber } = req.body;
+        const { phoneNumber, clubId } = req.body;
 
-        if (!phoneNumber) {
+        if (!phoneNumber || !clubId) {
             res.status(400).json({
                 success: false,
                 message: 'Vui lòng cung cấp số điện thoại.'
@@ -676,14 +676,43 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
+        const club = await Club.findOne({ clubId: clubId });
+        if (!club) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy thông tin club.'
+            });
+            return;
+        }
+
+        if (membership.brandId !== club.brandId) {
+            res.status(403).json({
+                success: false,
+                isMember: true,
+                isBrandCompatible: false,
+                message: 'Bạn không phải là hội viên của thương hiệu này.',
+                data: {
+                    membershipId: membership.membershipId,
+                    fullName: membership.fullName,
+                    phoneNumber: membership.phoneNumber,
+                    status: membership.status,
+                    brandId: membership.brandId
+                }
+            });
+            return;
+        }
+
         res.status(200).json({
             success: true,
             isMember: true,
+            isBrandCompatible: true,
+            message: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
             data: {
                 membershipId: membership.membershipId,
                 fullName: membership.fullName,
                 phoneNumber: membership.phoneNumber,
-                status: membership.status
+                status: membership.status,
+                brandId: membership.brandId
             }
         });
     } catch (error: any) {
