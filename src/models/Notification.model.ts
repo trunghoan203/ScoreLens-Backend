@@ -1,15 +1,57 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
-  supportRequestId: string;
+  notificationId: string;
+  feedbackId?: string;
+  supportRequestId?: string;
+  type: 'feedback' | 'support_request';
+  title: string;
+  message: string;
+  recipientId: string;
+  recipientRole: 'superadmin' | 'admin' | 'manager';
+  isRead: boolean;
   dateTime: Date;
 }
 
 const NotificationSchema = new Schema({
-  supportRequestId: {
-    type: Schema.Types.ObjectId,
-    ref: 'SupportRequest',
+  notificationId: {
+    type: String,
+    unique: true,
     required: true
+  },
+  feedbackId: {
+    type: String,
+    ref: 'Feedback'
+  },
+  supportRequestId: {
+    type: String,
+    ref: 'SupportRequest'
+  },
+  type: {
+    type: String,
+    enum: ['feedback', 'support_request'],
+    required: true
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
+  },
+  recipientId: {
+    type: String,
+    required: true
+  },
+  recipientRole: {
+    type: String,
+    enum: ['superadmin', 'admin', 'manager'],
+    required: true
+  },
+  isRead: {
+    type: Boolean,
+    default: false
   },
   dateTime: {
     type: Date,
@@ -19,5 +61,18 @@ const NotificationSchema = new Schema({
 }, {
   timestamps: true
 });
+
+
+NotificationSchema.pre('save', function (this: INotification, next) {
+  if (!this.notificationId) {
+    this.notificationId = `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  }
+  next();
+});
+
+// Index để tối ưu query
+NotificationSchema.index({ recipientId: 1, isRead: 1 });
+NotificationSchema.index({ recipientRole: 1, isRead: 1 });
+NotificationSchema.index({ dateTime: -1 });
 
 export const Notification = mongoose.model<INotification>('Notification', NotificationSchema);

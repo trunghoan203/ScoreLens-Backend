@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { Feedback } from '../models/Feedback.model';
+import { Feedback, IFeedback } from '../models/Feedback.model';
 import { Brand } from '../models/Brand.model';
+import { NotificationService } from '../services/Notification.service';
 
 // User tạo feedback
 export const createFeedback = async (req: Request, res: Response): Promise<void> => {
@@ -18,6 +19,18 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
             tableId: tableInfo.tableId,
             content
         });
+
+        // Tạo thông báo realtime cho manager (vì status default là managerP)
+        try {
+            await NotificationService.createFeedbackNotification(feedback.feedbackId, {
+                createdBy,
+                tableId: tableInfo.tableId,
+                clubId: clubInfo.clubId,
+                status: feedback.status
+            });
+        } catch (notificationError) {
+            console.error('Error creating notifications:', notificationError);
+        }
 
         res.status(201).json({ success: true, feedback });
     } catch (error: any) {
@@ -208,10 +221,23 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
             date: new Date()
         });
 
+        const oldStatus = feedback.status;
         if (status) feedback.status = status;
         if (typeof needSupport === 'boolean') feedback.needSupport = needSupport;
 
         await feedback.save();
+
+        if (status && status !== oldStatus) {
+            try {
+                await NotificationService.createStatusChangeNotification(feedback.feedbackId, {
+                    clubId: feedback.clubId,
+                    tableId: feedback.tableId
+                }, status);
+            } catch (notificationError) {
+                console.error('Error creating status change notifications:', notificationError);
+            }
+        }
+
         res.json({ success: true, feedback });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
