@@ -1,0 +1,461 @@
+import { Notification, INotification } from '../models/Notification.model';
+import { Admin } from '../models/Admin.model';
+import { Manager } from '../models/Manager.model';
+import { SuperAdmin } from '../models/SuperAdmin.model';
+import { Brand } from '../models/Brand.model';
+import { Club } from '../models/Club.model';
+import { getIO } from '../socket';
+
+export class NotificationService {
+  // Tạo thông báo cho feedback mới (chỉ tạo theo status hiện tại)
+  static async createFeedbackNotification(feedbackId: string, feedbackData: any) {
+    try {
+      const notifications: INotification[] = [];
+      const { clubId, status = 'managerP' } = feedbackData;
+
+      // Chỉ tạo thông báo theo status hiện tại của feedback
+      switch (status) {
+        case 'managerP':
+          // Tạo thông báo cho Manager quản lý club này
+          const managers = await Manager.find({ 
+            clubId: clubId,
+            isActive: true 
+          });
+          
+          for (const manager of managers) {
+            notifications.push({
+              notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+              feedbackId,
+              type: 'feedback',
+              title: 'Feedback mới cần xử lý',
+              message: `Có feedback mới từ ${feedbackData.createdBy.type === 'guest' ? 'khách' : 'thành viên'} tại bàn ${feedbackData.tableId} cần xử lý`,
+              recipientId: manager.managerId,
+              recipientRole: 'manager',
+              isRead: false,
+              dateTime: new Date()
+            } as INotification);
+          }
+          break;
+
+        case 'adminP':
+          // Tạo thông báo cho Admin quản lý brand chứa club này
+          const club = await Club.findOne({ clubId });
+          if (club && club.brandId) {
+            const admins = await Admin.find({ 
+              brandId: club.brandId,
+              status: 'approved', 
+              isVerified: true 
+            });
+            
+            for (const admin of admins) {
+              notifications.push({
+                notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                feedbackId,
+                type: 'feedback',
+                title: 'Feedback cần Admin xử lý',
+                message: `Feedback từ bàn ${feedbackData.tableId} đã được Manager xử lý, cần Admin review`,
+                recipientId: admin.adminId,
+                recipientRole: 'admin',
+                isRead: false,
+                dateTime: new Date()
+              } as INotification);
+            }
+          }
+          break;
+
+        case 'superadminP':
+          // Tạo thông báo cho tất cả SuperAdmin
+          const superAdmins = await SuperAdmin.find({ isVerified: true });
+          for (const sAdmin of superAdmins) {
+            notifications.push({
+              notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+              feedbackId,
+              type: 'feedback',
+              title: 'Feedback cần SuperAdmin xử lý',
+              message: `Feedback từ bàn ${feedbackData.tableId} đã được Admin xử lý, cần SuperAdmin review`,
+              recipientId: sAdmin.sAdminId,
+              recipientRole: 'superadmin',
+              isRead: false,
+              dateTime: new Date()
+            } as INotification);
+          }
+          break;
+
+        case 'resolved':
+          break;
+      }
+
+      // Lưu thông báo vào database nếu có
+      if (notifications.length > 0) {
+        const savedNotifications = await Notification.insertMany(notifications);
+        
+        // Gửi thông báo realtime qua socket
+        this.sendRealtimeNotifications(savedNotifications);
+
+        console.log(`Created ${notifications.length} notifications for feedback ${feedbackId} (status: ${status})`);
+      } else {
+        console.log(`No notifications created for feedback ${feedbackId} (status: ${status})`);
+      }
+
+      return notifications;
+    } catch (error) {
+      console.error('Error creating feedback notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tạo thông báo khi status feedback thay đổi
+   */
+  static async createStatusChangeNotification(feedbackId: string, feedbackData: any, newStatus: string) {
+    try {
+      const notifications: INotification[] = [];
+      const { clubId, tableId } = feedbackData;
+
+      // Chỉ tạo thông báo theo status mới
+      switch (newStatus) {
+        case 'adminP':
+          // Tạo thông báo cho Admin quản lý brand chứa club này
+          const club = await Club.findOne({ clubId });
+          if (club && club.brandId) {
+            const admins = await Admin.find({ 
+              brandId: club.brandId,
+              status: 'approved', 
+              isVerified: true 
+            });
+            
+            for (const admin of admins) {
+              notifications.push({
+                notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                feedbackId,
+                type: 'feedback',
+                title: 'Feedback cần Admin xử lý',
+                message: `Feedback từ bàn ${tableId} đã được Manager xử lý, cần Admin review`,
+                recipientId: admin.adminId,
+                recipientRole: 'admin',
+                isRead: false,
+                dateTime: new Date()
+              } as INotification);
+            }
+          }
+          break;
+
+        case 'superadminP':
+          // Tạo thông báo cho tất cả SuperAdmin
+          const superAdmins = await SuperAdmin.find({ isVerified: true });
+          for (const sAdmin of superAdmins) {
+            notifications.push({
+              notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+              feedbackId,
+              type: 'feedback',
+              title: 'Feedback cần SuperAdmin xử lý',
+              message: `Feedback từ bàn ${tableId} đã được Admin xử lý, cần SuperAdmin review`,
+              recipientId: sAdmin.sAdminId,
+              recipientRole: 'superadmin',
+              isRead: false,
+              dateTime: new Date()
+            } as INotification);
+          }
+          break;
+
+        case 'resolved':
+          // Không tạo thông báo khi feedback đã resolved
+          break;
+      }
+
+      // Lưu thông báo vào database nếu có
+      if (notifications.length > 0) {
+        const savedNotifications = await Notification.insertMany(notifications);
+        
+        // Gửi thông báo realtime qua socket
+        this.sendRealtimeNotifications(savedNotifications);
+
+        console.log(`Created ${notifications.length} notifications for status change to ${newStatus} (feedback: ${feedbackId})`);
+      } else {
+        console.log(`No notifications created for status change to ${newStatus} (feedback: ${feedbackId})`);
+      }
+
+      return notifications;
+    } catch (error) {
+      console.error('Error creating status change notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gửi thông báo realtime qua socket
+   */
+  static sendRealtimeNotifications(notifications: INotification[]) {
+    try {
+      const io = getIO();
+
+      // Nhóm thông báo theo role để gửi hiệu quả
+      const notificationsByRole = notifications.reduce((acc, notification) => {
+        if (!acc[notification.recipientRole]) {
+          acc[notification.recipientRole] = [];
+        }
+        acc[notification.recipientRole].push(notification);
+        return acc;
+      }, {} as Record<string, INotification[]>);
+
+      // Gửi thông báo cho từng role
+      Object.entries(notificationsByRole).forEach(([role, roleNotifications]) => {
+        io.to(`role_${role}`).emit('new_notification', {
+          type: 'feedback',
+          notifications: roleNotifications,
+          message: `Có ${roleNotifications.length} thông báo mới`
+        });
+      });
+
+      // Gửi thông báo chung cho tất cả
+      io.emit('feedback_created', {
+        type: 'feedback',
+        message: 'Có feedback mới',
+        count: notifications.length
+      });
+
+    } catch (error) {
+      console.error('Error sending realtime notifications:', error);
+    }
+  }
+
+  /**
+   * Lấy thông báo cho user cụ thể với phân quyền theo role
+   */
+  static async getUserNotifications(userId: string, role: string, page: number = 1, limit: number = 20) {
+    try {
+      const skip = (page - 1) * limit;
+      
+      let matchCondition: any = {
+        recipientId: userId,
+        recipientRole: role
+      };
+
+      // Nếu là admin, chỉ lấy thông báo của brand họ quản lý
+      if (role === 'admin') {
+        const admin = await Admin.findOne({ adminId: userId });
+        if (admin && admin.brandId) {
+          // Lấy tất cả club thuộc brand
+          const brand = await Brand.findOne({ brandId: admin.brandId });
+          if (brand && brand.clubIds && brand.clubIds.length > 0) {
+            // Lấy feedback của các club thuộc brand
+            const feedbackIds = await this.getFeedbackIdsByClubIds(brand.clubIds);
+            if (feedbackIds.length > 0) {
+              matchCondition.feedbackId = { $in: feedbackIds };
+            } else {
+              // Nếu không có feedback nào, trả về rỗng
+              return {
+                notifications: [],
+                pagination: {
+                  page,
+                  limit,
+                  total: 0,
+                  pages: 0
+                }
+              };
+            }
+          }
+        }
+      }
+
+      // Nếu là manager, chỉ lấy thông báo của club họ quản lý
+      if (role === 'manager') {
+        const manager = await Manager.findOne({ managerId: userId });
+        if (manager && manager.clubId) {
+          // Lấy feedback của club manager quản lý
+          const feedbackIds = await this.getFeedbackIdsByClubIds([manager.clubId]);
+          if (feedbackIds.length > 0) {
+            matchCondition.feedbackId = { $in: feedbackIds };
+          } else {
+            // Nếu không có feedback nào, trả về rỗng
+            return {
+              notifications: [],
+              pagination: {
+                page,
+                limit,
+                total: 0,
+                pages: 0
+              }
+            };
+          }
+        }
+      }
+
+      // SuperAdmin có thể xem tất cả thông báo (không cần filter)
+
+      const notifications = await Notification.find(matchCondition)
+        .sort({ dateTime: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('notificationId feedbackId supportRequestId type title message recipientId recipientRole isRead dateTime createdAt updatedAt');
+
+      const total = await Notification.countDocuments(matchCondition);
+
+      return {
+        notifications,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error getting user notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy danh sách feedback IDs theo club IDs
+   */
+  private static async getFeedbackIdsByClubIds(clubIds: string[]): Promise<string[]> {
+    try {
+      const { Feedback } = await import('../models/Feedback.model');
+      const feedbacks = await Feedback.find({ clubId: { $in: clubIds } }).select('feedbackId');
+      return feedbacks.map((feedback: any) => feedback.feedbackId);
+    } catch (error) {
+      console.error('Error getting feedback IDs by club IDs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Đánh dấu thông báo đã đọc
+   */
+  static async markAsRead(notificationId: string, userId: string) {
+    try {
+      const notification = await Notification.findOneAndUpdate(
+        {
+          notificationId: notificationId,
+          recipientId: userId
+        },
+        {
+          isRead: true
+        },
+        { new: true }
+      );
+
+      return notification;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Đánh dấu tất cả thông báo đã đọc
+   */
+  static async markAllAsRead(userId: string, role: string) {
+    try {
+      let matchCondition: any = {
+        recipientId: userId,
+        recipientRole: role,
+        isRead: false
+      };
+
+      // Áp dụng phân quyền tương tự như getUserNotifications
+      if (role === 'admin') {
+        const admin = await Admin.findOne({ adminId: userId });
+        if (admin && admin.brandId) {
+          const brand = await Brand.findOne({ brandId: admin.brandId });
+          if (brand && brand.clubIds && brand.clubIds.length > 0) {
+            const feedbackIds = await this.getFeedbackIdsByClubIds(brand.clubIds);
+            if (feedbackIds.length > 0) {
+              matchCondition.feedbackId = { $in: feedbackIds };
+            } else {
+              return { modifiedCount: 0 };
+            }
+          }
+        }
+      }
+
+      if (role === 'manager') {
+        const manager = await Manager.findOne({ managerId: userId });
+        if (manager && manager.clubId) {
+          const feedbackIds = await this.getFeedbackIdsByClubIds([manager.clubId]);
+          if (feedbackIds.length > 0) {
+            matchCondition.feedbackId = { $in: feedbackIds };
+          } else {
+            return { modifiedCount: 0 };
+          }
+        }
+      }
+
+      const result = await Notification.updateMany(matchCondition, {
+        isRead: true
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Đếm số thông báo chưa đọc
+   */
+  static async getUnreadCount(userId: string, role: string) {
+    try {
+      let matchCondition: any = {
+        recipientId: userId,
+        recipientRole: role,
+        isRead: false
+      };
+
+      // Áp dụng phân quyền tương tự như getUserNotifications
+      if (role === 'admin') {
+        const admin = await Admin.findOne({ adminId: userId });
+        if (admin && admin.brandId) {
+          const brand = await Brand.findOne({ brandId: admin.brandId });
+          if (brand && brand.clubIds && brand.clubIds.length > 0) {
+            const feedbackIds = await this.getFeedbackIdsByClubIds(brand.clubIds);
+            if (feedbackIds.length > 0) {
+              matchCondition.feedbackId = { $in: feedbackIds };
+            } else {
+              return 0;
+            }
+          }
+        }
+      }
+
+      if (role === 'manager') {
+        const manager = await Manager.findOne({ managerId: userId });
+        if (manager && manager.clubId) {
+          const feedbackIds = await this.getFeedbackIdsByClubIds([manager.clubId]);
+          if (feedbackIds.length > 0) {
+            matchCondition.feedbackId = { $in: feedbackIds };
+          } else {
+            return 0;
+          }
+        }
+      }
+
+      const count = await Notification.countDocuments(matchCondition);
+      return count;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa thông báo
+   */
+  static async deleteNotification(notificationId: string, userId: string) {
+    try {
+      const notification = await Notification.findOneAndDelete({
+        notificationId: notificationId,
+        recipientId: userId
+      });
+
+      return notification;
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
+    }
+  }
+
+  // Đã loại bỏ deleteReadNotifications theo yêu cầu
+}
