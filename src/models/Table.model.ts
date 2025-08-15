@@ -46,7 +46,7 @@ TableSchema.pre('save', function (next) {
     this.tableId = `TB-${Date.now()}`;
   }
 
-  const baseUrl = process.env.FRONTEND_URL;
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
   if (this.isModified('tableId') || this.isModified('name') || !this.qrCodeData) {
     const params = new URLSearchParams({
