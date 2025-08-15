@@ -40,17 +40,8 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        if (table.status == 'maintenance') {
-            res.status(409).json({
-                success: false,
-                message: 'Bàn này hiện đang được bảo trì.'
-            });
-            return;
-        }
-
         let creatorMembership = null;
         if (createdByMembershipId) {
-            // Tìm creator membership theo membershipId (không cần kiểm tra brandId vì đã có ID cụ thể)
             creatorMembership = await Membership.findOne({ membershipId: createdByMembershipId });
             if (!creatorMembership) {
                 res.status(400).json({ success: false, message: `Người tạo với ID ${createdByMembershipId} không tồn tại.` });
@@ -64,7 +55,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 return;
             }
 
-            // Kiểm tra xem creator có thuộc cùng brand với club không
             const club = await Club.findOne({ clubId: table.clubId });
             if (club) {
                 if (creatorMembership.brandId !== club.brandId) {
@@ -92,7 +82,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                                 brandId: club.brandId
                             });
                         } else {
-                            // Fallback: tìm theo phoneNumber nếu không có club
                             foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                         }
 
@@ -105,7 +94,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                                 return;
                             }
 
-                            // Không cần kiểm tra brandId nữa vì đã tìm theo brandId đúng
                             processedMembers.push({
                                 membershipId: foundMembership.membershipId,
                                 membershipName: foundMembership.fullName,
@@ -173,10 +161,18 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         const savedMatch = await newMatch.save();
         await Table.findOneAndUpdate({ tableId: tableId }, { status: 'inuse' });
 
+        // Lấy thông tin club để trả về
+        const club = await Club.findOne({ clubId: table.clubId });
+
         res.status(201).json({
             success: true,
             data: savedMatch.toObject(),
-            creatorGuestToken: guestToken
+            creatorGuestToken: guestToken,
+            club: club ? {
+                clubId: club.clubId,
+                clubName: club.clubName,
+                status: club.status
+            } : null
         });
 
     } catch (error: any) {
@@ -628,6 +624,9 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
+        // Lấy thông tin club để trả về
+        const club = await Club.findOne({ clubId: table.clubId });
+
         res.status(200).json({
             success: true,
             data: {
@@ -635,7 +634,12 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
                 name: table.name,
                 category: table.category,
                 status: table.status,
-                clubId: table.clubId
+                clubId: table.clubId,
+                club: club ? {
+                    clubId: club.clubId,
+                    clubName: club.clubName,
+                    status: club.status
+                } : null
             }
         });
     } catch (error: any) {
@@ -707,6 +711,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
             res.status(404).json({ success: false, message: 'Không tìm thấy trận đấu với mã này.' });
             return;
         }
+
         if (match.status !== 'pending') {
             res.status(400).json({ success: false, message: 'Chỉ có thể tham gia trận đấu đang ở trạng thái chờ.' });
             return;
