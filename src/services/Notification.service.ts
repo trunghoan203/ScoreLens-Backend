@@ -337,7 +337,7 @@ export class NotificationService {
         .sort({ dateTime: -1 })
         .skip(skip)
         .limit(limit)
-        .select('notificationId feedbackId supportRequestId type title message recipientId recipientRole isRead dateTime createdAt updatedAt');
+        .select('notificationId feedbackId type title message recipientId recipientRole isRead dateTime createdAt updatedAt');
 
       const total = await Notification.countDocuments(matchCondition);
 
