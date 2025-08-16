@@ -5,12 +5,20 @@ import { catchAsync } from '../utils/catchAsync';
 export class NotificationController {
 
   static getUserNotifications = catchAsync(async (req: Request, res: Response) => {
-    const { userId, role } = req.params;
+    const { userId: paramUserId, role: paramRole } = req.params as { userId?: string; role?: string };
     const { page = 1, limit = 20 } = req.query;
+    
+    const authReq = req as any;
+    const derivedUserId = paramUserId || authReq?.superAdmin?.sAdminId || authReq?.admin?.adminId || authReq?.manager?.managerId;
+    const derivedRole = paramRole || (authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined);
+
+    if (!derivedUserId || !derivedRole) {
+      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc role' });
+    }
 
     const result = await NotificationService.getUserNotifications(
-      userId,
-      role,
+      derivedUserId,
+      derivedRole,
       Number(page),
       Number(limit)
     );
@@ -21,18 +29,18 @@ export class NotificationController {
     });
   });
 
-
   static markAsRead = catchAsync(async (req: Request, res: Response) => {
     const { notificationId } = req.params;
     const authReq = req as any;
     const derivedUserId =
       authReq?.superAdmin?.sAdminId || authReq?.admin?.adminId || authReq?.manager?.managerId || req.body?.userId;
+    const derivedRole = authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined;
 
     if (!derivedUserId) {
       return res.status(400).json({ success: false, message: 'Thiếu userId' });
     }
 
-    const notification = await NotificationService.markAsRead(notificationId, derivedUserId);
+    const notification = await NotificationService.markAsRead(notificationId, derivedUserId, derivedRole);
 
     if (!notification) {
       return res.status(404).json({
@@ -90,18 +98,18 @@ export class NotificationController {
     });
   });
 
-
   static deleteNotification = catchAsync(async (req: Request, res: Response) => {
     const { notificationId } = req.params;
     const authReq = req as any;
     const derivedUserId =
       authReq?.superAdmin?.sAdminId || authReq?.admin?.adminId || authReq?.manager?.managerId || req.body?.userId;
+    const derivedRole = authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined;
 
     if (!derivedUserId) {
       return res.status(400).json({ success: false, message: 'Thiếu userId' });
     }
 
-    const notification = await NotificationService.deleteNotification(notificationId, derivedUserId);
+    const notification = await NotificationService.deleteNotification(notificationId, derivedUserId, derivedRole);
 
     if (!notification) {
       return res.status(404).json({
