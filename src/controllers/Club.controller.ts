@@ -37,7 +37,7 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
           res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin cho từng club.' });
           return;
         }
-        const clubId = `CLB-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        const clubId = `CLB-${Date.now()}`;
         const club = await Club.create({
           clubId,
           brandId: brand.brandId,
