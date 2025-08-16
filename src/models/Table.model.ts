@@ -54,7 +54,7 @@ TableSchema.pre('save', function (next) {
       tableName: encodeURIComponent(this.name)
     });
 
-    this.qrCodeData = `${baseUrl}/user/login?${params.toString()}`;
+    this.qrCodeData = `${baseUrl}/user/match/create?${params.toString()}`;
   }
   next();
 });

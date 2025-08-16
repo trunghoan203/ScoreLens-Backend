@@ -7,7 +7,6 @@ import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
 import { Club } from '../models/Club.model';
 
-// Tạo một trận đấu mới
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tableId, gameType, createdByMembershipId, isAiAssisted, teams } = req.body;
@@ -50,7 +49,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
 
         let creatorMembership = null;
         if (createdByMembershipId) {
-            // Tìm creator membership theo membershipId (không cần kiểm tra brandId vì đã có ID cụ thể)
             creatorMembership = await Membership.findOne({ membershipId: createdByMembershipId });
             if (!creatorMembership) {
                 res.status(400).json({ success: false, message: `Người tạo với ID ${createdByMembershipId} không tồn tại.` });
@@ -64,7 +62,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 return;
             }
 
-            // Kiểm tra xem creator có thuộc cùng brand với club không
             const club = await Club.findOne({ clubId: table.clubId });
             if (club) {
                 if (creatorMembership.brandId !== club.brandId) {
@@ -92,7 +89,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                                 brandId: club.brandId
                             });
                         } else {
-                            // Fallback: tìm theo phoneNumber nếu không có club
                             foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                         }
 
@@ -105,7 +101,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                                 return;
                             }
 
-                            // Không cần kiểm tra brandId nữa vì đã tìm theo brandId đúng
                             processedMembers.push({
                                 membershipId: foundMembership.membershipId,
                                 membershipName: foundMembership.fullName,
@@ -185,7 +180,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// Lấy thông tin chi tiết một trận đấu
 export const getMatchById = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = await Match.findOne({ matchId: req.params.id });
@@ -212,7 +206,6 @@ export const getMatchById = async (req: Request, res: Response): Promise<void> =
     }
 };
 
-// Lấy trận đấu theo mã
 export const getMatchByCode = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchCode } = req.params;
@@ -241,7 +234,6 @@ export const getMatchByCode = async (req: Request, res: Response): Promise<void>
     }
 };
 
-// Cập nhật điểm số cho một đội
 export const updateScore = async (req: Request, res: Response): Promise<void> => {
     try {
         const { teamIndex, score } = req.body;
@@ -299,7 +291,6 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// Cập nhật thành viên trong đội
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { teams } = req.body;
@@ -377,7 +368,9 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                             membershipName: foundMembership.fullName,
                         });
                     } else {
-                        // Membership không tìm thấy, bỏ qua
+                        processedMembers.push({
+                            guestName: `Guest ${member.phoneNumber}`,
+                        });
                     }
                 }
                 else if (member.guestName) {
@@ -401,7 +394,6 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
     }
 };
 
-// Bắt đầu trận đấu
 export const startMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = (req as any).match as IMatch;
@@ -480,7 +472,6 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-// Kết thúc trận đấu
 export const endMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = (req as any).match as IMatch;
@@ -542,7 +533,6 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-// Xóa trận đấu
 export const deleteMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = (req as any).match as IMatch;
@@ -568,7 +558,6 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// Lấy danh sách trận đấu theo bàn
 export const getMatchesByTable = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tableId } = req.params;
@@ -606,7 +595,6 @@ export const getMatchesByTable = async (req: Request, res: Response): Promise<vo
     }
 };
 
-// Xác thực bàn chơi qua QR code
 export const verifyTable = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tableId } = req.body;
@@ -648,7 +636,6 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-//Xác thực membership
 export const verifyMembership = async (req: Request, res: Response): Promise<void> => {
     try {
         const { phoneNumber, clubId } = req.body;
@@ -721,7 +708,6 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
     }
 };
 
-// Tham gia trận đấu bằng mã code hoặc QR
 export const joinMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchCode, teamIndex = 0, joinerInfo } = req.body;
@@ -802,7 +788,6 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-// Rời khỏi trận đấu (chỉ áp dụng khi trận đấu chưa bắt đầu)
 export const leaveMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchCode, leaverInfo } = req.body;
