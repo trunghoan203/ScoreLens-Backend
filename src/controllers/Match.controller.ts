@@ -648,17 +648,6 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        const membership = await Membership.findOne({ phoneNumber });
-
-        if (!membership) {
-            res.status(200).json({
-                success: true,
-                isMember: false,
-                message: 'Không tìm thấy hội viên, bạn có thể chơi với vai trò khách.'
-            });
-            return;
-        }
-
         const club = await Club.findOne({ clubId: clubId });
         if (!club) {
             res.status(404).json({
@@ -668,18 +657,37 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        if (membership.brandId !== club.brandId) {
+        const allMemberships = await Membership.find({ phoneNumber });
+
+        if (allMemberships.length === 0) {
+            res.status(200).json({
+                success: true,
+                isMember: false,
+                message: 'Không tìm thấy hội viên, bạn có thể chơi với vai trò khách.'
+            });
+            return;
+        }
+
+        let compatibleMembership = null;
+        for (const membership of allMemberships) {
+            if (membership.brandId === club.brandId) {
+                compatibleMembership = membership;
+                break;
+            }
+        }
+
+        if (!compatibleMembership) {
             res.status(403).json({
                 success: false,
                 isMember: true,
                 isBrandCompatible: false,
                 message: 'Bạn không phải là hội viên của thương hiệu này.',
                 data: {
-                    membershipId: membership.membershipId,
-                    fullName: membership.fullName,
-                    phoneNumber: membership.phoneNumber,
-                    status: membership.status,
-                    brandId: membership.brandId
+                    membershipId: allMemberships[0].membershipId,
+                    fullName: allMemberships[0].fullName,
+                    phoneNumber: allMemberships[0].phoneNumber,
+                    status: (allMemberships[0] as any).status,
+                    brandId: allMemberships[0].brandId
                 }
             });
             return;
@@ -691,13 +699,14 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             isBrandCompatible: true,
             message: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
             data: {
-                membershipId: membership.membershipId,
-                fullName: membership.fullName,
-                phoneNumber: membership.phoneNumber,
-                status: membership.status,
-                brandId: membership.brandId
+                membershipId: compatibleMembership.membershipId,
+                fullName: compatibleMembership.fullName,
+                phoneNumber: compatibleMembership.phoneNumber,
+                status: (compatibleMembership as any).status,
+                brandId: compatibleMembership.brandId
             }
         });
+
     } catch (error: any) {
         console.error('Error verifying membership:', error);
         res.status(500).json({
