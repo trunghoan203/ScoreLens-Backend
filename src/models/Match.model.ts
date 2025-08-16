@@ -30,7 +30,6 @@ export interface IMatch extends Document {
   updatedAt: Date;
 }
 
-// Schema con cho thành viên trong đội
 const MatchTeamMemberSchema = new Schema({
   membershipId: {
     type: String,
