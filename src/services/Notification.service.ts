@@ -4,6 +4,7 @@ import { Manager } from '../models/Manager.model';
 import { SuperAdmin } from '../models/SuperAdmin.model';
 import { Brand } from '../models/Brand.model';
 import { Club } from '../models/Club.model';
+import { Table } from '../models/Table.model';
 import { getIO } from '../socket';
 
 export class NotificationService {
@@ -11,7 +12,16 @@ export class NotificationService {
   static async createFeedbackNotification(feedbackId: string, feedbackData: any) {
     try {
       const notifications: INotification[] = [];
-      const { clubId, status = 'managerP' } = feedbackData;
+      const { clubId, tableId, status = 'managerP' } = feedbackData;
+
+      // Lấy thông tin table, club, brand
+      const table = await Table.findOne({ tableId }).select('name');
+      const club = await Club.findOne({ clubId }).select('clubName brandId');
+      const brand = club ? await Brand.findOne({ brandId: club.brandId }).select('brandName') : null;
+
+      const tableName = table?.name || 'Bàn không xác định';
+      const clubName = club?.clubName || 'Club không xác định';
+      const brandName = brand?.brandName || 'Brand không xác định';
 
       // Chỉ tạo thông báo theo status hiện tại của feedback
       switch (status) {
@@ -27,8 +37,8 @@ export class NotificationService {
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
               type: 'feedback',
-              title: 'Feedback mới cần xử lý',
-              message: `Có feedback mới từ ${feedbackData.createdBy.type === 'guest' ? 'khách' : 'thành viên'} tại bàn ${feedbackData.tableId} cần xử lý`,
+              title: 'Feedback mới',
+              message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: manager.managerId,
               recipientRole: 'manager',
               isRead: false,
@@ -39,7 +49,6 @@ export class NotificationService {
 
         case 'adminP':
           // Tạo thông báo cho Admin quản lý brand chứa club này
-          const club = await Club.findOne({ clubId });
           if (club && club.brandId) {
             const admins = await Admin.find({ 
               brandId: club.brandId,
@@ -52,8 +61,8 @@ export class NotificationService {
                 notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 feedbackId,
                 type: 'feedback',
-                title: 'Feedback cần Admin xử lý',
-                message: `Feedback từ bàn ${feedbackData.tableId} đã được Manager xử lý, cần Admin review`,
+                title: 'Feedback mới',
+                message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
                 recipientId: admin.adminId,
                 recipientRole: 'admin',
                 isRead: false,
@@ -71,8 +80,8 @@ export class NotificationService {
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
               type: 'feedback',
-              title: 'Feedback cần SuperAdmin xử lý',
-              message: `Feedback từ bàn ${feedbackData.tableId} đã được Admin xử lý, cần SuperAdmin review`,
+              title: 'Feedback mới',
+              message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: sAdmin.sAdminId,
               recipientRole: 'superadmin',
               isRead: false,
@@ -112,11 +121,19 @@ export class NotificationService {
       const notifications: INotification[] = [];
       const { clubId, tableId } = feedbackData;
 
+      // Lấy thông tin table, club, brand
+      const table = await Table.findOne({ tableId }).select('name');
+      const club = await Club.findOne({ clubId }).select('clubName brandId');
+      const brand = club ? await Brand.findOne({ brandId: club.brandId }).select('brandName') : null;
+
+      const tableName = table?.name || 'Bàn không xác định';
+      const clubName = club?.clubName || 'Club không xác định';
+      const brandName = brand?.brandName || 'Brand không xác định';
+
       // Chỉ tạo thông báo theo status mới
       switch (newStatus) {
         case 'adminP':
           // Tạo thông báo cho Admin quản lý brand chứa club này
-          const club = await Club.findOne({ clubId });
           if (club && club.brandId) {
             const admins = await Admin.find({ 
               brandId: club.brandId,
@@ -129,8 +146,8 @@ export class NotificationService {
                 notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 feedbackId,
                 type: 'feedback',
-                title: 'Feedback cần Admin xử lý',
-                message: `Feedback từ bàn ${tableId} đã được Manager xử lý, cần Admin review`,
+                title: 'Feedback mới',
+                message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
                 recipientId: admin.adminId,
                 recipientRole: 'admin',
                 isRead: false,
@@ -148,8 +165,8 @@ export class NotificationService {
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
               type: 'feedback',
-              title: 'Feedback cần SuperAdmin xử lý',
-              message: `Feedback từ bàn ${tableId} đã được Admin xử lý, cần SuperAdmin review`,
+              title: 'Feedback mới',
+              message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: sAdmin.sAdminId,
               recipientRole: 'superadmin',
               isRead: false,
@@ -254,7 +271,29 @@ export class NotificationService {
                 }
               };
             }
+          } else {
+            // Nếu brand không có club nào, trả về rỗng
+            return {
+              notifications: [],
+              pagination: {
+                page,
+                limit,
+                total: 0,
+                pages: 0
+              }
+            };
           }
+        } else {
+          // Nếu admin chưa có brandId, trả về rỗng
+          return {
+            notifications: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0
+            }
+          };
         }
       }
 
@@ -278,6 +317,17 @@ export class NotificationService {
               }
             };
           }
+        } else {
+          // Nếu manager chưa có clubId, trả về rỗng
+          return {
+            notifications: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0
+            }
+          };
         }
       }
 
@@ -323,13 +373,20 @@ export class NotificationService {
   /**
    * Đánh dấu thông báo đã đọc
    */
-  static async markAsRead(notificationId: string, userId: string) {
+  static async markAsRead(notificationId: string, userId: string, role?: string) {
     try {
+      let matchCondition: any = {
+        notificationId: notificationId,
+        recipientId: userId
+      };
+
+      // Nếu có role, thêm vào điều kiện tìm kiếm
+      if (role) {
+        matchCondition.recipientRole = role;
+      }
+
       const notification = await Notification.findOneAndUpdate(
-        {
-          notificationId: notificationId,
-          recipientId: userId
-        },
+        matchCondition,
         {
           isRead: true
         },
@@ -366,7 +423,11 @@ export class NotificationService {
             } else {
               return { modifiedCount: 0 };
             }
+          } else {
+            return { modifiedCount: 0 };
           }
+        } else {
+          return { modifiedCount: 0 };
         }
       }
 
@@ -379,6 +440,8 @@ export class NotificationService {
           } else {
             return { modifiedCount: 0 };
           }
+        } else {
+          return { modifiedCount: 0 };
         }
       }
 
@@ -416,7 +479,11 @@ export class NotificationService {
             } else {
               return 0;
             }
+          } else {
+            return 0;
           }
+        } else {
+          return 0;
         }
       }
 
@@ -429,6 +496,8 @@ export class NotificationService {
           } else {
             return 0;
           }
+        } else {
+          return 0;
         }
       }
 
@@ -443,12 +512,19 @@ export class NotificationService {
   /**
    * Xóa thông báo
    */
-  static async deleteNotification(notificationId: string, userId: string) {
+  static async deleteNotification(notificationId: string, userId: string, role?: string) {
     try {
-      const notification = await Notification.findOneAndDelete({
+      let matchCondition: any = {
         notificationId: notificationId,
         recipientId: userId
-      });
+      };
+
+      // Nếu có role, thêm vào điều kiện tìm kiếm
+      if (role) {
+        matchCondition.recipientRole = role;
+      }
+
+      const notification = await Notification.findOneAndDelete(matchCondition);
 
       return notification;
     } catch (error) {
@@ -457,5 +533,4 @@ export class NotificationService {
     }
   }
 
-  // Đã loại bỏ deleteReadNotifications theo yêu cầu
 }
