@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Brand } from '../models/Brand.model';
 import { Admin } from '../models/Admin.model';
+import { MESSAGES } from '../config/messages';
 
 // Tạo brand mới
 export const createBrand = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
@@ -48,7 +49,7 @@ export const updateBrand = async (req: Request & { admin?: any }, res: Response)
         const { brandName, phoneNumber, website, logo_url, citizenCode } = req.body;
         const brand = await Brand.findOne({ brandId, adminId });
         if (!brand) {
-            res.status(404).json({ success: false, message: 'Brand không tồn tại hoặc bạn không có quyền.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG117 });
             return;
         }
         if (brandName !== undefined) brand.brandName = brandName;
@@ -81,7 +82,7 @@ export const getBrandDetail = async (req: Request & { admin?: any }, res: Respon
         const { brandId } = req.params;
         const brand = await Brand.findOne({ brandId, adminId });
         if (!brand) {
-            res.status(404).json({ success: false, message: 'Brand không tồn tại hoặc bạn không có quyền.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG117 });
             return;
         }
         res.status(200).json({ success: true, brand });
@@ -97,7 +98,7 @@ export const deleteBrand = async (req: Request & { admin?: any }, res: Response)
         const { brandId } = req.params;
         const brand = await Brand.findOneAndDelete({ brandId, adminId });
         if (!brand) {
-            res.status(404).json({ success: false, message: 'Brand không tồn tại hoặc bạn không có quyền.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG117 });
             return;
         }
 
@@ -107,7 +108,7 @@ export const deleteBrand = async (req: Request & { admin?: any }, res: Response)
             { brandId: null }
         );
 
-        res.status(200).json({ success: true, message: 'Xóa brand thành công.' });
+        res.status(200).json({ success: true, message: MESSAGES.MSG118 });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }

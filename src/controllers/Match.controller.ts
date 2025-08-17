@@ -6,6 +6,7 @@ import { generateMatchCode } from '../utils/generateCode';
 import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
 import { Club } from '../models/Club.model';
+import { MESSAGES } from '../config/messages';
 
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -175,7 +176,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         });
 
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -196,7 +197,7 @@ export const getMatchById = async (req: Request, res: Response): Promise<void> =
             data: match
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -219,7 +220,7 @@ export const getMatchByCode = async (req: Request, res: Response): Promise<void>
             data: match
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -271,7 +272,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
             data: updatedMatch
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -373,7 +374,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
 
         res.status(200).json({ success: true, data: updatedMatch });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -446,7 +447,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             data: updatedMatch
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -502,7 +503,7 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
             data: finishedMatch
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -522,7 +523,7 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
             message: 'Trận đấu đã được xóa thành công.'
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -554,7 +555,7 @@ export const getMatchesByTable = async (req: Request, res: Response): Promise<vo
             }
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -590,7 +591,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             }
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -666,7 +667,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
         });
 
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -745,7 +746,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
 
         res.status(200).json({ success: true, data: updatedMatch, message: 'Tham gia trận đấu thành công.' });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -831,7 +832,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
             message: 'Rời khỏi trận đấu thành công.'
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -866,6 +867,6 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
             }
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };

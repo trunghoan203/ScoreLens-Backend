@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import { MESSAGES } from './config/messages';
 
 let io: Server;
 
@@ -65,7 +66,7 @@ export const initializeSocket = (serverIo: Server) => {
                     });
                 }
             } catch (error) {
-                console.error('Lỗi máy chủ nội bộ', error);
+                console.error(MESSAGES.MSG100, error);
             }
         });
 

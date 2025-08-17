@@ -6,6 +6,7 @@ import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import upload from '../middlewares/upload.middleware';
 import { Request, Response } from 'express';
+import { MESSAGES } from '../config/messages';
 
 const adminRouter = express.Router();
 
@@ -22,7 +23,7 @@ adminRouter.post('/logout', isAuthenticated, logoutAdmin);
 adminRouter.get('/profile', isAuthenticated, getAdminProfile);
 adminRouter.post('/upload-image', upload.single('image'), (req: Request, res: Response): void => {
   if (!req.file) {
-    res.status(400).json({ success: false, message: 'Không có file được upload.' });
+    res.status(400).json({ success: false, message: MESSAGES.MSG99 });
     return;
   }
   const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;

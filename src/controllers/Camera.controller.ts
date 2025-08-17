@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Camera } from '../models/Camera.model';
 import { Table } from '../models/Table.model';
+import { MESSAGES } from '../config/messages';
 
 // Lấy danh sách camera (theo club của manager)
 export const listCameras = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
@@ -13,7 +14,7 @@ export const listCameras = async (req: Request & { manager?: any }, res: Respons
         res.json({ success: true, cameras });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -32,7 +33,7 @@ export const createCamera = async (req: Request & { manager?: any }, res: Respon
         res.status(201).json({ success: true, camera });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -64,7 +65,7 @@ export const updateCamera = async (req: Request & { manager?: any }, res: Respon
         res.json({ success: true, camera });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -79,10 +80,10 @@ export const deleteCamera = async (req: Request & { manager?: any }, res: Respon
             res.status(404).json({ success: false, message: 'Camera không tồn tại' });
             return;
         }
-        res.json({ success: true, message: 'Camera đã được xóa' });
+        res.json({ success: true, message: MESSAGES.MSG50 });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };

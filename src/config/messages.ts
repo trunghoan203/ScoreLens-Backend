@@ -21,6 +21,8 @@ export const MESSAGES = {
   MSG18: 'Tài khoản đã được xác thực',
   MSG19: 'Tài khoản chưa được xác thực. Vui lòng xác thực tài khoản trước.',
   MSG20: 'Không được phép truy cập',
+  MSG21: 'Vui lòng nhập email và mật khẩu',
+  MSG22: 'Vui lòng cung cấp email',
 
   // Super Admin
   MSG30: 'Super Admin không tồn tại',
@@ -74,11 +76,23 @@ export const MESSAGES = {
   MSG114: 'Thông tin Manager đã được cập nhật thành công.',
   MSG115: 'Manager đã được xóa thành công.',
   MSG116: 'Admin không tồn tại.',
+  MSG117: 'Brand không tồn tại hoặc bạn không có quyền.',
 
   // Generic
   MSG120: 'Request body là bắt buộc',
   MSG121: 'Email là bắt buộc',
   MSG122: 'Refresh token là bắt buộc',
+
+  // Mail
+  MSG123: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
+  MSG124: 'Mã đặt lại mật khẩu đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
+  MSG125: 'Email thông báo đăng ký thành công đã được gửi.',
+
+  // TOKEN
+  MSG130: 'ACCESS_TOKEN không được xác định trong các biến môi trường',
+  MSG131: 'REFRESH_TOKEN không được xác định trong các biến môi trường',
+  MSG132: 'REFRESH_TOKEN hoặc REFRESH_TOKEN_EXPIRE không được xác định trong các biến môi trường',
+  MSG133: 'ACCESS_TOKEN hoặc ACCESS_TOKEN_EXPIRE không được xác định trong các biến môi trường'
 };
 
 // Type for message codes

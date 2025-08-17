@@ -6,6 +6,7 @@ import { Brand } from '../models/Brand.model';
 import { Club } from '../models/Club.model';
 import { Table } from '../models/Table.model';
 import { getIO } from '../socket';
+import { MESSAGES } from '../config/messages';
 
 export class NotificationService {
   // Tạo thông báo cho feedback mới (chỉ tạo theo status hiện tại)
@@ -103,7 +104,7 @@ export class NotificationService {
 
       return notifications;
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -184,7 +185,7 @@ export class NotificationService {
 
       return notifications;
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -222,7 +223,7 @@ export class NotificationService {
       });
 
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
     }
   }
 
@@ -341,7 +342,7 @@ export class NotificationService {
         }
       };
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -355,7 +356,7 @@ export class NotificationService {
       const feedbacks = await Feedback.find({ clubId: { $in: clubIds } }).select('feedbackId');
       return feedbacks.map((feedback: any) => feedback.feedbackId);
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       return [];
     }
   }
@@ -385,7 +386,7 @@ export class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -441,7 +442,7 @@ export class NotificationService {
 
       return result;
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -494,7 +495,7 @@ export class NotificationService {
       const count = await Notification.countDocuments(matchCondition);
       return count;
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -518,7 +519,7 @@ export class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Lỗi máy chủ nội bộ', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }

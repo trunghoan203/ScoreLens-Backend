@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { RememberPasswordService } from '../../services/RememberPassword.service';
+import { MESSAGES } from '../../config/messages';
 
 export const autoRefreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -9,7 +10,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
       token = req.header('Authorization')?.replace('Bearer ', '');
     }
     if (!token) {
-      res.status(401).json({ success: false, message: 'Không có token được cung cấp, vui lòng đăng nhập.' });
+      res.status(401).json({ success: false, message: MESSAGES.MSG90 });
       return;
     }
 
@@ -17,7 +18,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
       // Thử verify access token
       const secret = process.env.ACCESS_TOKEN;
       if (!secret) {
-        throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
+        throw new Error(MESSAGES.MSG130);
       }
       const decoded = jwt.verify(token, secret) as { adminId?: string; sAdminId?: string; managerId?: string; iat: number, exp: number };
       
@@ -47,7 +48,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
             // Decode admin info từ access token mới
             const secret = process.env.ACCESS_TOKEN;
             if (!secret) {
-              throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
+              throw new Error(MESSAGES.MSG130);
             }
             const decoded = jwt.verify(accessToken, secret) as { adminId?: string; sAdminId?: string; managerId?: string };
             
@@ -81,7 +82,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
   } catch (error) {
     res.status(401).json({ 
       success: false, 
-      message: 'Không được phép truy cập tài nguyên này.',
+      message: MESSAGES.MSG95,
       code: 'UNAUTHORIZED'
     });
   }

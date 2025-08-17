@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { NotificationService } from '../services/Notification.service';
 import { catchAsync } from '../utils/catchAsync';
+import { MESSAGES } from '../config/messages';
 
 export class NotificationController {
 
@@ -13,7 +14,7 @@ export class NotificationController {
     const derivedRole = paramRole || (authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined);
 
     if (!derivedUserId || !derivedRole) {
-      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc role' });
+      return res.status(400).json({ success: false, message: MESSAGES.MSG70 });
     }
 
     const result = await NotificationService.getUserNotifications(
@@ -37,7 +38,7 @@ export class NotificationController {
     const derivedRole = authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined;
 
     if (!derivedUserId) {
-      return res.status(400).json({ success: false, message: 'Thiếu userId' });
+      return res.status(400).json({ success: false, message: MESSAGES.MSG71 });
     }
 
     const notification = await NotificationService.markAsRead(notificationId, derivedUserId, derivedRole);
@@ -63,7 +64,7 @@ export class NotificationController {
     const derivedRole = paramRole || (authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined);
 
     if (!derivedUserId || !derivedRole) {
-      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc role' });
+      return res.status(400).json({ success: false, message: MESSAGES.MSG70 });
     }
 
     const result = await NotificationService.markAllAsRead(derivedUserId, derivedRole);
@@ -85,7 +86,7 @@ export class NotificationController {
     const derivedRole = paramRole || (authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined);
 
     if (!derivedUserId || !derivedRole) {
-      return res.status(400).json({ success: false, message: 'Thiếu userId hoặc role' });
+      return res.status(400).json({ success: false, message: MESSAGES.MSG70 });
     }
 
     const count = await NotificationService.getUnreadCount(derivedUserId, derivedRole);
@@ -106,7 +107,7 @@ export class NotificationController {
     const derivedRole = authReq?.superAdmin ? 'superadmin' : authReq?.admin ? 'admin' : authReq?.manager ? 'manager' : undefined;
 
     if (!derivedUserId) {
-      return res.status(400).json({ success: false, message: 'Thiếu userId' });
+      return res.status(400).json({ success: false, message: MESSAGES.MSG71 });
     }
 
     const notification = await NotificationService.deleteNotification(notificationId, derivedUserId, derivedRole);
