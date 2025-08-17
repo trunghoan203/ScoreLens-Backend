@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { Membership } from '../../models/Membership.model';
+import { MESSAGES } from '../../config/messages';
 
 export const isGuestOrAuthenticated = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -14,7 +15,7 @@ export const isGuestOrAuthenticated = async (req: Request, res: Response, next: 
 
         const secret = process.env.ACCESS_TOKEN;
         if (!secret) {
-            throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
+            throw new Error(MESSAGES.MSG130);
         }
 
         const decoded = jwt.verify(token, secret) as any;
@@ -32,7 +33,7 @@ export const isGuestOrAuthenticated = async (req: Request, res: Response, next: 
             (req as any).isGuest = false;
             (req as any).managerId = decoded.managerId;
         } else {
-             res.status(401).json({ success: false, message: 'Dữ liệu token không hợp lệ.' });
+             res.status(401).json({ success: false, message: MESSAGES.MSG92 });
              return;
         }
 

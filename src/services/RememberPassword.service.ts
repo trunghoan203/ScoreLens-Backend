@@ -3,6 +3,7 @@ import { Admin } from '../models/Admin.model';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import ErrorHandler from '../utils/ErrorHandler';
+import { MESSAGES } from '../config/messages';
 
 export class RememberPasswordService {
   /**
@@ -14,7 +15,7 @@ export class RememberPasswordService {
   ): Promise<{ token: string; tokenHash: string; expiresAt: Date }> {
     const admin = await Admin.findOne({ adminId });
     if (!admin) {
-      throw new ErrorHandler('Admin không tồn tại', 404);
+      throw new ErrorHandler(MESSAGES.MSG31, 404);
     }
 
     // Tạo token dựa trên remember me
@@ -100,7 +101,7 @@ export class RememberPasswordService {
       if (error instanceof ErrorHandler) {
         throw error;
       }
-      throw new ErrorHandler('Refresh token không hợp lệ', 401);
+      throw new ErrorHandler(MESSAGES.MSG11, 401);
     }
   }
 

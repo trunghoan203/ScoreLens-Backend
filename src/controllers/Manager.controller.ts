@@ -5,6 +5,7 @@ import { sendToken } from '../utils/jwt';
 import { generateRandomCode } from '../utils/helpers';
 import sendMail from '../utils/sendMail';
 import jwt from 'jsonwebtoken'
+import { MESSAGES } from '../config/messages';
 
 export const loginManager = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -35,11 +36,11 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     res.status(200).json({
       success: true,
-      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
+      message: MESSAGES.MSG123,
       data: { email: manager.email }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+    res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };
 
@@ -69,7 +70,7 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     sendToken(manager, 200, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+    res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };
 
@@ -77,9 +78,9 @@ export const logoutManager = async (req: Request, res: Response): Promise<void> 
   try {
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
+    res.status(200).json({ success: true, message: MESSAGES.MSG02 });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+    res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };
 
@@ -88,7 +89,7 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
     const refresh_token = req.cookies.refresh_token;
 
     if (!refresh_token) {
-      res.status(401).json({ success: false, message: 'Không có refresh token được cung cấp' });
+      res.status(401).json({ success: false, message: MESSAGES.MSG10 });
       return;
     }
 
@@ -96,13 +97,13 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
 
     const manager = await Manager.findOne({ sAdminId: decoded.managerId });
     if (!manager) {
-      res.status(401).json({ success: false, message: 'Refresh token không hợp lệ' });
+      res.status(401).json({ success: false, message: MESSAGES.MSG11 });
       return;
     }
 
     sendToken(manager, 200, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+    res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };
 
@@ -147,7 +148,7 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+    res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };
 
@@ -155,14 +156,14 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
 export const resendLoginCode = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.body) {
-      res.status(400).json({ success: false, message: 'Request body là bắt buộc' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG120 });
       return;
     }
 
     const { email } = req.body;
 
     if (!email) {
-      res.status(400).json({ success: false, message: 'Email là bắt buộc' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG121 });
       return;
     }
 
@@ -196,11 +197,11 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
-      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
+      message: MESSAGES.MSG123,
       data: { email: manager.email }
     });
 
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+    res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };

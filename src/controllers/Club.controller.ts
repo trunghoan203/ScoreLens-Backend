@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Club } from '../models/Club.model';
 import { Brand } from '../models/Brand.model';
 import { Admin } from '../models/Admin.model';
+import { MESSAGES } from '../config/messages';
 
 // Tạo club mới (hỗ trợ tạo 1 hoặc nhiều club)
 export const createClub = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
@@ -10,7 +11,7 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
 
     const admin = await Admin.findOne({ adminId });
     if (!admin) {
-      res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG116 });
       return;
     }
 

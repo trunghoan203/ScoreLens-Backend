@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Membership } from '../models/Membership.model';
 import { Club } from '../models/Club.model';
+import { MESSAGES } from '../config/messages';
 
 // Lấy danh sách hội viên
 export const listMemberships = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
@@ -8,7 +9,7 @@ export const listMemberships = async (req: Request & { manager?: any }, res: Res
         const manager = req.manager;
         const club = await Club.findOne({ clubId: manager.clubId });
         if (!club) {
-            res.status(404).json({ success: false, message: 'Câu lạc bộ không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG60 });
             return;
         }
         const brandId = club.brandId;
@@ -17,7 +18,7 @@ export const listMemberships = async (req: Request & { manager?: any }, res: Res
         res.json({ success: true, memberships });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -29,7 +30,7 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         const manager = req.manager;
         const club = await Club.findOne({ clubId: manager.clubId });
         if (!club) {
-            res.status(404).json({ success: false, message: 'Câu lạc bộ không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG60 });
             return;
         }
         const brandId = club.brandId;
@@ -38,7 +39,7 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         res.status(201).json({ success: true, membership });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -54,13 +55,13 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
             { new: true }
         );
         if (!membership) {
-            res.status(404).json({ success: false, message: 'Thành viên không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG61 });
             return;
         }
         res.json({ success: true, membership });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -71,13 +72,13 @@ export const deleteMembership = async (req: Request & { manager?: any }, res: Re
         const { membershipId } = req.params;
         const membership = await Membership.findOneAndDelete({ membershipId });
         if (!membership) {
-            res.status(404).json({ success: false, message: 'Thành viên không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG61 });
             return;
         }
-        res.json({ success: true, message: 'Thành viên đã được xóa' });
+        res.json({ success: true, message: MESSAGES.MSG62 });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         return;
     }
 };
@@ -116,7 +117,7 @@ export const searchMembership = async (req: Request, res: Response): Promise<voi
             }
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -137,6 +138,6 @@ export const getMembershipById = async (req: Request, res: Response): Promise<vo
             data: membership
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };

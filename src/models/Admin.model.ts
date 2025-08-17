@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { IAdmin } from '../interfaces/Admin.interface';
 import jwt from 'jsonwebtoken';
+import { MESSAGES } from '../config/messages';
 
 const adminSchema = new Schema<IAdmin>({
   adminId: { type: String, required: true, unique: true },
@@ -38,7 +39,7 @@ adminSchema.methods.signAccessToken = function (): string {
   const secret = process.env.ACCESS_TOKEN;
   const expiresIn = process.env.ACCESS_TOKEN_EXPIRE || '1d';
   if (!secret) {
-    throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
+    throw new Error(MESSAGES.MSG130);
   }
   return (jwt as any).sign({ adminId: this.adminId }, secret, {
     expiresIn
@@ -49,7 +50,7 @@ adminSchema.methods.signRefreshToken = function (): string {
   const secret = process.env.REFRESH_TOKEN;
   const expiresIn = process.env.REFRESH_TOKEN_EXPIRE || '7d';
   if (!secret) {
-    throw new Error('REFRESH_TOKEN không được xác định trong các biến môi trường');
+    throw new Error(MESSAGES.MSG131);
   }
   return (jwt as any).sign({ adminId: this.adminId }, secret, {
     expiresIn

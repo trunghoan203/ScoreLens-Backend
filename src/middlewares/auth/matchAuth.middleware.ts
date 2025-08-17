@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Match } from '../../models/Match.model';
+import { MESSAGES } from '../../config/messages';
 
 export const isMatchCreator = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -13,13 +14,13 @@ export const isMatchCreator = async (req: Request, res: Response, next: NextFunc
         }
         
         if (!actorMembershipId && !actorGuestToken) {
-            res.status(403).json({ success: false, message: 'Cần có định danh người thực hiện (actorMembershipId hoặc actorGuestToken).' });
+            res.status(403).json({ success: false, message: MESSAGES.MSG97 });
             return;
         }
 
         const match = await Match.findOne({ matchId: matchId });
         if (!match) {
-            res.status(404).json({ success: false, message: 'Trận đấu không tồn tại.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG81 });
             return;
         }
 
@@ -42,6 +43,6 @@ export const isMatchCreator = async (req: Request, res: Response, next: NextFunc
         });
 
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };

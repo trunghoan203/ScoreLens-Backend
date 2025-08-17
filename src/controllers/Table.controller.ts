@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Table } from '../models/Table.model';
+import { MESSAGES } from '../config/messages';
 
 const escapeRegex = (text: string): string => {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -21,7 +22,7 @@ export const listTables = async (req: Request & { manager?: any }, res: Response
         const tables = await Table.find(query);
         res.json({ success: true, tables });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -38,7 +39,7 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
             table
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -56,7 +57,7 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
         );
 
         if (!table) {
-            res.status(404).json({ success: false, message: 'Bàn không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG40 });
             return;
         }
 
@@ -65,7 +66,7 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
             table
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -77,14 +78,14 @@ export const deleteTable = async (req: Request & { manager?: any }, res: Respons
 
         const table = await Table.findOne({ tableId, clubId });
         if (!table) {
-            res.status(404).json({ success: false, message: 'Bàn không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG40 });
             return;
         }
 
         await Table.findOneAndDelete({ tableId, clubId });
-        res.json({ success: true, message: 'Bàn đã được xóa' });
+        res.json({ success: true, message: MESSAGES.MSG41 });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -131,7 +132,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             }
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -153,7 +154,7 @@ export const getTableById = async (req: Request, res: Response): Promise<void> =
             data: table
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -178,6 +179,6 @@ export const getTablesByClub = async (req: Request, res: Response): Promise<void
             data: tables
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
