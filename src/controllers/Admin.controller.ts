@@ -80,12 +80,12 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
         }
 
         if (admin.activationCode !== activationCode) {
-            res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG23 });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG24 });
             return;
         }
 
@@ -96,7 +96,7 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({
             success: true,
-            message: 'Tài khoản đã được xác thực thành công. Bạn có thể đăng nhập ngay bây giờ.',
+            message: MESSAGES.MSG03,
         });
 
     } catch (error: any) {

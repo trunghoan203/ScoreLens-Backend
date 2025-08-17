@@ -23,7 +23,8 @@ export const MESSAGES = {
   MSG20: 'Không được phép truy cập',
   MSG21: 'Vui lòng nhập email và mật khẩu',
   MSG22: 'Vui lòng cung cấp email',
-
+  MSG23: 'Mã xác thực không hợp lệ',
+  MSG24: 'Mã xác thực đã hết hạn',
   // Super Admin
   MSG30: 'Super Admin không tồn tại',
   MSG31: 'Admin không tồn tại',
@@ -94,6 +95,7 @@ export const MESSAGES = {
   MSG131: 'REFRESH_TOKEN không được xác định trong các biến môi trường',
   MSG132: 'REFRESH_TOKEN hoặc REFRESH_TOKEN_EXPIRE không được xác định trong các biến môi trường',
   MSG133: 'ACCESS_TOKEN hoặc ACCESS_TOKEN_EXPIRE không được xác định trong các biến môi trường'
+
 };
 
 // Type for message codes
