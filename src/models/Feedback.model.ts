@@ -10,7 +10,6 @@ export interface IFeedback extends Document {
     tableId: string;
     content: string;
     status: 'managerP' | 'adminP' | 'superadminP' | 'resolved';
-    needSupport: boolean;
     history: Array<{
         byId: string;
         byName: string;
@@ -37,7 +36,7 @@ const FeedbackSchema = new Schema<IFeedback>(
             enum: ['managerP', 'adminP', 'superadminP', 'resolved'],
             default: 'managerP'
         },
-        needSupport: { type: Boolean, default: false },
+
         history: [
             {
                 byId: String,
