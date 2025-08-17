@@ -6,12 +6,12 @@ export const initializeSocket = (serverIo: Server) => {
     io = serverIo;
 
     io.on('connection', (socket: Socket) => {
-        console.log(`[Socket.IO] User connected: ${socket.id}`);
+        console.log(`[Socket.IO] Người dùng đã kết nối: ${socket.id}`);
 
         // Join match room
         socket.on('join_match_room', (matchId: string) => {
             if (matchId) {
-                console.log(`[Socket.IO] User ${socket.id} is joining room for match ${matchId}`);
+                console.log(`[Socket.IO] Người dùng ${socket.id} đang vào phòng ${matchId}`);
                 socket.join(matchId);
             }
         });
@@ -19,7 +19,7 @@ export const initializeSocket = (serverIo: Server) => {
         // Leave match room
         socket.on('leave_match_room', (matchId: string) => {
             if (matchId) {
-                console.log(`[Socket.IO] User ${socket.id} is leaving room for match ${matchId}`);
+                console.log(`[Socket.IO] Người dùng ${socket.id} đang rời phòng ${matchId}`);
                 socket.leave(matchId);
             }
         });
@@ -30,7 +30,7 @@ export const initializeSocket = (serverIo: Server) => {
                 const roomName = `role_${data.role}`;
                 const userRoomName = `user_${data.userId}`;
                 
-                console.log(`[Socket.IO] User ${data.userId} (${data.role}) joining rooms: ${roomName}, ${userRoomName}`);
+                console.log(`[Socket.IO] Người dùng ${data.userId} (${data.role}) tham gia phòng: ${roomName}, ${userRoomName}`);
                 
                 socket.join(roomName);
                 socket.join(userRoomName);
@@ -47,7 +47,7 @@ export const initializeSocket = (serverIo: Server) => {
                 const roomName = `role_${data.role}`;
                 const userRoomName = `user_${data.userId}`;
                 
-                console.log(`[Socket.IO] User ${data.userId} (${data.role}) leaving rooms: ${roomName}, ${userRoomName}`);
+                console.log(`[Socket.IO] Người dùng ${data.userId} (${data.role}) rời phòng: ${roomName}, ${userRoomName}`);
                 
                 socket.leave(roomName);
                 socket.leave(userRoomName);
@@ -65,7 +65,7 @@ export const initializeSocket = (serverIo: Server) => {
                     });
                 }
             } catch (error) {
-                console.error('Error handling notification read:', error);
+                console.error('Lỗi máy chủ nội bộ', error);
             }
         });
 
@@ -91,7 +91,7 @@ export const initializeSocket = (serverIo: Server) => {
 
         // Handle disconnect
         socket.on('disconnect', () => {
-            console.log(`[Socket.IO] User disconnected: ${socket.id}`);
+            console.log(`[Socket.IO] Người dùng đã ngắt kết nối: ${socket.id}`);
             
             // Clean up user data
             if (socket.data.userId && socket.data.role) {
@@ -101,7 +101,7 @@ export const initializeSocket = (serverIo: Server) => {
                 socket.leave(roomName);
                 socket.leave(userRoomName);
                 
-                console.log(`[Socket.IO] Cleaned up rooms for user ${socket.data.userId}`);
+                console.log(`[Socket.IO] Dọn dẹp phòng cho người dùng ${socket.data.userId}`);
             }
         });
     });
@@ -109,7 +109,7 @@ export const initializeSocket = (serverIo: Server) => {
 
 export const getIO = (): Server => {
     if (!io) {
-        throw new Error("Socket.io not initialized!");
+        throw new Error("Socket.io chưa được khởi tạo!");
     }
     return io;
 };

@@ -15,13 +15,13 @@ export const registerSuperAdmin = async (req: Request, res: Response): Promise<v
 
     const existingAdmin = await SuperAdmin.findOne({ email });
     if (existingAdmin) {
-      res.status(400).json({ success: false, message: 'Email already registered' });
+      res.status(400).json({ success: false, message: 'Email đã được đăng ký' });
       return;
     }
 
     const sAdminId = `SA-${Date.now()}`;
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     const newAdmin = await SuperAdmin.create({
       sAdminId,
@@ -43,11 +43,11 @@ export const registerSuperAdmin = async (req: Request, res: Response): Promise<v
 
     res.status(201).json({
       success: true,
-      message: 'Activation code sent to email',
+      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
       data: { email: newAdmin.email }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -57,22 +57,22 @@ export const verifySuperAdmin = async (req: Request, res: Response): Promise<voi
 
     const admin = await SuperAdmin.findOne({ email });
     if (!admin) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Super Admin không tồn tại' });
       return;
     }
 
     if (admin.isVerified) {
-      res.status(400).json({ success: false, message: 'Account already verified' });
+      res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
       return;
     }
 
     if (admin.activationCode !== activationCode) {
-      res.status(400).json({ success: false, message: 'Invalid activation code' });
+      res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
       return;
     }
 
     if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-      res.status(400).json({ success: false, message: 'Activation code expired' });
+      res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
       return;
     }
 
@@ -82,7 +82,7 @@ export const verifySuperAdmin = async (req: Request, res: Response): Promise<voi
     await admin.save();
 
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -92,17 +92,17 @@ export const loginSuperAdmin = async (req: Request, res: Response): Promise<void
 
     const admin = await SuperAdmin.findOne({ email });
     if (!admin) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Super Admin không tồn tại' });
       return;
     }
 
     if (!admin.isVerified) {
-      res.status(403).json({ success: false, message: 'Account not verified' });
+      res.status(403).json({ success: false, message: 'Tài khoản chưa được xác thực' });
       return;
     }
 
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     admin.activationCode = activationCode;
     admin.activationCodeExpires = activationCodeExpires;
@@ -110,7 +110,7 @@ export const loginSuperAdmin = async (req: Request, res: Response): Promise<void
 
     await sendMail({
       email: admin.email,
-      subject: 'ScoreLens - Login Verification',
+      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập',
       template: 'activation-mail.ejs',
       data: {
         user: { name: admin.fullName },
@@ -120,11 +120,11 @@ export const loginSuperAdmin = async (req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
-      message: 'Login verification code sent to email',
+      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
       data: { email: admin.email }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -134,17 +134,17 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     const admin = await SuperAdmin.findOne({ email });
     if (!admin) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Super Admin không tồn tại' });
       return;
     }
 
     if (admin.activationCode !== activationCode) {
-      res.status(400).json({ success: false, message: 'Invalid activation code' });
+      res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
       return;
     }
 
     if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-      res.status(400).json({ success: false, message: 'Activation code expired' });
+      res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
       return;
     }
 
@@ -155,7 +155,7 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     sendToken(admin, 200, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -170,7 +170,7 @@ export const logoutSuperAdmin = async (req: Request, res: Response): Promise<voi
 
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    res.status(200).json({ success: true, message: 'Logged out successfully' });
+    res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -181,7 +181,7 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
     const refresh_token = req.cookies.refresh_token;
 
     if (!refresh_token) {
-      res.status(401).json({ success: false, message: 'No refresh token provided' });
+      res.status(401).json({ success: false, message: 'Không có refresh token được cung cấp' });
       return;
     }
 
@@ -189,13 +189,13 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
 
     const admin = await SuperAdmin.findOne({ sAdminId: decoded.sAdminId });
     if (!admin) {
-      res.status(401).json({ success: false, message: 'Invalid refresh token' });
+      res.status(401).json({ success: false, message: 'Refresh token không hợp lệ' });
       return;
     }
 
     sendToken(admin, 200, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -206,7 +206,7 @@ export const getProfile = async (req: Request & { superAdmin?: any }, res: Respo
     if (!superAdmin) {
       res.status(401).json({
         success: false,
-        message: 'Not authenticated'
+        message: 'Không được xác thực'
       });
       return;
     }
@@ -222,7 +222,7 @@ export const getProfile = async (req: Request & { superAdmin?: any }, res: Respo
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -232,25 +232,25 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
     const { email } = req.body;
 
     if (!email) {
-      res.status(400).json({ success: false, message: 'Email is required' });
+      res.status(400).json({ success: false, message: 'Email là bắt buộc' });
       return;
     }
 
     const superAdmin = await SuperAdmin.findOne({ email });
     if (!superAdmin) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Super Admin không tồn tại' });
       return;
     }
 
     // Kiểm tra xem tài khoản đã được verify chưa
     if (superAdmin.isVerified) {
-      res.status(400).json({ success: false, message: 'Account is already verified' });
+      res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
       return;
     }
 
     // Tạo mã xác thực mới
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     // Cập nhật mã xác thực mới
     superAdmin.activationCode = activationCode;
@@ -270,13 +270,13 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
 
     res.status(200).json({
       success: true,
-      message: 'Verification code has been resent to your email. It will expire in 5 minutes.',
+      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
       data: { email: superAdmin.email }
     });
 
   } catch (error: any) {
     console.error('Resend verification code error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -286,25 +286,25 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
     const { email } = req.body;
 
     if (!email) {
-      res.status(400).json({ success: false, message: 'Email is required' });
+      res.status(400).json({ success: false, message: 'Email là bắt buộc' });
       return;
     }
 
     const superAdmin = await SuperAdmin.findOne({ email });
     if (!superAdmin) {
-      res.status(404).json({ success: false, message: 'Super Admin not found' });
+      res.status(404).json({ success: false, message: 'Super Admin không tồn tại' });
       return;
     }
 
     // Kiểm tra xem tài khoản đã được verify chưa
     if (!superAdmin.isVerified) {
-      res.status(403).json({ success: false, message: 'Account is not verified. Please verify your account first.' });
+      res.status(403).json({ success: false, message: 'Tài khoản chưa được xác thực. Vui lòng xác thực tài khoản trước.' });
       return;
     }
 
     // Tạo mã xác thực đăng nhập mới
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     // Cập nhật mã xác thực mới
     superAdmin.activationCode = activationCode;
@@ -324,17 +324,16 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
-      message: 'Login verification code has been resent to your email. It will expire in 5 minutes.',
+      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
       data: { email: superAdmin.email }
     });
 
   } catch (error: any) {
     console.error('Resend login code error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
-//Manage Admin APIs
 // Approve admin
 export const approveAdmin = async (req: Request, res: Response): Promise<void> => {
   const { adminId } = req.params;
@@ -344,7 +343,7 @@ export const approveAdmin = async (req: Request, res: Response): Promise<void> =
     { new: true }
   );
   if (!admin) {
-    res.status(404).json({ success: false, message: 'Admin not found' });
+    res.status(404).json({ success: false, message: 'Admin không tồn tại' });
     return;
   }
   res.json({ success: true, admin });
@@ -370,7 +369,7 @@ export const rejectAdmin = async (req: Request, res: Response): Promise<void> =>
     { new: true }
   );
   if (!admin) {
-    res.status(404).json({ success: false, message: 'Admin not found' });
+    res.status(404).json({ success: false, message: 'Admin không tồn tại' });
     return;
   }
   res.json({ success: true, admin });
@@ -434,8 +433,7 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
       }
     });
   } catch (error) {
-    console.error('Error in listAdminsWithDetails:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -446,7 +444,7 @@ export const getAdminDetail = async (req: Request, res: Response): Promise<void>
 
     const admin = await Admin.findOne({ adminId }).lean();
     if (!admin) {
-      res.status(404).json({ success: false, message: 'Admin not found' });
+      res.status(404).json({ success: false, message: 'Admin không tồn tại' });
       return;
     }
 
@@ -467,7 +465,6 @@ export const getAdminDetail = async (req: Request, res: Response): Promise<void>
       }
     });
   } catch (error) {
-    console.error('Error in getAdminDetailWithBrandAndClub:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };

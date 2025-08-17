@@ -38,7 +38,7 @@ adminSchema.methods.signAccessToken = function (): string {
   const secret = process.env.ACCESS_TOKEN;
   const expiresIn = process.env.ACCESS_TOKEN_EXPIRE || '1d';
   if (!secret) {
-    throw new Error('ACCESS_TOKEN is not defined in environment variables');
+    throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
   }
   return (jwt as any).sign({ adminId: this.adminId }, secret, {
     expiresIn
@@ -49,7 +49,7 @@ adminSchema.methods.signRefreshToken = function (): string {
   const secret = process.env.REFRESH_TOKEN;
   const expiresIn = process.env.REFRESH_TOKEN_EXPIRE || '7d';
   if (!secret) {
-    throw new Error('REFRESH_TOKEN is not defined in environment variables');
+    throw new Error('REFRESH_TOKEN không được xác định trong các biến môi trường');
   }
   return (jwt as any).sign({ adminId: this.adminId }, secret, {
     expiresIn

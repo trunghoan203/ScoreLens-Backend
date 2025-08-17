@@ -20,13 +20,13 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
         const { fullName, email, password } = req.body;
 
         if (!fullName || !email || !password) {
-            res.status(400).json({ success: false, message: 'Please provide fullName, email, and password' });
+            res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ họ tên, email và mật khẩu' });
             return;
         }
 
         const existingAdmin = await Admin.findOne({ email });
         if (existingAdmin) {
-            res.status(400).json({ success: false, message: 'Email already registered' });
+            res.status(400).json({ success: false, message: 'Email đã được đăng ký' });
             return;
         }
 
@@ -69,22 +69,22 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         if (admin.isVerified) {
-            res.status(400).json({ success: false, message: 'Account already verified' });
+            res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
             return;
         }
 
         if (admin.activationCode !== activationCode) {
-            res.status(400).json({ success: false, message: 'Invalid activation code' });
+            res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Activation code expired' });
+            res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
             return;
         }
 
@@ -95,7 +95,7 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({
             success: true,
-            message: 'Account verified successfully. You can now log in.',
+            message: 'Tài khoản đã được xác thực thành công. Bạn có thể đăng nhập ngay bây giờ.',
         });
 
     } catch (error: any) {
@@ -108,24 +108,24 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
         const { email, password, rememberMe } = req.body;
 
         if (!email || !password) {
-            res.status(400).json({ success: false, message: 'Please provide email and password' });
+            res.status(400).json({ success: false, message: 'Vui lòng nhập email và mật khẩu' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+password');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Invalid credentials' });
+            res.status(404).json({ success: false, message: 'Thông tin đăng nhập không hợp lệ' });
             return;
         }
 
         if (!admin.isVerified) {
-            res.status(403).json({ success: false, message: 'Account not verified. Please check your email for verification code.' });
+            res.status(403).json({ success: false, message: 'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để nhận mã xác thực.' });
             return;
         }
 
         const isPasswordMatched = await (admin as any).comparePassword(password);
         if (!isPasswordMatched) {
-            res.status(401).json({ success: false, message: 'Invalid credentials' });
+            res.status(401).json({ success: false, message: 'Thông tin đăng nhập không hợp lệ' });
             return;
         }
 
@@ -191,7 +191,7 @@ export const logoutAdmin = async (req: Request, res: Response): Promise<void> =>
         
         res.cookie('access_token', '', { maxAge: 1 });
         res.cookie('refresh_token', '', { maxAge: 1 });
-        res.status(200).json({ success: true, message: 'Logged out successfully' });
+        res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -202,7 +202,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         const { refreshToken } = req.body;
 
         if (!refreshToken) {
-            res.status(400).json({ success: false, message: 'Refresh token is required' });
+            res.status(400).json({ success: false, message: 'Refresh token là bắt buộc' });
             return;
         }
 
@@ -225,7 +225,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         if (error.message.includes('Invalid') || error.message.includes('expired') || error.message.includes('revoked')) {
             res.status(401).json({ success: false, message: error.message });
         } else {
-            res.status(500).json({ success: false, message: 'Internal server error' });
+            res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
         }
     }
 };
@@ -236,7 +236,7 @@ export const getAdminProfile = async (req: Request & { admin?: any }, res: Respo
         const admin = await Admin.findOne({ adminId: adminId });
 
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
@@ -251,23 +251,23 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
         const { email } = req.body;
 
         if (!email) {
-            res.status(400).json({ success: false, message: 'Please provide email' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email' });
             return;
         }
 
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         if (!admin.isVerified) {
-            res.status(403).json({ success: false, message: 'Account not verified' });
+            res.status(403).json({ success: false, message: 'Tài khoản chưa được xác thực' });
             return;
         }
 
         const resetCode = generateRandomCode(6);
-        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         admin.activationCode = resetCode;
         admin.activationCodeExpires = resetCodeExpires;
@@ -275,7 +275,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Reset Password Code',
+            subject: 'ScoreLens - Mã Đặt Lại Mật Khẩu',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
@@ -285,7 +285,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({
             success: true,
-            message: `Password reset code sent to ${admin.email}. It will expire in 10 minutes.`
+            message: `Mã đặt lại mật khẩu đã được gửi đến ${admin.email}. Mã này sẽ hết hạn trong 10 phút.`
         });
 
     } catch (error: any) {
@@ -298,23 +298,23 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
         const { email, resetCode, newPassword } = req.body;
 
         if (!email || !resetCode || !newPassword) {
-            res.status(400).json({ success: false, message: 'Please provide email, reset code, and new password' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email, mã đặt lại và mật khẩu mới' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         if (!admin.activationCode || admin.activationCode !== resetCode) {
-            res.status(400).json({ success: false, message: 'Invalid reset code' });
+            res.status(400).json({ success: false, message: 'Mã đặt lại không hợp lệ' });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Reset code expired' });
+            res.status(400).json({ success: false, message: 'Mã đặt lại đã hết hạn' });
             return;
         }
 
@@ -326,7 +326,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
         res.status(200).json({
             success: true,
-            message: 'Password reset successfully. You can now login with your new password.'
+            message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.'
         });
 
     } catch (error: any) {
@@ -339,23 +339,23 @@ export const verifyResetCode = async (req: Request, res: Response): Promise<void
         const { email, resetCode } = req.body;
 
         if (!email || !resetCode) {
-            res.status(400).json({ success: false, message: 'Please provide email and reset code' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email và mã đặt lại' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         if (!admin.activationCode || admin.activationCode !== resetCode) {
-            res.status(400).json({ success: false, message: 'Invalid reset code' });
+            res.status(400).json({ success: false, message: 'Mã đặt lại không hợp lệ' });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Reset code expired' });
+            res.status(400).json({ success: false, message: 'Mã đặt lại đã hết hạn' });
             return;
         }
 
@@ -366,7 +366,7 @@ export const verifyResetCode = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({
             success: true,
-            message: 'Reset code verified successfully. You can now set your new password.'
+            message: 'Mã đặt lại đã được xác thực thành công. Bạn có thể đặt mật khẩu mới.'
         });
 
     } catch (error: any) {
@@ -379,19 +379,19 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
         const { email, newPassword } = req.body;
 
         if (!email || !newPassword) {
-            res.status(400).json({ success: false, message: 'Please provide email and new password' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email và mật khẩu mới' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         // Check if reset code was already verified (activationCode should be null)
         if (admin.activationCode !== null) {
-            res.status(400).json({ success: false, message: 'Please verify your reset code first' });
+            res.status(400).json({ success: false, message: 'Vui lòng xác thực mã đặt lại trước khi tiếp tục' });
             return;
         }
 
@@ -401,7 +401,7 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({
             success: true,
-            message: 'Password updated successfully. You can now login with your new password.'
+            message: 'Cập nhật mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.'
         });
 
     } catch (error: any) {
@@ -414,7 +414,7 @@ export const createManager = catchAsync(async (req: Request & { admin?: any }, r
 
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler('Lỗi xác thực: Không tìm thấy Admin ID trong token.', 401));
     }
 
     if (!fullName || !email || !phoneNumber || !dateOfBirth || !citizenCode || !address || !clubId) {
@@ -444,7 +444,7 @@ export const updateManager = catchAsync(async (req: Request & { admin?: any }, r
 
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler('Lỗi xác thực: Không tìm thấy Admin ID trong token.', 401));
     }
 
     if (!managerId) {
@@ -461,12 +461,10 @@ export const updateManager = catchAsync(async (req: Request & { admin?: any }, r
 });
 
 export const deleteManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
-    console.log('Request Params:', req.params);
     const { managerId } = req.params;
-    console.log('Extracted managerId:', managerId);
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler('Lỗi xác thực: Không tìm thấy Admin ID trong token.', 401));
     }
 
     if (!managerId) {
@@ -486,7 +484,7 @@ export const deactivateManager = catchAsync(async (req: Request & { admin?: any 
 
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler('Lỗi xác thực: Không tìm thấy Admin ID trong token.', 401));
     }
 
     if (!managerId) {
@@ -529,32 +527,32 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
     try {
         // Kiểm tra req.body có tồn tại không
         if (!req.body) {
-            res.status(400).json({ success: false, message: 'Request body is required' });
+            res.status(400).json({ success: false, message: 'Request body là bắt buộc' });
             return;
         }
 
         const { email } = req.body;
 
         if (!email) {
-            res.status(400).json({ success: false, message: 'Email is required' });
+            res.status(400).json({ success: false, message: 'Email là bắt buộc' });
             return;
         }
 
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         // Kiểm tra xem tài khoản đã được verify chưa
         if (admin.isVerified) {
-            res.status(400).json({ success: false, message: 'Account is already verified' });
+            res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
             return;
         }
 
         // Tạo mã xác thực mới
         const activationCode = generateRandomCode(6);
-        const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+        const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         // Cập nhật mã xác thực mới
         admin.activationCode = activationCode;
@@ -564,7 +562,7 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
         // Gửi email với mã mới
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Admin Email Verification',
+            subject: 'ScoreLens - Mã Xác Thực Đăng Nhập',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
@@ -574,13 +572,12 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
 
         res.status(200).json({
             success: true,
-            message: 'Verification code has been resent to your email. It will expire in 10 minutes.',
+            message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
             data: { email: admin.email }
         });
 
     } catch (error: any) {
-        console.error('Resend verification code error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -589,32 +586,32 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
     try {
         // Kiểm tra req.body có tồn tại không
         if (!req.body) {
-            res.status(400).json({ success: false, message: 'Request body is required' });
+            res.status(400).json({ success: false, message: 'Request body là bắt buộc' });
             return;
         }
 
         const { email } = req.body;
 
         if (!email) {
-            res.status(400).json({ success: false, message: 'Email is required' });
+            res.status(400).json({ success: false, message: 'Email là bắt buộc' });
             return;
         }
 
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: 'Admin không tồn tại' });
             return;
         }
 
         // Kiểm tra xem tài khoản đã được verify chưa
         if (!admin.isVerified) {
-            res.status(403).json({ success: false, message: 'Account is not verified. Please verify your account first.' });
+            res.status(403).json({ success: false, message: 'Tài khoản chưa được xác thực. Vui lòng xác thực tài khoản trước.' });
             return;
         }
 
         // Tạo mã reset password mới
         const resetCode = generateRandomCode(6);
-        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         // Cập nhật mã reset mới
         admin.activationCode = resetCode;
@@ -624,7 +621,7 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
         // Gửi email với mã mới
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Reset Password Code',
+            subject: 'ScoreLens - Mã Đặt Lại Mật Khẩu',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
@@ -634,13 +631,12 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
 
         res.status(200).json({
             success: true,
-            message: 'Password reset code has been resent to your email. It will expire in 10 minutes.',
+            message: 'Mã đặt lại mật khẩu đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
             data: { email: admin.email }
         });
 
     } catch (error: any) {
-        console.error('Resend reset password code error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -648,7 +644,7 @@ export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: 
     try {
         const adminId = req.admin?.adminId;
         if (!adminId) {
-            res.status(401).json({ success: false, message: 'Unauthorized' });
+            res.status(401).json({ success: false, message: 'Không được phép truy cập' });
             return;
         }
         const admin = await Admin.findOneAndUpdate(
@@ -670,7 +666,7 @@ export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: 
 export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler('Lỗi xác thực: Không tìm thấy Admin ID trong token.', 401));
     }
 
     const admin = await Admin.findOne({ adminId });

@@ -12,7 +12,7 @@ export const startServer = async () => {
     try {
         await connectDB(process.env.DB_URI);
 
-        console.log('MongoDB database connection established successfully');
+        console.log('Kết nối cơ sở dữ liệu MongoDB đã được thiết lập thành công');
 
         const httpServer = http.createServer(app);
         const io = new SocketIOServer(httpServer, {
@@ -26,11 +26,11 @@ export const startServer = async () => {
         initializeSocket(io);
         const PORT = process.env.PORT;
         httpServer.listen(PORT, () => {
-            console.log(`Server is listening on port: http://localhost:${process.env.PORT} ....`);
+            console.log(`Máy chủ đang lắng nghe trên cổng: http://localhost:${process.env.PORT} ....`);
         });
         
     } catch (error: any) {
-        console.log('MongoDB connection error. Please make sure MongoDB is running: ');
+        console.log('Lỗi kết nối MongoDB. Vui lòng đảm bảo MongoDB đang chạy.: ');
     }
 };
 

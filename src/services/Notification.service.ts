@@ -97,18 +97,13 @@ export class NotificationService {
       // Lưu thông báo vào database nếu có
       if (notifications.length > 0) {
         const savedNotifications = await Notification.insertMany(notifications);
-        
         // Gửi thông báo realtime qua socket
         this.sendRealtimeNotifications(savedNotifications);
-
-        console.log(`Created ${notifications.length} notifications for feedback ${feedbackId} (status: ${status})`);
-      } else {
-        console.log(`No notifications created for feedback ${feedbackId} (status: ${status})`);
-      }
+      } 
 
       return notifications;
     } catch (error) {
-      console.error('Error creating feedback notifications:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }
@@ -182,19 +177,14 @@ export class NotificationService {
 
       // Lưu thông báo vào database nếu có
       if (notifications.length > 0) {
-        const savedNotifications = await Notification.insertMany(notifications);
-        
+        const savedNotifications = await Notification.insertMany(notifications);       
         // Gửi thông báo realtime qua socket
         this.sendRealtimeNotifications(savedNotifications);
-
-        console.log(`Created ${notifications.length} notifications for status change to ${newStatus} (feedback: ${feedbackId})`);
-      } else {
-        console.log(`No notifications created for status change to ${newStatus} (feedback: ${feedbackId})`);
       }
 
       return notifications;
     } catch (error) {
-      console.error('Error creating status change notifications:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }
@@ -232,7 +222,7 @@ export class NotificationService {
       });
 
     } catch (error) {
-      console.error('Error sending realtime notifications:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
     }
   }
 
@@ -351,7 +341,7 @@ export class NotificationService {
         }
       };
     } catch (error) {
-      console.error('Error getting user notifications:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }
@@ -365,7 +355,7 @@ export class NotificationService {
       const feedbacks = await Feedback.find({ clubId: { $in: clubIds } }).select('feedbackId');
       return feedbacks.map((feedback: any) => feedback.feedbackId);
     } catch (error) {
-      console.error('Error getting feedback IDs by club IDs:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       return [];
     }
   }
@@ -395,7 +385,7 @@ export class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }
@@ -451,7 +441,7 @@ export class NotificationService {
 
       return result;
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }
@@ -504,7 +494,7 @@ export class NotificationService {
       const count = await Notification.countDocuments(matchCondition);
       return count;
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }
@@ -528,7 +518,7 @@ export class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error('Lỗi máy chủ nội bộ', error);
       throw error;
     }
   }

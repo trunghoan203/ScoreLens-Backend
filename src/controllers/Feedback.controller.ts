@@ -20,7 +20,6 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
             content
         });
 
-        // Tạo thông báo realtime cho manager (vì status default là managerP)
         try {
             await NotificationService.createFeedbackNotification(feedback.feedbackId, {
                 createdBy,
@@ -29,12 +28,10 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
                 status: feedback.status
             });
         } catch (notificationError) {
-            console.error('Error creating notifications:', notificationError);
         }
 
         res.status(201).json({ success: true, feedback });
     } catch (error: any) {
-        console.log(error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -234,7 +231,6 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
                     tableId: feedback.tableId
                 }, status);
             } catch (notificationError) {
-                console.error('Error creating status change notifications:', notificationError);
             }
         }
 
