@@ -55,12 +55,12 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
     }
 
     if (manager.activationCode !== activationCode) {
-      res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG23 });
       return;
     }
 
     if (manager.activationCodeExpires && new Date() > manager.activationCodeExpires) {
-      res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG24 });
       return;
     }
 
