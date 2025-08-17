@@ -8,7 +8,7 @@ export const listMemberships = async (req: Request & { manager?: any }, res: Res
         const manager = req.manager;
         const club = await Club.findOne({ clubId: manager.clubId });
         if (!club) {
-            res.status(404).json({ success: false, message: 'Club not found' });
+            res.status(404).json({ success: false, message: 'Câu lạc bộ không tồn tại' });
             return;
         }
         const brandId = club.brandId;
@@ -17,7 +17,7 @@ export const listMemberships = async (req: Request & { manager?: any }, res: Res
         res.json({ success: true, memberships });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
         return;
     }
 };
@@ -29,7 +29,7 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         const manager = req.manager;
         const club = await Club.findOne({ clubId: manager.clubId });
         if (!club) {
-            res.status(404).json({ success: false, message: 'Club not found' });
+            res.status(404).json({ success: false, message: 'Câu lạc bộ không tồn tại' });
             return;
         }
         const brandId = club.brandId;
@@ -38,7 +38,7 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         res.status(201).json({ success: true, membership });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
         return;
     }
 };
@@ -54,13 +54,13 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
             { new: true }
         );
         if (!membership) {
-            res.status(404).json({ success: false, message: 'Membership not found' });
+            res.status(404).json({ success: false, message: 'Thành viên không tồn tại' });
             return;
         }
         res.json({ success: true, membership });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
         return;
     }
 };
@@ -71,13 +71,13 @@ export const deleteMembership = async (req: Request & { manager?: any }, res: Re
         const { membershipId } = req.params;
         const membership = await Membership.findOneAndDelete({ membershipId });
         if (!membership) {
-            res.status(404).json({ success: false, message: 'Membership not found' });
+            res.status(404).json({ success: false, message: 'Thành viên không tồn tại' });
             return;
         }
-        res.json({ success: true, message: 'Membership deleted' });
+        res.json({ success: true, message: 'Thành viên đã được xóa' });
         return;
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
         return;
     }
 };
@@ -116,18 +116,10 @@ export const searchMembership = async (req: Request, res: Response): Promise<voi
             }
         });
     } catch (error: any) {
-        console.error('Error searching membership:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
-// @desc    Lấy thông tin membership
-// @route   GET /api/memberships/:id
-// @access  Public
 export const getMembershipById = async (req: Request, res: Response): Promise<void> => {
     try {
         const membership = await Membership.findById(req.params.id);
@@ -145,11 +137,6 @@ export const getMembershipById = async (req: Request, res: Response): Promise<vo
             data: membership
         });
     } catch (error: any) {
-        console.error('Error getting membership:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };

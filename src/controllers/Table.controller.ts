@@ -21,8 +21,7 @@ export const listTables = async (req: Request & { manager?: any }, res: Response
         const tables = await Table.find(query);
         res.json({ success: true, tables });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -39,7 +38,7 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
             table
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -57,7 +56,7 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
         );
 
         if (!table) {
-            res.status(404).json({ success: false, message: 'Table not found' });
+            res.status(404).json({ success: false, message: 'Bàn không tồn tại' });
             return;
         }
 
@@ -66,7 +65,7 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
             table
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -78,14 +77,14 @@ export const deleteTable = async (req: Request & { manager?: any }, res: Respons
 
         const table = await Table.findOne({ tableId, clubId });
         if (!table) {
-            res.status(404).json({ success: false, message: 'Table not found' });
+            res.status(404).json({ success: false, message: 'Bàn không tồn tại' });
             return;
         }
 
         await Table.findOneAndDelete({ tableId, clubId });
-        res.json({ success: true, message: 'Table deleted' });
+        res.json({ success: true, message: 'Bàn đã được xóa' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -132,12 +131,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             }
         });
     } catch (error: any) {
-        console.error('Error verifying table:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -159,12 +153,7 @@ export const getTableById = async (req: Request, res: Response): Promise<void> =
             data: table
         });
     } catch (error: any) {
-        console.error('Error getting table:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };
 
@@ -189,11 +178,6 @@ export const getTablesByClub = async (req: Request, res: Response): Promise<void
             data: tables
         });
     } catch (error: any) {
-        console.error('Error getting tables by club:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
     }
 };

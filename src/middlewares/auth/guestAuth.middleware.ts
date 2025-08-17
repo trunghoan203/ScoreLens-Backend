@@ -14,7 +14,7 @@ export const isGuestOrAuthenticated = async (req: Request, res: Response, next: 
 
         const secret = process.env.ACCESS_TOKEN;
         if (!secret) {
-            throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+            throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
         }
 
         const decoded = jwt.verify(token, secret) as any;
@@ -22,7 +22,7 @@ export const isGuestOrAuthenticated = async (req: Request, res: Response, next: 
         if (decoded.membershipId) {
             const membership = await Membership.findOne({ membershipId: decoded.membershipId });
             if (!membership) {
-                res.status(401).json({ success: false, message: 'Invalid token: Membership not found.' });
+                res.status(401).json({ success: false, message: 'Thành viên không tồn tại.' });
                 return;
             }
             (req as any).isGuest = false;
@@ -32,7 +32,7 @@ export const isGuestOrAuthenticated = async (req: Request, res: Response, next: 
             (req as any).isGuest = false;
             (req as any).managerId = decoded.managerId;
         } else {
-             res.status(401).json({ success: false, message: 'Invalid token payload.' });
+             res.status(401).json({ success: false, message: 'Dữ liệu token không hợp lệ.' });
              return;
         }
 
@@ -58,7 +58,7 @@ export const isGuestOnly = async (req: Request, res: Response, next: NextFunctio
         if (token) {
             res.status(403).json({
                 success: false,
-                message: 'This endpoint is for guests only.',
+                message: 'Chỉ dành cho khách',
                 code: 'GUEST_ONLY'
             });
             return;
@@ -72,7 +72,7 @@ export const isGuestOnly = async (req: Request, res: Response, next: NextFunctio
         console.error('Guest only middleware error:', error);
         res.status(401).json({
             success: false,
-            message: 'Authentication failed.',
+            message: 'Xác thực không thành công.',
             code: 'AUTH_FAILED'
         });
     }

@@ -9,7 +9,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
       token = req.header('Authorization')?.replace('Bearer ', '');
     }
     if (!token) {
-      res.status(401).json({ success: false, message: 'No token provided, please login.' });
+      res.status(401).json({ success: false, message: 'Không có token được cung cấp, vui lòng đăng nhập.' });
       return;
     }
 
@@ -17,7 +17,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
       // Thử verify access token
       const secret = process.env.ACCESS_TOKEN;
       if (!secret) {
-        throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+        throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
       }
       const decoded = jwt.verify(token, secret) as { adminId?: string; sAdminId?: string; managerId?: string; iat: number, exp: number };
       
@@ -47,7 +47,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
             // Decode admin info từ access token mới
             const secret = process.env.ACCESS_TOKEN;
             if (!secret) {
-              throw new Error('ACCESS_TOKEN secret is not defined in environment variables');
+              throw new Error('ACCESS_TOKEN không được xác định trong các biến môi trường');
             }
             const decoded = jwt.verify(accessToken, secret) as { adminId?: string; sAdminId?: string; managerId?: string };
             
@@ -64,7 +64,7 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
           } catch (refreshError: any) {
             res.status(401).json({ 
               success: false, 
-              message: 'Session expired, please login again.',
+              message: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
               code: 'SESSION_EXPIRED'
             });
             return;
@@ -74,14 +74,14 @@ export const autoRefreshToken = async (req: Request, res: Response, next: NextFu
       
       res.status(401).json({ 
         success: false, 
-        message: 'Invalid token.',
+        message: 'Token không hợp lệ',
         code: 'INVALID_TOKEN'
       });
     }
   } catch (error) {
     res.status(401).json({ 
       success: false, 
-      message: 'Not authorized to access this resource.',
+      message: 'Không được phép truy cập tài nguyên này.',
       code: 'UNAUTHORIZED'
     });
   }

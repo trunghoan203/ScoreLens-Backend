@@ -14,7 +14,7 @@ export class RememberPasswordService {
   ): Promise<{ token: string; tokenHash: string; expiresAt: Date }> {
     const admin = await Admin.findOne({ adminId });
     if (!admin) {
-      throw new ErrorHandler('Admin not found', 404);
+      throw new ErrorHandler('Admin không tồn tại', 404);
     }
 
     // Tạo token dựa trên remember me
@@ -92,7 +92,7 @@ export class RememberPasswordService {
       // Lấy thông tin admin
       const admin = await Admin.findOne({ adminId: decoded.adminId });
       if (!admin || !admin.isVerified) {
-        throw new ErrorHandler('Admin not found or not verified', 401);
+        throw new ErrorHandler('Admin không tồn tại or not verified', 401);
       }
 
       return { admin, tokenDoc };
@@ -100,7 +100,7 @@ export class RememberPasswordService {
       if (error instanceof ErrorHandler) {
         throw error;
       }
-      throw new ErrorHandler('Invalid refresh token', 401);
+      throw new ErrorHandler('Refresh token không hợp lệ', 401);
     }
   }
 

@@ -12,12 +12,12 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Manager not found' });
+      res.status(404).json({ success: false, message: 'Manager không tồn tại' });
       return;
     }
 
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     manager.activationCode = activationCode;
     manager.activationCodeExpires = activationCodeExpires;
@@ -25,7 +25,7 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     await sendMail({
       email: manager.email,
-      subject: 'ScoreLens - Login Verification',
+      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập',
       template: 'activation-mail.ejs',
       data: {
         user: { name: manager.fullName },
@@ -35,11 +35,11 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     res.status(200).json({
       success: true,
-      message: 'Login verification code sent to email',
+      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
       data: { email: manager.email }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -49,17 +49,17 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Manager not found' });
+      res.status(404).json({ success: false, message: 'Manager không tồn tại' });
       return;
     }
 
     if (manager.activationCode !== activationCode) {
-      res.status(400).json({ success: false, message: 'Invalid activation code' });
+      res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
       return;
     }
 
     if (manager.activationCodeExpires && new Date() > manager.activationCodeExpires) {
-      res.status(400).json({ success: false, message: 'Activation code expired' });
+      res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
       return;
     }
 
@@ -69,7 +69,7 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     sendToken(manager, 200, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -77,9 +77,9 @@ export const logoutManager = async (req: Request, res: Response): Promise<void> 
   try {
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
-    res.status(200).json({ success: true, message: 'Logged out successfully' });
+    res.status(200).json({ success: true, message: 'Đăng xuất thành công' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -88,7 +88,7 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
     const refresh_token = req.cookies.refresh_token;
 
     if (!refresh_token) {
-      res.status(401).json({ success: false, message: 'No refresh token provided' });
+      res.status(401).json({ success: false, message: 'Không có refresh token được cung cấp' });
       return;
     }
 
@@ -96,13 +96,13 @@ export const refreshAccessToken = async (req: Request, res: Response): Promise<v
 
     const manager = await Manager.findOne({ sAdminId: decoded.managerId });
     if (!manager) {
-      res.status(401).json({ success: false, message: 'Invalid refresh token' });
+      res.status(401).json({ success: false, message: 'Refresh token không hợp lệ' });
       return;
     }
 
     sendToken(manager, 200, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -113,7 +113,7 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
     if (!manager) {
       res.status(401).json({
         success: false,
-        message: 'Not authenticated'
+        message: 'Không được xác thực'
       });
       return;
     }
@@ -127,7 +127,6 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
           clubName = club.clubName;
         }
       } catch (clubError) {
-        console.error('Error fetching club:', clubError);
       }
     }
 
@@ -148,7 +147,7 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
 
@@ -156,30 +155,30 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
 export const resendLoginCode = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.body) {
-      res.status(400).json({ success: false, message: 'Request body is required' });
+      res.status(400).json({ success: false, message: 'Request body là bắt buộc' });
       return;
     }
 
     const { email } = req.body;
 
     if (!email) {
-      res.status(400).json({ success: false, message: 'Email is required' });
+      res.status(400).json({ success: false, message: 'Email là bắt buộc' });
       return;
     }
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Manager not found' });
+      res.status(404).json({ success: false, message: 'Manager không tồn tại' });
       return;
     }
 
     if (!manager.isActive) {
-      res.status(403).json({ success: false, message: 'Manager account is deactivated' });
+      res.status(403).json({ success: false, message: 'Tài khoản Manager đã bị vô hiệu hóa' });
       return;
     }
 
     const activationCode = generateRandomCode(6);
-    const activationCodeExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     manager.activationCode = activationCode;
     manager.activationCodeExpires = activationCodeExpires;
@@ -197,12 +196,11 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
-      message: 'Login verification code has been resent to your email. It will expire in 5 minutes.',
+      message: 'Mã xác thực đã được gửi đến email của bạn. Mã này sẽ hết hạn trong 10 phút.',
       data: { email: manager.email }
     });
 
   } catch (error: any) {
-    console.error('Resend login code error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ nội bộ' });
   }
 };
