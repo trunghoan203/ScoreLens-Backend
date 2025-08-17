@@ -77,6 +77,7 @@ export const MESSAGES = {
   MSG115: 'Manager đã được xóa thành công.',
   MSG116: 'Admin không tồn tại.',
   MSG117: 'Brand không tồn tại hoặc bạn không có quyền.',
+  MSG118: 'Xóa brand thành công',
 
   // Generic
   MSG120: 'Request body là bắt buộc',

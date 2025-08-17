@@ -3,7 +3,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface INotification extends Document {
   notificationId: string;
   feedbackId?: string;
-  type: 'feedback' | 'admin_register';
   title: string;
   message: string;
   recipientId: string;
@@ -21,11 +20,6 @@ const NotificationSchema = new Schema({
   feedbackId: {
     type: String,
     ref: 'Feedback'
-  },
-  type: {
-    type: String,
-    enum: ['feedback', 'admin_register'],
-    required: true
   },
   title: {
     type: String,

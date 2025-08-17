@@ -37,7 +37,6 @@ export class NotificationService {
             notifications.push({
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
-              type: 'feedback',
               title: 'Feedback mới',
               message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: manager.managerId,
@@ -61,7 +60,6 @@ export class NotificationService {
               notifications.push({
                 notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 feedbackId,
-                type: 'feedback',
                 title: 'Feedback mới',
                 message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
                 recipientId: admin.adminId,
@@ -80,7 +78,6 @@ export class NotificationService {
             notifications.push({
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
-              type: 'feedback',
               title: 'Feedback mới',
               message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: sAdmin.sAdminId,
@@ -141,7 +138,6 @@ export class NotificationService {
               notifications.push({
                 notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 feedbackId,
-                type: 'feedback',
                 title: 'Feedback mới',
                 message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
                 recipientId: admin.adminId,
@@ -160,7 +156,6 @@ export class NotificationService {
             notifications.push({
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
-              type: 'feedback',
               title: 'Feedback mới',
               message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: sAdmin.sAdminId,
@@ -328,7 +323,7 @@ export class NotificationService {
         .sort({ dateTime: -1 })
         .skip(skip)
         .limit(limit)
-        .select('notificationId feedbackId type title message recipientId recipientRole isRead dateTime createdAt updatedAt');
+        .select('notificationId feedbackId title message recipientId recipientRole isRead dateTime createdAt updatedAt');
 
       const total = await Notification.countDocuments(matchCondition);
 
