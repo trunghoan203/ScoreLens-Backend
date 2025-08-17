@@ -648,6 +648,17 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
+        const membership = await Membership.findOne({ phoneNumber });
+
+        if (!membership) {
+            res.status(200).json({
+                success: true,
+                isMember: false,
+                message: 'Không tìm thấy hội viên, bạn có thể chơi với vai trò khách.'
+            });
+            return;
+        }
+
         const club = await Club.findOne({ clubId: clubId });
         if (!club) {
             res.status(404).json({
@@ -657,37 +668,18 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        const allMemberships = await Membership.find({ phoneNumber });
-
-        if (allMemberships.length === 0) {
-            res.status(200).json({
-                success: true,
-                isMember: false,
-                message: 'Không tìm thấy hội viên, bạn có thể chơi với vai trò khách.'
-            });
-            return;
-        }
-
-        let compatibleMembership = null;
-        for (const membership of allMemberships) {
-            if (membership.brandId === club.brandId) {
-                compatibleMembership = membership;
-                break;
-            }
-        }
-
-        if (!compatibleMembership) {
+        if (membership.brandId !== club.brandId) {
             res.status(403).json({
                 success: false,
                 isMember: true,
                 isBrandCompatible: false,
                 message: 'Bạn không phải là hội viên của thương hiệu này.',
                 data: {
-                    membershipId: allMemberships[0].membershipId,
-                    fullName: allMemberships[0].fullName,
-                    phoneNumber: allMemberships[0].phoneNumber,
-                    status: (allMemberships[0] as any).status,
-                    brandId: allMemberships[0].brandId
+                    membershipId: membership.membershipId,
+                    fullName: membership.fullName,
+                    phoneNumber: membership.phoneNumber,
+                    status: membership.status,
+                    brandId: membership.brandId
                 }
             });
             return;
@@ -699,14 +691,13 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             isBrandCompatible: true,
             message: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
             data: {
-                membershipId: compatibleMembership.membershipId,
-                fullName: compatibleMembership.fullName,
-                phoneNumber: compatibleMembership.phoneNumber,
-                status: (compatibleMembership as any).status,
-                brandId: compatibleMembership.brandId
+                membershipId: membership.membershipId,
+                fullName: membership.fullName,
+                phoneNumber: membership.phoneNumber,
+                status: membership.status,
+                brandId: membership.brandId
             }
         });
-
     } catch (error: any) {
         console.error('Error verifying membership:', error);
         res.status(500).json({
@@ -721,8 +712,25 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchCode, teamIndex = 0, joinerInfo } = req.body;
 
-        if (!matchCode || !joinerInfo || (!joinerInfo.phoneNumber && !joinerInfo.guestName)) {
-            res.status(400).json({ success: false, message: 'Vui lòng cung cấp matchCode và joinerInfo (phoneNumber hoặc guestName).' });
+        if (!matchCode || !joinerInfo) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng cung cấp matchCode và joinerInfo.' 
+            });
+            return;
+        }
+
+        const hasValidInfo = (
+            (joinerInfo.membershipId && joinerInfo.membershipName) ||
+            joinerInfo.phoneNumber ||
+            joinerInfo.guestName
+        );
+
+        if (!hasValidInfo) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng cung cấp membershipId + membershipName, hoặc phoneNumber, hoặc guestName.' 
+            });
             return;
         }
 
@@ -748,7 +756,17 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         let newMember: IMatchTeamMember;
         let isAlreadyJoined = false;
 
-        if (joinerInfo.phoneNumber) {
+        if (joinerInfo.membershipId && joinerInfo.membershipName) {
+            newMember = { 
+                membershipId: joinerInfo.membershipId, 
+                membershipName: joinerInfo.membershipName 
+            };
+            
+            isAlreadyJoined = match.teams.some(team => 
+                team.members.some(member => member.membershipId === joinerInfo.membershipId)
+            );
+            
+        } else if (joinerInfo.phoneNumber) {
             const membership = await Membership.findOne({ phoneNumber: joinerInfo.phoneNumber });
             if (!membership) {
                 res.status(404).json({ success: false, message: `Không tìm thấy hội viên với SĐT ${joinerInfo.phoneNumber}.` });
@@ -774,10 +792,28 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 }
             }
 
-            isAlreadyJoined = match.teams.some(team => team.members.some(member => member.membershipId === membership.membershipId));
-            newMember = { membershipId: membership.membershipId, membershipName: membership.fullName };
-        } else {
+            isAlreadyJoined = match.teams.some(team => 
+                team.members.some(member => member.membershipId === membership.membershipId)
+            );
+            newMember = { 
+                membershipId: membership.membershipId, 
+                membershipName: membership.fullName 
+            };
+            
+        } else if (joinerInfo.guestName) {
             newMember = { guestName: joinerInfo.guestName };
+            
+            isAlreadyJoined = match.teams.some(team => 
+                team.members.some(member => 
+                    member.guestName === joinerInfo.guestName
+                )
+            );
+        } else {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng cung cấp membershipId + membershipName, hoặc phoneNumber, hoặc guestName.' 
+            });
+            return;
         }
 
         if (isAlreadyJoined) {
@@ -801,8 +837,25 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
     try {
         const { matchCode, leaverInfo } = req.body;
 
-        if (!matchCode || !leaverInfo || (!leaverInfo.phoneNumber && !leaverInfo.guestName)) {
-            res.status(400).json({ success: false, message: 'Vui lòng cung cấp matchCode và leaverInfo (phoneNumber hoặc guestName).' });
+        if (!matchCode || !leaverInfo) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng cung cấp matchCode và leaverInfo.' 
+            });
+            return;
+        }
+
+        const hasValidInfo = (
+            (leaverInfo.membershipId && leaverInfo.membershipName) ||
+            leaverInfo.phoneNumber ||
+            leaverInfo.guestName
+        );
+
+        if (!hasValidInfo) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Vui lòng cung cấp membershipId + membershipName, hoặc phoneNumber, hoặc guestName.' 
+            });
             return;
         }
 
@@ -821,33 +874,53 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         let teamIndex = -1;
         let memberIndex = -1;
 
-        if (leaverInfo.phoneNumber) {
+        if (leaverInfo.membershipId && leaverInfo.membershipName) {
             for (let i = 0; i < match.teams.length; i++) {
                 const foundMemberIndex = match.teams[i].members.findIndex(member =>
-                    member.membershipId && member.membershipId === leaverInfo.phoneNumber
+                    member.membershipId === leaverInfo.membershipId
                 );
                 if (foundMemberIndex !== -1) {
-                    const membership = await Membership.findOne({ membershipId: leaverInfo.phoneNumber });
-                    if (membership) {
-                        const table = await Table.findOne({ tableId: match.tableId });
-                        if (table) {
-                            const club = await Club.findOne({ clubId: table.clubId });
-                            if (club && membership.brandId !== club.brandId) {
-                                res.status(403).json({
-                                    success: false,
-                                    message: `Không tìm thấy hội viên.`
-                                });
-                                return;
-                            }
-                        }
-                    }
-
                     memberToRemove = match.teams[i].members[foundMemberIndex];
                     teamIndex = i;
                     memberIndex = foundMemberIndex;
                     break;
                 }
             }
+            
+        } else if (leaverInfo.phoneNumber) {
+            const membership = await Membership.findOne({ phoneNumber: leaverInfo.phoneNumber });
+            if (!membership) {
+                res.status(404).json({ 
+                    success: false, 
+                    message: `Không tìm thấy hội viên với SĐT ${leaverInfo.phoneNumber}.` 
+                });
+                return;
+            }
+
+            const table = await Table.findOne({ tableId: match.tableId });
+            if (table) {
+                const club = await Club.findOne({ clubId: table.clubId });
+                if (club && membership.brandId !== club.brandId) {
+                    res.status(403).json({
+                        success: false,
+                        message: `Không tìm thấy hội viên.`
+                    });
+                    return;
+                }
+            }
+
+            for (let i = 0; i < match.teams.length; i++) {
+                const foundMemberIndex = match.teams[i].members.findIndex(member =>
+                    member.membershipId === membership.membershipId
+                );
+                if (foundMemberIndex !== -1) {
+                    memberToRemove = match.teams[i].members[foundMemberIndex];
+                    teamIndex = i;
+                    memberIndex = foundMemberIndex;
+                    break;
+                }
+            }
+            
         } else if (leaverInfo.guestName) {
             for (let i = 0; i < match.teams.length; i++) {
                 const foundMemberIndex = match.teams[i].members.findIndex(member =>
