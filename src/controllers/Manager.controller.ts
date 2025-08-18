@@ -36,7 +36,7 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     res.status(200).json({
       success: true,
-      message: MESSAGES.MSG123,
+      message: MESSAGES.MSG01,
       data: { email: manager.email }
     });
   } catch (error) {

@@ -56,7 +56,7 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
 
         res.status(201).json({
             success: true,
-            message: MESSAGES.MSG123,
+            message: MESSAGES.MSG03,
         });
 
     } catch (error: any) {
@@ -149,6 +149,7 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
         res.status(200).json({
             success: true,
+            message: MESSAGES.MSG01,
             data: {
                 accessToken,
                 refreshToken,
@@ -215,6 +216,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
         res.status(200).json({
             success: true,
+            message: MESSAGES.MSG02,
             data: {
                 accessToken,
                 refreshToken: newRefreshToken,
