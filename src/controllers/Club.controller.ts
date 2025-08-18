@@ -16,26 +16,30 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
     }
 
     if (!admin.brandId) {
-      res.status(400).json({ success: false, message: 'Admin phải có brand mới được tạo club.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG111 });
       return;
     }
 
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
-      res.status(400).json({ success: false, message: 'Admin chưa có brand, không thể tạo club.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG109 });
       return;
     }
     if (Array.isArray(req.body)) {
       const clubsData = req.body;
       if (clubsData.length === 0) {
-        res.status(400).json({ success: false, message: 'Danh sách club rỗng.' });
+        res.status(400).json({ success: false, message: MESSAGES.MSG120 });
         return;
       }
       const createdClubs = [];
       for (const data of clubsData) {
         const { clubName, address, phoneNumber, tableNumber, status } = data;
         if (!clubName || !address || !phoneNumber || !tableNumber) {
-          res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin cho từng club.' });
+          res.status(400).json({ success: false, message: MESSAGES.MSG46 });
+          return;
+        }
+        if (tableNumber === 0) {
+          res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
           return;
         }
         const clubId = `CLB-${Date.now()}`;
@@ -61,7 +65,11 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
     }
     const { clubName, address, phoneNumber, tableNumber, status } = req.body;
     if (!clubName || !address || !phoneNumber || !tableNumber) {
-      res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin club.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG46 });
+      return;
+    }
+    if (tableNumber === 0) {
+      res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
       return;
     }
     const clubId = `CLB-${Date.now()}`;
@@ -92,19 +100,25 @@ export const updateClub = async (req: Request & { admin?: any }, res: Response):
     const { clubId } = req.params;
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
-      res.status(400).json({ success: false, message: 'Admin chưa có brand.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG109 });
       return;
     }
     const club = await Club.findOne({ clubId, brandId: brand.brandId });
     if (!club) {
-      res.status(404).json({ success: false, message: 'Club không tồn tại hoặc không thuộc quyền quản lý.' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG60 });
       return;
     }
     const { clubName, address, phoneNumber, tableNumber, status } = req.body;
     if (clubName !== undefined) club.clubName = clubName;
     if (address !== undefined) club.address = address;
     if (phoneNumber !== undefined) club.phoneNumber = phoneNumber;
-    if (tableNumber !== undefined) club.tableNumber = tableNumber;
+    if (tableNumber !== undefined) {
+      if (tableNumber === 0) {
+        res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
+        return;
+      }
+      club.tableNumber = tableNumber;
+    }
     if (status !== undefined) club.status = status;
     await club.save();
     res.status(200).json({ success: true, club });
@@ -120,19 +134,19 @@ export const deleteClub = async (req: Request & { admin?: any }, res: Response):
     const { clubId } = req.params;
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
-      res.status(400).json({ success: false, message: 'Admin chưa có brand.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG109 });
       return;
     }
     const club = await Club.findOneAndDelete({ clubId, brandId: brand.brandId });
     if (!club) {
-      res.status(404).json({ success: false, message: 'Club không tồn tại hoặc không thuộc quyền quản lý.' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG60 });
       return;
     }
 
     brand.clubIds = brand.clubIds.filter(id => id !== clubId);
     await brand.save();
 
-    res.status(200).json({ success: true, message: 'Xóa club thành công.' });
+    res.status(200).json({ success: true, message: MESSAGES.MSG118 });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -144,11 +158,24 @@ export const getClubs = async (req: Request & { admin?: any }, res: Response): P
     const adminId = req.admin.adminId;
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
-      res.status(400).json({ success: false, message: 'Admin chưa có brand.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG109 });
       return;
     }
+
     const clubs = await Club.find({ brandId: brand.brandId });
-    res.status(200).json({ success: true, clubs });
+
+    const clubsWithTableCount = await Promise.all(
+      clubs.map(async (club) => {
+        const Table = require('../models/Table.model').Table;
+        const tableCount = await Table.countDocuments({ clubId: club.clubId });
+        return {
+          ...club.toObject(),
+          actualTableCount: tableCount
+        };
+      })
+    );
+
+    res.status(200).json({ success: true, clubs: clubsWithTableCount });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -161,12 +188,12 @@ export const getClubDetail = async (req: Request & { admin?: any }, res: Respons
     const { clubId } = req.params;
     const brand = await Brand.findOne({ adminId });
     if (!brand) {
-      res.status(400).json({ success: false, message: 'Admin chưa có brand.' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG109 });
       return;
     }
     const club = await Club.findOne({ clubId, brandId: brand.brandId });
     if (!club) {
-      res.status(404).json({ success: false, message: 'Club không tồn tại hoặc không thuộc quyền quản lý.' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG60 });
       return;
     }
     res.status(200).json({ success: true, club });

@@ -13,7 +13,7 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Manager không tồn tại' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG32 });
       return;
     }
 
@@ -50,17 +50,17 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Manager không tồn tại' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG32 });
       return;
     }
 
     if (manager.activationCode !== activationCode) {
-      res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG23 });
       return;
     }
 
     if (manager.activationCodeExpires && new Date() > manager.activationCodeExpires) {
-      res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn' });
+      res.status(400).json({ success: false, message: MESSAGES.MSG24 });
       return;
     }
 
@@ -114,7 +114,7 @@ export const getProfile = async (req: Request & { manager?: any }, res: Response
     if (!manager) {
       res.status(401).json({
         success: false,
-        message: 'Không được xác thực'
+        message: MESSAGES.MSG20
       });
       return;
     }
@@ -169,12 +169,12 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
     const manager = await Manager.findOne({ email });
     if (!manager) {
-      res.status(404).json({ success: false, message: 'Manager không tồn tại' });
+      res.status(404).json({ success: false, message: MESSAGES.MSG32 });
       return;
     }
 
     if (!manager.isActive) {
-      res.status(403).json({ success: false, message: 'Tài khoản Manager đã bị vô hiệu hóa' });
+      res.status(403).json({ success: false, message: MESSAGES.MSG32 });
       return;
     }
 

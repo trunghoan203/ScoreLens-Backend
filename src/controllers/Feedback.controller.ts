@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Feedback, IFeedback } from '../models/Feedback.model';
 import { Brand } from '../models/Brand.model';
 import { NotificationService } from '../services/Notification.service';
+import { MESSAGES } from '../config/messages';
 
 // User tạo feedback
 export const createFeedback = async (req: Request, res: Response): Promise<void> => {
@@ -9,7 +10,7 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
         const { clubInfo, tableInfo, content, createdBy } = req.body;
 
         if (!clubInfo?.clubId || !tableInfo?.tableId || !content || !createdBy.type) {
-            res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG46 });
             return;
         }
 
@@ -88,6 +89,30 @@ export const getFeedbacks = async (req: Request & { manager?: any; admin?: any; 
                     path: '$tableInfo',
                     preserveNullAndEmptyArrays: true
                 }
+            },
+            {
+                $lookup: {
+                    from: 'brands',
+                    localField: 'clubInfo.brandId',
+                    foreignField: 'brandId',
+                    as: 'brandInfo'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$brandInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    'clubInfo.brandName': '$brandInfo.brandName'
+                }
+            },
+            {
+                $project: {
+                    brandInfo: 0
+                }
             }
         );
 
@@ -142,6 +167,33 @@ export const getFeedbackDetail = async (req: Request & { manager?: any; admin?: 
             },
             { $unwind: '$clubInfo' },
             { $unwind: '$tableInfo' },
+            // Thêm lookup với brands để lấy brandName
+            {
+                $lookup: {
+                    from: 'brands',
+                    localField: 'clubInfo.brandId',
+                    foreignField: 'brandId',
+                    as: 'brandInfo'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$brandInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // Thêm brandName vào clubInfo
+            {
+                $addFields: {
+                    'clubInfo.brandName': '$brandInfo.brandName'
+                }
+            },
+            // Loại bỏ brandInfo không cần thiết
+            {
+                $project: {
+                    brandInfo: 0
+                }
+            },
             {
                 $addFields: {
                     history: {
@@ -169,7 +221,7 @@ export const getFeedbackDetail = async (req: Request & { manager?: any; admin?: 
 export const updateFeedback = async (req: Request & { manager?: any; admin?: any; superAdmin?: any }, res: Response): Promise<void> => {
     try {
         const { feedbackId } = req.params;
-        const { note, status, needSupport } = req.body;
+        const { note, status } = req.body;
 
         let queryCondition: any = { feedbackId };
 
@@ -220,7 +272,6 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
 
         const oldStatus = feedback.status;
         if (status) feedback.status = status;
-        if (typeof needSupport === 'boolean') feedback.needSupport = needSupport;
 
         await feedback.save();
 

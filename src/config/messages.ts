@@ -23,31 +23,58 @@ export const MESSAGES = {
   MSG20: 'Không được phép truy cập',
   MSG21: 'Vui lòng nhập email và mật khẩu',
   MSG22: 'Vui lòng cung cấp email',
-
+  MSG23: 'Mã xác thực không hợp lệ',
+  MSG24: 'Mã xác thực đã hết hạn',
   // Super Admin
   MSG30: 'Super Admin không tồn tại',
   MSG31: 'Admin không tồn tại',
+  MSG32: 'Manager không tồn tại',
 
   // Table
   MSG40: 'Bàn không tồn tại',
   MSG41: 'Bàn đã được xóa',
   MSG42: 'Vui lòng cung cấp dữ liệu QR code.',
+  MSG43: 'Không tìm thấy bàn chơi',
+  MSG44: 'Bàn này hiện đang được sử dụng.',
+  MSG45: 'Bàn này hiện đang được bảo trì.',
+  MSG46: 'Vui lòng cung cấp đầy đủ thông tin.',
+  MSG47: 'Danh sách bàn chơi đã được lấy thành công.',
 
   // Camera
   MSG50: 'Camera đã được xóa',
+  MSG51: 'Camera không tồn tại',
 
   // Membership
   MSG60: 'Câu lạc bộ không tồn tại',
   MSG61: 'Thành viên không tồn tại',
   MSG62: 'Thành viên đã được xóa',
+  MSG63: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
+  MSG64: 'Thành viên đã được tạo thành công.',
+  MSG65: 'Vui lòng cung cấp membershipId.',
+  MSG66: 'Thành viên đã được cập nhật thành công.',
 
   // Notification
   MSG70: 'Thiếu userId hoặc role',
   MSG71: 'Thiếu userId',
+  MSG72: 'Không tìm thấy thông báo hoặc bạn không có quyền truy cập',
+  MSG73: 'Đã đánh dấu tất cả thông báo là đã đọc',
+  MSG74: 'Đã xóa thông báo thành công',
 
   // Match
+  MSG76: 'Rời khỏi trận đấu thành ckhoi',
+  MSG77: 'Chỉ có thể rời khỏi trận đấu khi đang ở trạng thái chờ.',
+  MSG78: 'Tham gia trận đấu thành công.',
+  MSG79: 'Bạn đã tham gia trận đấu này rồi.',
   MSG80: 'Người tạo với ID ${createdByMembershipId} không tồn tại.',
   MSG81: 'Trận đấu không tồn tại.',
+  MSG82: 'Tài khoản hội viên của ${fullName} đang bị cấm',
+  MSG83: 'Người tạo không thuộc cùng thương hiệu với câu lạc bộ',
+  MSG84: 'Vui lòng cung cấp teamIndex và score.',
+  MSG85: 'Không thể cập nhật thông tin trận đấu đã hoàn thành hoặc đã bị hủy.',
+  MSG86: 'Chỉ số đội không hợp lệ.',
+  MSG87: 'Teams phải có 2 thành viên trở lên.',
+  MSG88: 'Trận đấu đã kết thúc rồi.',
+  MSG89: 'Trận đấu đã được xóa thành công.',
 
   // Middleware
   MSG90: 'Không có token được cung cấp, vui lòng đăng nhập.',
@@ -67,8 +94,12 @@ export const MESSAGES = {
   MSG102: 'Dữ liệu trùng lặp ${Object.keys(error.keyValue)} đã được nhập',
   MSG103: 'Json web token không hợp lệ, hãy thử lại',
   MSG104: 'Json web token đã hết hạn, hãy thử lại',
+  MSG105: 'Lỗi khi xóa tài khoản admin.',
 
   // Admin Service
+  MSG107: 'Admin đã có brand, không thể tạo thêm.',
+  MSG108: 'Tài khoản Admin và tất cả dữ liệu liên quan đã được xóa thành công.',
+  MSG109: 'Admin chưa có brand được gán.',
   MSG110: 'Lỗi xác thực: Không tìm thấy Admin ID trong token.',
   MSG111: 'Vui lòng điền đầy đủ tất cả các trường bắt buộc.',
   MSG112: 'Tài khoản Manager đã được tạo thành công.',
@@ -78,8 +109,8 @@ export const MESSAGES = {
   MSG116: 'Admin không tồn tại.',
   MSG117: 'Brand không tồn tại hoặc bạn không có quyền.',
   MSG118: 'Xóa brand thành công',
+  MSG119: 'Manager đã được vô hiệu hóa thành công.',
 
-  // Generic
   MSG120: 'Request body là bắt buộc',
   MSG121: 'Email là bắt buộc',
   MSG122: 'Refresh token là bắt buộc',
@@ -94,6 +125,7 @@ export const MESSAGES = {
   MSG131: 'REFRESH_TOKEN không được xác định trong các biến môi trường',
   MSG132: 'REFRESH_TOKEN hoặc REFRESH_TOKEN_EXPIRE không được xác định trong các biến môi trường',
   MSG133: 'ACCESS_TOKEN hoặc ACCESS_TOKEN_EXPIRE không được xác định trong các biến môi trường'
+
 };
 
 // Type for message codes

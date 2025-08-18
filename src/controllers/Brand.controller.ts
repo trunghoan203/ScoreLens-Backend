@@ -10,12 +10,12 @@ export const createBrand = async (req: Request & { admin?: any }, res: Response)
         // Kiểm tra admin đã có brand chưa
         const existed = await Brand.findOne({ adminId });
         if (existed) {
-            res.status(400).json({ success: false, message: 'Admin đã có brand, không thể tạo thêm.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG107 });
             return;
         }
         const { brandName, phoneNumber, website, logo_url, citizenCode } = req.body;
         if (!brandName || !phoneNumber || !citizenCode || !logo_url) {
-            res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin brand.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG107 });
             return;
         }
         const brandId = `BR-${Date.now()}`;

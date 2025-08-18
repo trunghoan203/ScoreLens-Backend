@@ -46,13 +46,13 @@ export const updateCamera = async (req: Request & { manager?: any }, res: Respon
         const manager = req.manager;
         const camera = await Camera.findOne({ cameraId });
         if (!camera) {
-            res.status(404).json({ success: false, message: 'Camera không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG51 });
             return;
         }
         if (tableId) {
             const table = await Table.findOne({ tableId, clubId: manager.clubId });
             if (!table) {
-                res.status(404).json({ success: false, message: 'Bàn không tồn tại hoặc không thuộc club của bạn' });
+                res.status(404).json({ success: false, message: MESSAGES.MSG40 });
                 return;
             }
         }
@@ -77,7 +77,7 @@ export const deleteCamera = async (req: Request & { manager?: any }, res: Respon
         const manager = req.manager;
         const camera = await Camera.findOneAndDelete({ cameraId });
         if (!camera) {
-            res.status(404).json({ success: false, message: 'Camera không tồn tại' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG51 });
             return;
         }
         res.json({ success: true, message: MESSAGES.MSG50 });

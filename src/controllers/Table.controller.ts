@@ -97,7 +97,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
         if (!qrData) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp QR code data.'
+                message: MESSAGES.MSG42
             });
             return;
         }
@@ -107,7 +107,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
         if (!tableId || !clubId) {
             res.status(400).json({
                 success: false,
-                message: 'QR code không hợp lệ.'
+                message: MESSAGES.MSG42
             });
             return;
         }
@@ -116,7 +116,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
         if (!table) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy bàn chơi với mã này.'
+                message: MESSAGES.MSG43
             });
             return;
         }
@@ -144,7 +144,7 @@ export const getTableById = async (req: Request, res: Response): Promise<void> =
         if (!table) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy bàn chơi.'
+                message: MESSAGES.MSG43
             });
             return;
         }
@@ -176,7 +176,8 @@ export const getTablesByClub = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({
             success: true,
-            data: tables
+            data: tables,
+            message: MESSAGES.MSG47
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
