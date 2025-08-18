@@ -36,7 +36,7 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         const brandId = club.brandId;
 
         const membership = await Membership.create({ brandId, fullName, phoneNumber, status });
-        res.status(201).json({ success: true, membership });
+        res.status(201).json({ success: true, membership, message: MESSAGES.MSG64 });
         return;
     } catch (error) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -93,7 +93,7 @@ export const searchMembership = async (req: Request, res: Response): Promise<voi
         if (!membershipId) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp membershipId.'
+                message: MESSAGES.MSG65
             });
             return;
         }
@@ -102,7 +102,7 @@ export const searchMembership = async (req: Request, res: Response): Promise<voi
         if (!membership) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy hội viên với mã này.'
+                message: MESSAGES.MSG61
             });
             return;
         }
@@ -128,14 +128,15 @@ export const getMembershipById = async (req: Request, res: Response): Promise<vo
         if (!membership) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy hội viên.'
+                message: MESSAGES.MSG61
             });
             return;
         }
 
         res.status(200).json({
             success: true,
-            data: membership
+            data: membership,
+            message: MESSAGES.MSG66
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });

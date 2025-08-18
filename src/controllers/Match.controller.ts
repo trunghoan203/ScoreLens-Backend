@@ -18,7 +18,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         if (!tableId || !gameType || !teams || !Array.isArray(teams) || teams.length < 2) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp đủ thông tin'
+                message: MESSAGES.MSG46
             });
             return;
         }
@@ -27,7 +27,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         if (!table) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy bàn chơi.'
+                message: MESSAGES.MSG43
             });
             return;
         }
@@ -35,7 +35,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         if (table.status == 'inuse') {
             res.status(409).json({
                 success: false,
-                message: 'Bàn này hiện đang được sử dụng.'
+                message: MESSAGES.MSG44
             });
             return;
         }
@@ -43,7 +43,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         if (table.status == 'maintenance') {
             res.status(409).json({
                 success: false,
-                message: 'Bàn này hiện đang được bảo trì.'
+                message: MESSAGES.MSG45
             });
             return;
         }
@@ -52,13 +52,13 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         if (createdByMembershipId) {
             creatorMembership = await Membership.findOne({ membershipId: createdByMembershipId });
             if (!creatorMembership) {
-                res.status(400).json({ success: false, message: `Người tạo với ID ${createdByMembershipId} không tồn tại.` });
+                res.status(400).json({ success: false, message: MESSAGES.MSG80 });
                 return;
             }
             if (creatorMembership.status === 'inactive') {
                 res.status(403).json({
                     success: false,
-                    message: `Tài khoản hội viên của ${creatorMembership.fullName} đang bị cấm`
+                    message: MESSAGES.MSG82
                 });
                 return;
             }
@@ -68,7 +68,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 if (creatorMembership.brandId !== club.brandId) {
                     res.status(403).json({
                         success: false,
-                        message: `Người tạo không thuộc cùng thương hiệu với câu lạc bộ`
+                        message: MESSAGES.MSG83
                     });
                     return;
                 }
@@ -97,7 +97,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                             if (foundMembership.status === 'inactive') {
                                 res.status(403).json({
                                     success: false,
-                                    message: `Tài khoản hội viên của ${foundMembership.fullName} đang bị cấm`
+                                    message: MESSAGES.MSG82
                                 });
                                 return;
                             }
@@ -187,7 +187,7 @@ export const getMatchById = async (req: Request, res: Response): Promise<void> =
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu.'
+                message: MESSAGES.MSG81
             });
             return;
         }
@@ -210,7 +210,7 @@ export const getMatchByCode = async (req: Request, res: Response): Promise<void>
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu với mã này.'
+                message: MESSAGES.MSG81
             });
             return;
         }
@@ -232,7 +232,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
         if (teamIndex === undefined || score === undefined) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp teamIndex và score.'
+                message: MESSAGES.MSG84
             });
             return;
         }
@@ -240,7 +240,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu.'
+                message: MESSAGES.MSG81
             });
             return;
         }
@@ -248,7 +248,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
         if (match.status === 'completed') {
             res.status(400).json({
                 success: false,
-                message: 'Không thể cập nhật thông tin trận đấu đã hoàn thành hoặc đã bị hủy.'
+                message: MESSAGES.MSG85
             });
             return;
         }
@@ -256,7 +256,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
         if (teamIndex < 0 || teamIndex >= match.teams.length) {
             res.status(400).json({
                 success: false,
-                message: 'Chỉ số đội không hợp lệ.'
+                message: MESSAGES.MSG86
             });
             return;
         }
@@ -284,7 +284,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         if (!req.body) {
             res.status(400).json({
                 success: false,
-                message: 'Request body không được cung cấp.'
+                message: MESSAGES.MSG120
             });
             return;
         }
@@ -292,7 +292,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         if (!teams || !Array.isArray(teams) || teams.length !== 2) {
             res.status(400).json({
                 success: false,
-                message: 'Teams phải có 2 thành viên trở lên.'
+                message: MESSAGES.MSG87
             });
             return;
         }
@@ -300,7 +300,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu.'
+                message: MESSAGES.MSG81
             });
             return;
         }
@@ -308,7 +308,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         if (match.status === 'completed') {
             res.status(400).json({
                 success: false,
-                message: 'Không thể cập nhật thông tin trận đấu đã hoàn thành hoặc đã bị hủy.'
+                message: MESSAGES.MSG85
             });
             return;
         }
@@ -342,7 +342,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                             if (club && foundMembership.brandId !== club.brandId) {
                                 res.status(403).json({
                                     success: false,
-                                    message: `Không tìm thấy hội viên.`
+                                    message: MESSAGES.MSG61
                                 });
                                 return;
                             }
@@ -385,7 +385,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu.'
+                message: MESSAGES.MSG81
             });
             return;
         }
@@ -393,7 +393,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
         if (match.status !== 'pending') {
             res.status(400).json({
                 success: false,
-                message: 'Trận đấu không thể bắt đầu ở trạng thái hiện tại.'
+                message: MESSAGES.MSG85
             });
             return;
         }
@@ -402,7 +402,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
         if (totalMembers === 0) {
             res.status(400).json({
                 success: false,
-                message: 'Phải có ít nhất 1 người chơi để bắt đầu trận đấu.'
+                message: MESSAGES.MSG87
             });
             return;
         }
@@ -411,7 +411,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             if (match.teams[i].members.length > 4) {
                 res.status(400).json({
                     success: false,
-                    message: `Team ${i + 1} chỉ được có tối đa 4 người chơi.`
+                    message: MESSAGES.MSG87
                 });
                 return;
             }
@@ -458,7 +458,7 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu.'
+                message: MESSAGES.MSG81
             });
             return;
         }
@@ -466,7 +466,7 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
         if (match.status === 'completed') {
             res.status(400).json({
                 success: false,
-                message: 'Trận đấu đã kết thúc rồi.'
+                message: MESSAGES.MSG88
             });
             return;
         }
@@ -516,11 +516,11 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
 
         await Match.deleteOne({ matchId: match.matchId });
 
-        getIO().to(matchIdToDelete).emit('match_deleted', { matchId: matchIdToDelete, message: 'Trận đấu đã bị người tham gia hủy.' });
+        getIO().to(matchIdToDelete).emit('match_deleted', { matchId: matchIdToDelete, message: MESSAGES.MSG85 });
 
         res.status(200).json({
             success: true,
-            message: 'Trận đấu đã được xóa thành công.'
+            message: MESSAGES.MSG89
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -566,7 +566,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
         if (!tableId) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp tableId.'
+                message: MESSAGES.MSG46
             });
             return;
         }
@@ -575,7 +575,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
         if (!table) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy bàn chơi.'
+                message: MESSAGES.MSG43
             });
             return;
         }
@@ -602,7 +602,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
         if (!phoneNumber || !clubId) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp số điện thoại.'
+                message: MESSAGES.MSG46 
             });
             return;
         }
@@ -613,7 +613,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             res.status(200).json({
                 success: true,
                 isMember: false,
-                message: 'Không tìm thấy hội viên, bạn có thể chơi với vai trò khách.'
+                message: MESSAGES.MSG61
             });
             return;
         }
@@ -622,7 +622,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
         if (!club) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy thông tin club.'
+                message: MESSAGES.MSG60
             });
             return;
         }
@@ -632,7 +632,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
                 success: false,
                 isMember: true,
                 isBrandCompatible: false,
-                message: 'Bạn không phải là hội viên của thương hiệu này.',
+                message: MESSAGES.MSG83,
                 data: {
                     membershipId: membership.membershipId,
                     fullName: membership.fullName,
@@ -648,7 +648,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             success: true,
             isMember: true,
             isBrandCompatible: true,
-            message: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
+            message: MESSAGES.MSG63,
             data: {
                 membershipId: membership.membershipId,
                 fullName: membership.fullName,
@@ -669,7 +669,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         if (!matchCode || !joinerInfo) {
             res.status(400).json({ 
                 success: false, 
-                message: 'Vui lòng cung cấp matchCode và joinerInfo.' 
+                message: MESSAGES.MSG84 
             });
             return;
         }
@@ -683,22 +683,22 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         if (!hasValidInfo) {
             res.status(400).json({ 
                 success: false, 
-                message: 'Vui lòng cung cấp membershipId + membershipName, hoặc phoneNumber, hoặc guestName.' 
+                message: MESSAGES.MSG46
             });
             return;
         }
 
         const match = await Match.findOne({ matchCode: matchCode });
         if (!match) {
-            res.status(404).json({ success: false, message: 'Không tìm thấy trận đấu với mã này.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG81 });
             return;
         }
         if (match.status !== 'pending') {
-            res.status(400).json({ success: false, message: 'Chỉ có thể tham gia trận đấu đang ở trạng thái chờ.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG85 });
             return;
         }
         if (teamIndex < 0 || teamIndex >= match.teams.length) {
-            res.status(400).json({ success: false, message: 'Chỉ số đội không hợp lệ.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG86 });
             return;
         }
 
@@ -723,13 +723,13 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         } else if (joinerInfo.phoneNumber) {
             const membership = await Membership.findOne({ phoneNumber: joinerInfo.phoneNumber });
             if (!membership) {
-                res.status(404).json({ success: false, message: `Không tìm thấy hội viên với SĐT ${joinerInfo.phoneNumber}.` });
+                res.status(404).json({ success: false, message: MESSAGES.MSG61 });
                 return;
             }
             if (membership.status === 'inactive') {
                 res.status(403).json({
                     success: false,
-                    message: `Tài khoản hội viên của ${membership.fullName} đang bị cấm`
+                    message: MESSAGES.MSG82
                 });
                 return;
             }
@@ -740,7 +740,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 if (club && membership.brandId !== club.brandId) {
                     res.status(403).json({
                         success: false,
-                        message: `Không tìm thấy hội viên.`
+                        message: MESSAGES.MSG61
                     });
                     return;
                 }
@@ -765,13 +765,13 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         } else {
             res.status(400).json({ 
                 success: false, 
-                message: 'Vui lòng cung cấp membershipId + membershipName, hoặc phoneNumber, hoặc guestName.' 
+                message: MESSAGES.MSG46
             });
             return;
         }
 
         if (isAlreadyJoined) {
-            res.status(409).json({ success: false, message: 'Bạn đã tham gia trận đấu này rồi.' });
+            res.status(409).json({ success: false, message: MESSAGES.MSG79 });
             return;
         }
 
@@ -780,7 +780,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
 
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
-        res.status(200).json({ success: true, data: updatedMatch, message: 'Tham gia trận đấu thành công.' });
+        res.status(200).json({ success: true, data: updatedMatch, message: MESSAGES.MSG78 });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
@@ -793,7 +793,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         if (!matchCode || !leaverInfo) {
             res.status(400).json({ 
                 success: false, 
-                message: 'Vui lòng cung cấp matchCode và leaverInfo.' 
+                message: MESSAGES.MSG84
             });
             return;
         }
@@ -807,19 +807,19 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         if (!hasValidInfo) {
             res.status(400).json({ 
                 success: false, 
-                message: 'Vui lòng cung cấp membershipId + membershipName, hoặc phoneNumber, hoặc guestName.' 
+                message: MESSAGES.MSG46
             });
             return;
         }
 
         const match = await Match.findOne({ matchCode: matchCode });
         if (!match) {
-            res.status(404).json({ success: false, message: 'Không tìm thấy trận đấu với mã này.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG81 });
             return;
         }
 
         if (match.status !== 'pending') {
-            res.status(400).json({ success: false, message: 'Chỉ có thể rời khỏi trận đấu khi đang ở trạng thái chờ.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG77 });
             return;
         }
 
@@ -845,7 +845,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
             if (!membership) {
                 res.status(404).json({ 
                     success: false, 
-                    message: `Không tìm thấy hội viên với SĐT ${leaverInfo.phoneNumber}.` 
+                    message: MESSAGES.MSG61 
                 });
                 return;
             }
@@ -856,7 +856,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                 if (club && membership.brandId !== club.brandId) {
                     res.status(403).json({
                         success: false,
-                        message: `Không tìm thấy hội viên.`
+                        message: MESSAGES.MSG61
                     });
                     return;
                 }
@@ -889,7 +889,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         }
 
         if (!memberToRemove || teamIndex === -1) {
-            res.status(404).json({ success: false, message: 'Không tìm thấy người chơi này trong trận đấu.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG61 });
             return;
         }
 
@@ -902,7 +902,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json({
             success: true,
             data: updatedMatch,
-            message: 'Rời khỏi trận đấu thành công.'
+            message: MESSAGES.MSG76
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });

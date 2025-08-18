@@ -98,7 +98,7 @@ export const loginSuperAdmin = async (req: Request, res: Response): Promise<void
     }
 
     if (!admin.isVerified) {
-      res.status(403).json({ success: false, message: 'Tài khoản chưa được xác thực' });
+      res.status(403).json({ success: false, message: MESSAGES.MSG19 });
       return;
     }
 
@@ -207,7 +207,7 @@ export const getProfile = async (req: Request & { superAdmin?: any }, res: Respo
     if (!superAdmin) {
       res.status(401).json({
         success: false,
-        message: 'Không được xác thực'
+        message: MESSAGES.MSG20
       });
       return;
     }
