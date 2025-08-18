@@ -16,9 +16,10 @@ import {
     joinMatch,
     leaveMatch,
     getMatchHistory,
+    getUserSessionToken,
 } from '../controllers/Match.controller';
-import { isMatchCreator } from '../middlewares/auth/matchAuth.middleware';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
+import { requireHostRole } from '../middlewares/auth/matchRoleAuth.middleware';
 
 const membershipRoute = express.Router();
 
@@ -37,20 +38,17 @@ membershipRoute.get('/matches/:id', getMatchById);
 membershipRoute.get('/matches/code/:matchCode', getMatchByCode);
 membershipRoute.post('/matches/join', joinMatch);
 membershipRoute.post('/matches/leave', leaveMatch);
-membershipRoute.put('/matches/:id/score', isMatchCreator, updateScore);
-membershipRoute.put('/matches/:id/teams', isMatchCreator, updateTeamMembers);
-membershipRoute.put('/matches/:id/start', isMatchCreator, startMatch);
-membershipRoute.put('/matches/:id/end', isMatchCreator, endMatch);
-membershipRoute.delete('/matches/:id', isMatchCreator, deleteMatch);
+membershipRoute.post('/matches/:matchId/session-token', getUserSessionToken);
+
+// Host-only routes (chỉ người tạo trận đấu mới có quyền)
+membershipRoute.put('/matches/:id/score', findMatchById, requireHostRole, updateScore);
+membershipRoute.put('/matches/:id/teams', findMatchById, requireHostRole, updateTeamMembers);
+membershipRoute.put('/matches/:id/start', findMatchById, requireHostRole, startMatch);
+membershipRoute.put('/matches/:id/end', findMatchById, requireHostRole, endMatch);
+membershipRoute.delete('/matches/:id', findMatchById, requireHostRole, deleteMatch);
 
 // History and other getters
 membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
 membershipRoute.get('/matches/history/:membershipId', getMatchHistory);
-
-// Additional Match routes with findMatchById middleware
-membershipRoute.patch('/matches/:id/score', findMatchById, updateScore);
-membershipRoute.patch('/matches/:id/teams', findMatchById, updateTeamMembers);
-membershipRoute.patch('/matches/:id/start', findMatchById, startMatch);
-membershipRoute.patch('/matches/:id/end', findMatchById, endMatch);
 
 export default membershipRoute;
