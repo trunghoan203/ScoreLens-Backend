@@ -38,6 +38,10 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
           res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin cho từng club.' });
           return;
         }
+        if (tableNumber === 0) {
+          res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
+          return;
+        }
         const clubId = `CLB-${Date.now()}`;
         const club = await Club.create({
           clubId,
@@ -62,6 +66,10 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
     const { clubName, address, phoneNumber, tableNumber, status } = req.body;
     if (!clubName || !address || !phoneNumber || !tableNumber) {
       res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin club.' });
+      return;
+    }
+    if (tableNumber === 0) {
+      res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
       return;
     }
     const clubId = `CLB-${Date.now()}`;
@@ -104,7 +112,13 @@ export const updateClub = async (req: Request & { admin?: any }, res: Response):
     if (clubName !== undefined) club.clubName = clubName;
     if (address !== undefined) club.address = address;
     if (phoneNumber !== undefined) club.phoneNumber = phoneNumber;
-    if (tableNumber !== undefined) club.tableNumber = tableNumber;
+    if (tableNumber !== undefined) {
+      if (tableNumber === 0) {
+        res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
+        return;
+      }
+      club.tableNumber = tableNumber;
+    }
     if (status !== undefined) club.status = status;
     await club.save();
     res.status(200).json({ success: true, club });
@@ -147,8 +161,21 @@ export const getClubs = async (req: Request & { admin?: any }, res: Response): P
       res.status(400).json({ success: false, message: 'Admin chưa có brand.' });
       return;
     }
+
     const clubs = await Club.find({ brandId: brand.brandId });
-    res.status(200).json({ success: true, clubs });
+
+    const clubsWithTableCount = await Promise.all(
+      clubs.map(async (club) => {
+        const Table = require('../models/Table.model').Table;
+        const tableCount = await Table.countDocuments({ clubId: club.clubId });
+        return {
+          ...club.toObject(),
+          actualTableCount: tableCount
+        };
+      })
+    );
+
+    res.status(200).json({ success: true, clubs: clubsWithTableCount });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
