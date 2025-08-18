@@ -56,7 +56,7 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
 
         res.status(201).json({
             success: true,
-            message: `Mã xác thực đã được gửi đến ${newAdmin.email}. Mã này sẽ hết hạn sau 10 phút.`,
+            message: MESSAGES.MSG123,
         });
 
     } catch (error: any) {
@@ -496,7 +496,7 @@ export const deactivateManager = catchAsync(async (req: Request & { admin?: any 
 
     res.status(200).json({
         success: true,
-        message: 'Manager đã được vô hiệu hóa thành công.',
+        message: MESSAGES.MSG119,
         data: deactivatedManager,
     });
 });
@@ -677,7 +677,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
 
     const brandId = admin.brandId;
     if (!brandId) {
-        return next(new ErrorHandler('Admin chưa có brand được gán.', 400));
+        return next(new ErrorHandler(MESSAGES.MSG109, 400));
     }
 
     const session = await Admin.db.startSession();
@@ -686,7 +686,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
     try {
         const brand = await Brand.findOne({ brandId }).session(session);
         if (!brand) {
-            throw new Error('Brand không tồn tại.');
+            throw new Error(MESSAGES.MSG117);
         }
 
         const clubIds = brand.clubIds || [];
@@ -723,7 +723,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
 
         res.status(200).json({
             success: true,
-            message: 'Tài khoản Admin và tất cả dữ liệu liên quan đã được xóa thành công.',
+            message: MESSAGES.MSG108,
             deletedData: {
                 admin: 1,
                 brand: 1,
@@ -739,7 +739,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
 
     } catch (error: any) {
         await session.abortTransaction();
-        return next(new ErrorHandler(`Lỗi khi xóa tài khoản admin: ${error.message}`, 500));
+        return next(new ErrorHandler(MESSAGES.MSG105, 500));
     } finally {
         session.endSession();
     }
@@ -771,6 +771,6 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
             message: MESSAGES.MSG125 
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };

@@ -46,7 +46,7 @@ export class NotificationController {
     if (!notification) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy thông báo hoặc bạn không có quyền truy cập'
+        message: MESSAGES.MSG72
       });
     }
 
@@ -73,7 +73,7 @@ export class NotificationController {
       success: true,
       data: {
         modifiedCount: result.modifiedCount,
-        message: 'Đã đánh dấu tất cả thông báo là đã đọc'
+        message: MESSAGES.MSG73
       }
     });
   });
@@ -115,14 +115,14 @@ export class NotificationController {
     if (!notification) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy thông báo hoặc bạn không có quyền truy cập'
+        message: MESSAGES.MSG72
       });
     }
 
     res.status(200).json({
       success: true,
       data: {
-        message: 'Đã xóa thông báo thành công',
+        message: MESSAGES.MSG74,
         deletedNotification: notification
       }
     });

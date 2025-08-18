@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Feedback, IFeedback } from '../models/Feedback.model';
 import { Brand } from '../models/Brand.model';
 import { NotificationService } from '../services/Notification.service';
+import { MESSAGES } from '../config/messages';
 
 // User tạo feedback
 export const createFeedback = async (req: Request, res: Response): Promise<void> => {
@@ -9,7 +10,7 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
         const { clubInfo, tableInfo, content, createdBy } = req.body;
 
         if (!clubInfo?.clubId || !tableInfo?.tableId || !content || !createdBy.type) {
-            res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG46 });
             return;
         }
 
