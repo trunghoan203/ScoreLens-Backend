@@ -1,5 +1,6 @@
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import ErrorHandler from '../../utils/ErrorHandler';
+import { MESSAGES } from '../../config/messages';
 
 export const errorHandlerMiddleware: ErrorRequestHandler = (
     error,
@@ -9,29 +10,29 @@ export const errorHandlerMiddleware: ErrorRequestHandler = (
     next: NextFunction
 ) => {
     error.statusCode = error.statusCode || 500;
-    error.message = error.message || 'Internal Server Error';
+    error.message = error.message || MESSAGES.MSG100;
 
     // wrong mongodb id error
     if (error.name === 'CastError') {
-        const message = `Resource not found. Invalid: ${error.path}`;
+        const message = `Không tìm thấy tài nguyên. Không hợp lệ: ${error.path}`;
         error = new ErrorHandler(message, 400);
     }
 
     // Duplicate key error
     if (error.code === 11000) {
-        const message = `Duplicate ${Object.keys(error.keyValue)} entered`;
+        const message = `Dữ liệu trùng lặp ${Object.keys(error.keyValue)} đã được nhập`;
         error = new ErrorHandler(message, 400);
     }
 
     // Wrong JWT error
     if (error.name === 'JsonWebTokenError') {
-        const message = 'Json web token is invalid, try again';
+        const message = MESSAGES.MSG103;
         error = new ErrorHandler(message, 400);
     }
 
     // JWT expired error
     if (error.name === 'TokenExpiredError') {
-        const message = 'Json web token is expired, try again';
+        const message = MESSAGES.MSG104;
         error = new ErrorHandler(message, 400);
     }
 

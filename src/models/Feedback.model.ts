@@ -9,8 +9,7 @@ export interface IFeedback extends Document {
     clubId: string;
     tableId: string;
     content: string;
-    status: 'pending' | 'managerP' | 'adminP' | 'superadminP' | 'resolved';
-    needSupport: boolean;
+    status: 'managerP' | 'adminP' | 'superadminP' | 'resolved';
     history: Array<{
         byId: string;
         byName: string;
@@ -34,10 +33,10 @@ const FeedbackSchema = new Schema<IFeedback>(
         content: { type: String, required: true },
         status: {
             type: String,
-            enum: ['pending', 'managerP', 'adminP', 'superadminP', 'resolved'],
-            default: 'pending'
+            enum: ['managerP', 'adminP', 'superadminP', 'resolved'],
+            default: 'managerP'
         },
-        needSupport: { type: Boolean, default: false },
+
         history: [
             {
                 byId: String,
