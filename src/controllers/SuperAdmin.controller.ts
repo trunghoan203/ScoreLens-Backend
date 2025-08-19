@@ -406,7 +406,6 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
     const { search = '', status, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
-    // Default: exclude newly registered admins (status = null)
     if (status) {
       query.status = status;
     } else {
@@ -414,7 +413,6 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
     }
 
     if (search) query.fullName = { $regex: search, $options: 'i' };
-    // Only include admins who have created brand (brandId exists)
     query.brandId = { $ne: null };
 
     const admins = await Admin.find(query)
@@ -422,7 +420,6 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
       .limit(Number(limit))
       .lean();
 
-    // Get brand and clubs for each admin
     const adminsWithDetails = await Promise.all(
       admins.map(async (admin) => {
         let brand: any = null;
@@ -441,10 +438,8 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
       })
     );
 
-    // Ensure admin has brand and at least one club (branch) created
     const eligibleAdmins = adminsWithDetails.filter((a) => a.brand && Array.isArray(a.clubs) && a.clubs.length > 0);
 
-    // total after eligibility filter
     const total = eligibleAdmins.length;
 
     res.json({
