@@ -68,12 +68,6 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
     manager.activationCodeExpires = null;
     await manager.save();
 
-    res.status(200).json({
-      success: true,
-      message: MESSAGES.MSG01,
-      data: { email: manager.email }
-    });
-
     sendToken(manager, 200, res);
   } catch (error) {
     res.status(500).json({ success: false, message: MESSAGES.MSG100 });
