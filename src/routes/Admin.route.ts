@@ -1,5 +1,4 @@
 import express from 'express';
-import { z } from 'zod';
 import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf, deleteAdminAccount, sendRegisterSuccessMail } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
@@ -16,7 +15,6 @@ import {
   createManagerSchema,
   updateManagerSchema,
   emailSchema,
-  createFeedbackSchema,
   updateFeedbackSchema
 } from '../validations';
 import upload from '../middlewares/upload.middleware';
