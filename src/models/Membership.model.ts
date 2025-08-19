@@ -5,7 +5,6 @@ export interface IMembership extends Document {
   brandId: string;
   fullName: string;
   phoneNumber: string;
-  totalPlayTime?: number;
   status: 'active' | 'inactive';
 }
 
@@ -26,10 +25,6 @@ const MembershipSchema = new Schema({
   phoneNumber: {
     type: String,
     required: true
-  },
-  totalPlayTime: {
-    type: Number,
-    default: 0
   },
   status: {
     type: String,

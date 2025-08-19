@@ -6,3 +6,7 @@ export const generateMatchCode = (length: number = 6): string => {
     }
     return result;
 };
+
+export const generateSessionToken = (): string => {
+    return `ST-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};

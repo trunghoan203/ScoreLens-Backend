@@ -4,6 +4,8 @@ export interface IMatchTeamMember {
   membershipId?: string;
   membershipName?: string;
   guestName?: string;
+  role: 'host' | 'participant';
+  sessionToken: string;
 }
 
 export interface IMatchTeam {
@@ -44,6 +46,15 @@ const MatchTeamMemberSchema = new Schema({
   guestName: {
     type: String,
     trim: true,
+  },
+  role: {
+    type: String,
+    enum: ['host', 'participant'],
+    required: true,
+  },
+  sessionToken: {
+    type: String,
+    required: true,
   },
 }, { _id: false });
 
