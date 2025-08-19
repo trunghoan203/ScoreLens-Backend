@@ -6,7 +6,7 @@ export const loginSuperAdminSchema = z.object({
 });
 
 export const updateFeedbackSchema = z.object({
-  content: z.string()
-    .min(10, 'Nội dung phải có ít nhất 10 ký tự')
+  status: z.enum(["adminP", "managerP", "superadminP"]),
+  note: z.string()
     .max(2000, 'Nội dung không được vượt quá 2000 ký tự'),
 });
