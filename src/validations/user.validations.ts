@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { phoneNumberSchema } from './common.validations';
+import { phoneNumberSchema, textSchema } from './common.validations';
 
 export const membershipCodeSchema = z.object({
+  clubId: textSchema,
   phoneNumber: phoneNumberSchema
 });
 
