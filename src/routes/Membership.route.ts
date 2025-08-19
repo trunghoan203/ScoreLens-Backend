@@ -1,3 +1,4 @@
+import { validate } from './../middlewares/validate.middleware';
 import express from 'express';
 import { createFeedback } from '../controllers/Feedback.controller';
 import { searchMembership, getMembershipById } from '../controllers/Membership.controller';
@@ -19,16 +20,17 @@ import {
     getUserSessionToken,
 } from '../controllers/Match.controller';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
-import { requireHostRole, allowManagerOrHost } from '../middlewares/auth/matchRoleAuth.middleware';
+import { allowManagerOrHost } from '../middlewares/auth/matchRoleAuth.middleware';
+import { createFeedbackSchema, membershipCodeSchema } from '../validations';
 
 const membershipRoute = express.Router();
 
 membershipRoute.get('/search/:membershipId', searchMembership);
 membershipRoute.get('/:id', getMembershipById);
-membershipRoute.post('/feedback', createFeedback);
+membershipRoute.post('/feedback', validate(createFeedbackSchema), createFeedback);
 
 membershipRoute.post('/matches/verify-table', verifyTable);
-membershipRoute.post('/matches/verify-membership', verifyMembership);
+membershipRoute.post('/matches/verify-membership', validate(membershipCodeSchema), verifyMembership);
 membershipRoute.post('/matches', createMatch);
 membershipRoute.get('/matches/:id', getMatchById);
 membershipRoute.get('/matches/code/:matchCode', getMatchByCode);
