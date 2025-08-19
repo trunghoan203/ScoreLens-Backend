@@ -406,15 +406,20 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
     const { search = '', status, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
-    if (status) query.status = status;
+    if (status) {
+      query.status = status;
+    } else {
+      query.status = { $ne: null };
+    }
+
     if (search) query.fullName = { $regex: search, $options: 'i' };
+    query.brandId = { $ne: null };
 
     const admins = await Admin.find(query)
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit))
       .lean();
 
-    // Get brand and clubs for each admin
     const adminsWithDetails = await Promise.all(
       admins.map(async (admin) => {
         let brand: any = null;
@@ -433,11 +438,13 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
       })
     );
 
-    const total = await Admin.countDocuments(query);
+    const eligibleAdmins = adminsWithDetails.filter((a) => a.brand && Array.isArray(a.clubs) && a.clubs.length > 0);
+
+    const total = eligibleAdmins.length;
 
     res.json({
       success: true,
-      admins: adminsWithDetails,
+      admins: eligibleAdmins,
       pagination: {
         page: Number(page),
         limit: Number(limit),
