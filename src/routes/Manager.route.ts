@@ -1,4 +1,5 @@
 import express from 'express';
+import { z } from 'zod';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
 import {
     listTables,
@@ -26,13 +27,25 @@ import {
     joinMatch,
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import {
+    loginManagerSchema,
+    createTableSchema,
+    updateTableSchema,
+    createMembershipSchema,
+    updateMembershipSchema,
+    createCameraSchema,
+    updateCameraSchema,
+    emailSchema,
+    phoneNumberSchema
+} from '../validations';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
 
 const managerRouter = express.Router();
 
-managerRouter.post('/login', loginManager);
+managerRouter.post('/login', validate(loginManagerSchema), loginManager);
 managerRouter.post('/login/verify', verifyLogin);
-managerRouter.post('/resend-login-code', resendLoginCode);
+managerRouter.post('/resend-login-code', validate(emailSchema), resendLoginCode);
 
 // Protected routes (require authentication)
 managerRouter.post('/logout', isAuthenticated, logoutManager);
@@ -40,8 +53,8 @@ managerRouter.get('/profile', isAuthenticated, getProfile);
 
 // Table management routes for manager
 managerRouter.get('/table', isAuthenticated, listTables);
-managerRouter.post('/table', isAuthenticated, createTable);
-managerRouter.put('/table/:tableId', isAuthenticated, updateTable);
+managerRouter.post('/table', isAuthenticated, validate(createTableSchema), createTable);
+managerRouter.put('/table/:tableId', isAuthenticated, validate(updateTableSchema), updateTable);
 managerRouter.delete('/table/:tableId', isAuthenticated, deleteTable);
 
 // Public table routes (không cần xác thực)
@@ -51,14 +64,14 @@ managerRouter.get('/table/:tableId', getTableById);
 
 // Membership management routes for manager
 managerRouter.get('/membership', isAuthenticated, listMemberships);
-managerRouter.post('/membership', isAuthenticated, createMembership);
-managerRouter.put('/membership/:membershipId', isAuthenticated, updateMembership);
+managerRouter.post('/membership', isAuthenticated, validate(createMembershipSchema), createMembership);
+managerRouter.put('/membership/:membershipId', isAuthenticated, validate(updateMembershipSchema), updateMembership);
 managerRouter.delete('/membership/:membershipId', isAuthenticated, deleteMembership)
 
 // Camera management routes for manager
 managerRouter.get('/camera', isAuthenticated, listCameras);
-managerRouter.post('/camera', isAuthenticated, createCamera);
-managerRouter.put('/camera/:cameraId', isAuthenticated, updateCamera);
+managerRouter.post('/camera', isAuthenticated, validate(createCameraSchema), createCamera);
+managerRouter.put('/camera/:cameraId', isAuthenticated, validate(updateCameraSchema), updateCamera);
 managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
 
 // Feedback management routes for manager
@@ -79,7 +92,6 @@ managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMat
 managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
 managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
 
-// Public match routes (không cần xác thực)
 managerRouter.post('/matches/join', joinMatch);
 
 
