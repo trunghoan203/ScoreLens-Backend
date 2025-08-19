@@ -82,6 +82,12 @@ export const verifySuperAdmin = async (req: Request, res: Response): Promise<voi
     admin.activationCodeExpires = null;
     await admin.save();
 
+    res.status(200).json({
+      success: true,
+      message: MESSAGES.MSG04,
+      data: { email: admin.email }
+    });
+
   } catch (error) {
     res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
@@ -111,7 +117,7 @@ export const loginSuperAdmin = async (req: Request, res: Response): Promise<void
 
     await sendMail({
       email: admin.email,
-      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập',
+      subject: 'ScoreLens - Mã Xác Thực Mới',
       template: 'activation-mail.ejs',
       data: {
         user: { name: admin.fullName },
@@ -155,6 +161,11 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
     await admin.save();
 
     sendToken(admin, 200, res);
+    res.status(200).json({
+      success: true,
+      message: MESSAGES.MSG01,
+      data: { email: admin.email }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
@@ -214,6 +225,7 @@ export const getProfile = async (req: Request & { superAdmin?: any }, res: Respo
 
     res.status(200).json({
       success: true,
+      
       admin: {
         sAdminId: superAdmin.sAdminId,
         fullName: superAdmin.fullName,
@@ -315,7 +327,7 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
     // Gửi email với mã mới
     await sendMail({
       email: superAdmin.email,
-      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập Mới',
+      subject: 'ScoreLens - Mã Xác Thực Mới',
       template: 'activation-mail.ejs',
       data: {
         user: { name: superAdmin.fullName },

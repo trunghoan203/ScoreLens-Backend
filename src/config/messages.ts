@@ -31,6 +31,8 @@ export const MESSAGES = {
   MSG32: 'Manager không tồn tại',
 
   // Table
+  MSG37: 'Bàn đã được tạo thành công.',
+  MSG38: 'Bàn đã được cập nhật thành công.',
   MSG40: 'Bàn không tồn tại',
   MSG41: 'Bàn đã được xóa',
   MSG42: 'Vui lòng cung cấp dữ liệu QR code.',
@@ -43,6 +45,8 @@ export const MESSAGES = {
   // Camera
   MSG50: 'Camera đã được xóa',
   MSG51: 'Camera không tồn tại',
+  MSG52: 'Camera đã được tạo thành công.',
+  MSG53: 'Camera đã được cập nhật thành công.',
 
   // Membership
   MSG60: 'Câu lạc bộ không tồn tại',
@@ -61,7 +65,8 @@ export const MESSAGES = {
   MSG74: 'Đã xóa thông báo thành công',
 
   // Match
-  MSG76: 'Rời khỏi trận đấu thành ckhoi',
+  MSG75: 'Trận đấu đã được tạo thành công.',
+  MSG76: 'Rời khỏi trận đấu thành công.',
   MSG77: 'Chỉ có thể rời khỏi trận đấu khi đang ở trạng thái chờ.',
   MSG78: 'Tham gia trận đấu thành công.',
   MSG79: 'Bạn đã tham gia trận đấu này rồi.',
@@ -124,7 +129,17 @@ export const MESSAGES = {
   MSG130: 'ACCESS_TOKEN không được xác định trong các biến môi trường',
   MSG131: 'REFRESH_TOKEN không được xác định trong các biến môi trường',
   MSG132: 'REFRESH_TOKEN hoặc REFRESH_TOKEN_EXPIRE không được xác định trong các biến môi trường',
-  MSG133: 'ACCESS_TOKEN hoặc ACCESS_TOKEN_EXPIRE không được xác định trong các biến môi trường'
+  MSG133: 'ACCESS_TOKEN hoặc ACCESS_TOKEN_EXPIRE không được xác định trong các biến môi trường',
+
+  // Brand
+  MSG134: 'Brand đã được tạo thành công.',
+  MSG135: 'Brand đã được cập nhật thành công.',
+  MSG136: 'Brand đã được xóa thành công.',
+
+  // Club
+  MSG140: 'Câu lạc bộ đã được tạo thành công.',
+  MSG141: 'Câu lạc bộ đã được cập nhật thành công.',
+  MSG142: 'Câu lạc bộ đã được xóa thành công.',
 
 };
 

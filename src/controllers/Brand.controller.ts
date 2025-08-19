@@ -35,7 +35,7 @@ export const createBrand = async (req: Request & { admin?: any }, res: Response)
             { brandId: brand.brandId }
         );
 
-        res.status(201).json({ success: true, brand });
+        res.status(201).json({ success: true, message: MESSAGES.MSG134, brand });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -58,7 +58,7 @@ export const updateBrand = async (req: Request & { admin?: any }, res: Response)
         if (logo_url !== undefined) brand.logo_url = logo_url;
         if (citizenCode !== undefined) brand.citizenCode = citizenCode;
         await brand.save();
-        res.status(200).json({ success: true, brand });
+        res.status(200).json({ success: true, message: MESSAGES.MSG135, brand });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -108,7 +108,7 @@ export const deleteBrand = async (req: Request & { admin?: any }, res: Response)
             { brandId: null }
         );
 
-        res.status(200).json({ success: true, message: MESSAGES.MSG118 });
+        res.status(200).json({ success: true, message: MESSAGES.MSG136 });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }

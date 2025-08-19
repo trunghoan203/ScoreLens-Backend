@@ -58,7 +58,7 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
             res.status(404).json({ success: false, message: MESSAGES.MSG61 });
             return;
         }
-        res.json({ success: true, membership });
+        res.json({ success: true, membership, message: MESSAGES.MSG66 });
         return;
     } catch (error) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });

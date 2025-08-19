@@ -96,7 +96,7 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({
             success: true,
-            message: MESSAGES.MSG03,
+            message: MESSAGES.MSG04,
         });
 
     } catch (error: any) {
@@ -565,7 +565,7 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
         // Gửi email với mã mới
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Mã Xác Thực Đăng Nhập',
+            subject: 'ScoreLens - Mã Xác Thực Mới',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
