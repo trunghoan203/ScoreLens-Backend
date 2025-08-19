@@ -92,7 +92,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                         } else {
                             foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
                         }
-
                         if (foundMembership) {
                             if (foundMembership.status === 'inactive') {
                                 res.status(403).json({
@@ -101,27 +100,27 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                                 });
                                 return;
                             }
-
-                            // Kiểm tra xem có phải người tạo trận đấu không
                             const isCreator = creatorMembership && foundMembership.membershipId === creatorMembership.membershipId;
-                            
+
                             processedMembers.push({
                                 membershipId: foundMembership.membershipId,
                                 membershipName: foundMembership.fullName,
-                                role: isCreator ? 'host' : 'participant', // Người tạo luôn là host
+                                role: isCreator ? 'host' : 'participant',
                                 sessionToken: generateSessionToken(),
                             });
                         } else {
-                            processedMembers.push({ 
-                                guestName: `Guest ${member.phoneNumber}`,
+                            const phone = String(member.phoneNumber).trim();
+                            processedMembers.push({
+                                guestName: phone,              
                                 role: 'participant',
                                 sessionToken: generateSessionToken(),
                             });
                         }
                     }
                     else if (member.guestName) {
-                        processedMembers.push({ 
-                            guestName: member.guestName,
+                        const g = String(member.guestName).trim().replace(/^Guest\s+/i, '');
+                        processedMembers.push({
+                            guestName: g,
                             role: 'participant',
                             sessionToken: generateSessionToken(),
                         });
@@ -136,15 +135,12 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
             });
         }
 
-        // Đảm bảo người tạo LUÔN có role 'host'
         if (creatorMembership) {
-            // Xử lý cho hội viên đã đăng ký
             const isCreatorInTeam = processedTeams.some(team =>
                 team.members.some(m => m.membershipId === creatorMembership.membershipId)
             );
 
             if (!isCreatorInTeam && processedTeams.length > 0) {
-                // Nếu người tạo chưa có trong teams, thêm vào team đầu tiên
                 processedTeams[0].members.unshift({
                     membershipId: creatorMembership.membershipId,
                     membershipName: creatorMembership.fullName,
@@ -152,7 +148,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                     sessionToken: generateSessionToken(),
                 });
             } else if (isCreatorInTeam) {
-                // Nếu người tạo đã có trong teams, cập nhật role thành 'host'
                 for (const team of processedTeams) {
                     const creatorMember = team.members.find(m => m.membershipId === creatorMembership.membershipId);
                     if (creatorMember) {
@@ -162,14 +157,10 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 }
             }
         } else if (!createdByMembershipId && !managerIdFromToken) {
-            // Xử lý cho guest user tạo trận đấu
-            // Tìm guest user đầu tiên trong teams và gán role 'host'
             if (processedTeams.length > 0 && processedTeams[0].members.length > 0) {
-                // Lấy guest user đầu tiên làm host
                 const firstGuestMember = processedTeams[0].members[0];
                 if (firstGuestMember.guestName) {
                     firstGuestMember.role = 'host';
-                    console.log(`Guest user "${firstGuestMember.guestName}" được gán role 'host'`);
                 }
             }
         }
@@ -207,7 +198,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         const savedMatch = await newMatch.save();
         await Table.findOneAndUpdate({ tableId: tableId }, { status: 'inuse' });
 
-        // Trả về sessionToken của host để Frontend sử dụng
         let hostSessionToken = null;
         for (const team of savedMatch.teams) {
             const hostMember = team.members.find(m => m.role === 'host');
@@ -220,8 +210,8 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
         res.status(201).json({
             success: true,
             data: savedMatch.toObject(),
-            creatorGuestToken: guestToken,
-            hostSessionToken: hostSessionToken // Thêm sessionToken của host
+            creatorGuestToken: guestToken, 
+            hostSessionToken: hostSessionToken 
         });
 
     } catch (error: any) {
@@ -231,7 +221,6 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
 
 export const getMatchById = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { membershipId, guestName } = req.query; // Thêm query params để xác định user
         const match = await Match.findOne({ matchId: req.params.id });
 
         if (!match) {
@@ -242,25 +231,9 @@ export const getMatchById = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        // Tìm sessionToken của user nếu có thông tin
-        let userSessionToken = null;
-        if (membershipId || guestName) {
-            for (const team of match.teams) {
-                const member = team.members.find(m => 
-                    (membershipId && m.membershipId === membershipId) ||
-                    (guestName && m.guestName === guestName)
-                );
-                if (member) {
-                    userSessionToken = member.sessionToken;
-                    break;
-                }
-            }
-        }
-
         res.status(200).json({
             success: true,
-            data: match,
-            userSessionToken: userSessionToken // Trả về sessionToken của user
+            data: match
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -270,7 +243,6 @@ export const getMatchById = async (req: Request, res: Response): Promise<void> =
 export const getMatchByCode = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchCode } = req.params;
-        const { membershipId, guestName } = req.query; // Thêm query params để xác định user
 
         const match = await Match.findOne({ matchCode });
 
@@ -282,25 +254,9 @@ export const getMatchByCode = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        // Tìm sessionToken của user nếu có thông tin
-        let userSessionToken = null;
-        if (membershipId || guestName) {
-            for (const team of match.teams) {
-                const member = team.members.find(m => 
-                    (membershipId && m.membershipId === membershipId) ||
-                    (guestName && m.guestName === guestName)
-                );
-                if (member) {
-                    userSessionToken = member.sessionToken;
-                    break;
-                }
-            }
-        }
-
         res.status(200).json({
             success: true,
-            data: match,
-            userSessionToken: userSessionToken // Trả về sessionToken của user
+            data: match
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -311,7 +267,7 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
     try {
         const { teamIndex, score } = req.body;
         const match = (req as any).match as IMatch;
-        const matchMember = (req as any).matchMember; // Lấy từ middleware
+        const matchMember = (req as any).matchMember; 
 
         if (teamIndex === undefined || score === undefined) {
             res.status(400).json({
@@ -328,9 +284,6 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
             });
             return;
         }
-
-        // Middleware requireHostRole đã kiểm tra quyền rồi
-        // matchMember đã được xác thực là host
 
         if (match.status === 'completed') {
             res.status(400).json({
@@ -363,182 +316,216 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
+// helpers
+const samePerson = (a: IMatchTeamMember, b: IMatchTeamMember) => {
+    if (a.membershipId && b.membershipId) return a.membershipId === b.membershipId;
+    if (a.guestName && b.guestName) return a.guestName.trim().toLowerCase() === b.guestName.trim().toLowerCase();
+    return false;
+};
+
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { teams } = req.body;
-        const match = (req as any).match as IMatch;
-        const matchMember = (req as any).matchMember; // Lấy từ middleware
+  try {
+    const { teams } = req.body;
+    const match = (req as any).match as IMatch;
 
-        if (!req.body) {
-            res.status(400).json({
-                success: false,
-                message: MESSAGES.MSG120
-            });
-            return;
-        }
+    if (!req.body) return void res.status(400).json({ success:false, message: MESSAGES.MSG120 });
+    if (!Array.isArray(teams) || teams.length !== 2) return void res.status(400).json({ success:false, message: MESSAGES.MSG87 });
+    if (!match) return void res.status(404).json({ success:false, message: MESSAGES.MSG81 });
+    if (match.status === 'completed') return void res.status(400).json({ success:false, message: MESSAGES.MSG85 });
 
-        if (!teams || !Array.isArray(teams) || teams.length !== 2) {
-            res.status(400).json({
-                success: false,
-                message: MESSAGES.MSG87
-            });
-            return;
-        }
+    // Helpers
+    const trim = (s:any) => typeof s === 'string' ? s.trim() : s;
+    const normalizePhone = (s:string) => trim(s);
+    const stripGuestPrefix = (s:string) => trim(s).replace(/^Guest\s+/i, '');
 
-        if (!match) {
-            res.status(404).json({
-                success: false,
-                message: MESSAGES.MSG81
-            });
-            return;
-        }
+    const keyOf = (m: IMatchTeamMember) =>
+      (m as any).membershipId ? `mem:${(m as any).membershipId}` :
+      (m as any).guestName   ? `guest:${(m as any).guestName}` : '';
 
-        // Middleware requireHostRole đã kiểm tra quyền rồi
-        // matchMember đã được xác thực là host
-
-        if (match.status === 'completed') {
-            res.status(400).json({
-                success: false,
-                message: MESSAGES.MSG85
-            });
-            return;
-        }
-
-        for (let teamIndex = 0; teamIndex < 2; teamIndex++) {
-            const rawMembers = teams[teamIndex];
-            if (!rawMembers || !Array.isArray(rawMembers)) {
-                res.status(400).json({
-                    success: false,
-                    message: `Members cho đội ${teamIndex} phải là một mảng.`
-                });
-                return;
-            }
-
-            const processedMembers: IMatchTeamMember[] = [];
-            for (const member of rawMembers) {
-                if (member.phoneNumber) {
-                    const foundMembership = await Membership.findOne({ phoneNumber: member.phoneNumber });
-                    if (foundMembership) {
-                        if (foundMembership.status === 'inactive') {
-                            res.status(403).json({
-                                success: false,
-                                message: `Tài khoản hội viên của ${foundMembership.fullName} đang bị cấm`
-                            });
-                            return;
-                        }
-
-                        const table = await Table.findOne({ tableId: match.tableId });
-                        if (table) {
-                            const club = await Club.findOne({ clubId: table.clubId });
-                            if (club && foundMembership.brandId !== club.brandId) {
-                                res.status(403).json({
-                                    success: false,
-                                    message: MESSAGES.MSG61
-                                });
-                                return;
-                            }
-                        }
-
-                        // Kiểm tra xem member này có phải là host không
-                        const isHost = foundMembership.membershipId === match.createdByMembershipId;
-                        
-                        // Nếu không phải host, kiểm tra xem có phải là guest host không
-                        let finalRole: 'host' | 'participant' = isHost ? 'host' : 'participant';
-                        if (!isHost && !match.createdByMembershipId && match.creatorGuestToken) {
-                            // Trường hợp host là guest user
-                            const isGuestHost = member.phoneNumber && match.creatorGuestToken.includes(member.phoneNumber.slice(-6));
-                            if (isGuestHost) {
-                                finalRole = 'host';
-                            }
-                        }
-                        
-                        // Tìm member hiện tại trong team để giữ nguyên token nếu có
-                        const existingMember = match.teams[teamIndex].members.find(m => 
-                            m.membershipId === foundMembership.membershipId
-                        );
-
-                        processedMembers.push({
-                            membershipId: foundMembership.membershipId,
-                            membershipName: foundMembership.fullName,
-                            role: finalRole,
-                            sessionToken: existingMember ? existingMember.sessionToken : generateSessionToken(),
-                        });
-                    } else {
-                        // Tìm guest member hiện tại để giữ nguyên token nếu có
-                        const existingGuestMember = match.teams[teamIndex].members.find(m => 
-                            m.guestName === `Guest ${member.phoneNumber}`
-                        );
-
-                        // Kiểm tra xem có phải là guest host không
-                        let guestRole: 'host' | 'participant' = 'participant';
-                        if (!match.createdByMembershipId && match.creatorGuestToken) {
-                            const isGuestHost = match.creatorGuestToken.includes(member.phoneNumber.slice(-6));
-                            if (isGuestHost) {
-                                guestRole = 'host';
-                            }
-                        }
-
-                        processedMembers.push({
-                            guestName: `Guest ${member.phoneNumber}`,
-                            role: guestRole,
-                            sessionToken: existingGuestMember ? existingGuestMember.sessionToken : generateSessionToken(),
-                        });
-                    }
-                }
-                else if (member.guestName) {
-                    // Tìm guest member hiện tại để giữ nguyên token nếu có
-                    const existingGuestMember = match.teams[teamIndex].members.find(m => 
-                        m.guestName === member.guestName
-                    );
-
-                    // Kiểm tra xem có phải là guest host không
-                    let guestNameRole: 'host' | 'participant' = 'participant';
-                    if (!match.createdByMembershipId && match.creatorGuestToken) {
-                        const isGuestHost = match.creatorGuestToken.includes(member.guestName.slice(-6));
-                        if (isGuestHost) {
-                            guestNameRole = 'host';
-                        }
-                    }
-
-                    processedMembers.push({
-                        guestName: member.guestName,
-                        role: guestNameRole,
-                        sessionToken: existingGuestMember ? existingGuestMember.sessionToken : generateSessionToken(),
-                    });
-                }
-            }
-
-            match.teams[teamIndex].members = processedMembers;
-        }
-
-        const updatedMatch = await match.save();
-
-        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
-
-        // Trả về sessionToken của host để Frontend sử dụng
-        let hostSessionToken = null;
-        for (const team of updatedMatch.teams) {
-            const hostMember = team.members.find(m => m.role === 'host');
-            if (hostMember) {
-                hostSessionToken = hostMember.sessionToken;
-                break;
-            }
-        }
-
-        res.status(200).json({ 
-            success: true, 
-            data: updatedMatch,
-            hostSessionToken: hostSessionToken // Thêm sessionToken của host
-        });
-    } catch (error: any) {
-        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    let tableBrandId: string | undefined;
+    const table = await Table.findOne({ tableId: match.tableId });
+    if (table) {
+      const club = await Club.findOne({ clubId: table.clubId });
+      if (club) tableBrandId = club.brandId;
     }
+
+    const existingByKey = new Map<string, { teamIndex:number; member:IMatchTeamMember }>();
+    let hostKey: string | null = null;
+    let hostTeamIndex = -1;
+    let originalHost: IMatchTeamMember | null = null;
+
+    match.teams.forEach((t, ti) => {
+      t.members.forEach((m) => {
+        const k = keyOf(m);
+        if (!k) return;
+        existingByKey.set(k, { teamIndex: ti, member: m });
+        if (m.role === 'host') {
+          hostKey = k;
+          hostTeamIndex = ti;
+          originalHost = m;
+        }
+      });
+    });
+
+    if (!originalHost || hostKey === null) {
+      return void res.status(400).json({ success:false, message: 'Dữ liệu không hợp lệ: không tìm thấy host hiện tại.' });
+    }
+
+    let hostMembershipPhone: string | null = null;
+    if ((originalHost as any).membershipId) {
+      const hostMem = await Membership.findOne({ membershipId: (originalHost as any).membershipId });
+      if (hostMem?.phoneNumber) hostMembershipPhone = normalizePhone(hostMem.phoneNumber);
+    } else if ((originalHost as any).guestName) {
+      hostMembershipPhone = normalizePhone((originalHost as any).guestName as string);
+    }
+
+    const resolveIncoming = async (raw:any) => {
+      if (raw.membershipId) {
+        const mem = await Membership.findOne({ membershipId: raw.membershipId });
+        if (!mem) return { error: 'Hội viên không tồn tại' };
+        if (mem.status === 'inactive') return { error: `Tài khoản hội viên của ${mem.fullName} đang bị cấm` };
+        if (tableBrandId && mem.brandId !== tableBrandId) return { error: MESSAGES.MSG61 };
+
+        const k = `mem:${mem.membershipId}`;
+        const isHost = (originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId;
+        return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
+      }
+
+      if (raw.phoneNumber) {
+        const phone = normalizePhone(raw.phoneNumber);
+        const mem = await Membership.findOne({ phoneNumber: phone });
+        if (mem) {
+          if (mem.status === 'inactive') return { error: `Tài khoản hội viên của ${mem.fullName} đang bị cấm` };
+          if (tableBrandId && mem.brandId !== tableBrandId) return { error: MESSAGES.MSG61 };
+
+          const k = `mem:${mem.membershipId}`;
+          const isHost =
+            ((originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId) ||
+            (!!hostMembershipPhone && phone === hostMembershipPhone);
+          return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
+        }
+        const isHost = !!hostMembershipPhone && phone === hostMembershipPhone;
+        return { key: isHost ? hostKey! : `guest:${phone}`, kind: 'guest', displayName: phone, isHost };
+      }
+
+      if (raw.guestName) {
+        const guestName = trim(raw.guestName);
+        
+        let mem = await Membership.findOne({ fullName: guestName });
+        
+        if (!mem) {
+          const phone = normalizePhone(stripGuestPrefix(guestName));
+          mem = await Membership.findOne({ phoneNumber: phone });
+        }
+        
+        if (mem) {
+          if (mem.status === 'inactive') return { error: `Tài khoản hội viên của ${mem.fullName} đang bị cấm` };
+          if (tableBrandId && mem.brandId !== tableBrandId) return { error: MESSAGES.MSG61 };
+
+          const k = `mem:${mem.membershipId}`;
+          const isHost =
+            ((originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId) ||
+            (!!hostMembershipPhone && mem.phoneNumber === hostMembershipPhone) ||
+            (mem.fullName === (originalHost as any).membershipName);
+          return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
+        }
+        
+        const isHost = (originalHost as any).guestName && guestName === (originalHost as any).guestName;
+        return { key: isHost ? hostKey! : `guest:${guestName}`, kind: 'guest', displayName: guestName, isHost };
+      }
+
+      return { error: 'Member input không hợp lệ' };
+    };
+
+    const newTeams = [
+      { teamName: match.teams[0].teamName, members: [] as IMatchTeamMember[] },
+      { teamName: match.teams[1].teamName, members: [] as IMatchTeamMember[] },
+    ];
+
+    newTeams[hostTeamIndex].members.push({
+      membershipId: (originalHost as IMatchTeamMember).membershipId,
+      membershipName: (originalHost as IMatchTeamMember).membershipName,
+      guestName: (originalHost as IMatchTeamMember).guestName,
+      role: (originalHost as IMatchTeamMember).role,
+      sessionToken: (originalHost as IMatchTeamMember).sessionToken,
+    });
+
+    const seenKeys = new Set<string>([hostKey!]); 
+    for (let ti = 0; ti < 2; ti++) {
+      const inputArr = teams[ti];
+      if (!Array.isArray(inputArr)) {
+        return void res.status(400).json({ success:false, message: `Members cho đội ${ti} phải là một mảng.` });
+      }
+
+      for (const raw of inputArr) {
+        const r:any = await resolveIncoming(raw);
+        if (r?.error) return void res.status(403).json({ success:false, message: r.error });
+
+        const { key, kind, displayName, membership, isHost } = r;
+
+        if (isHost || key === hostKey) continue;
+
+        if (seenKeys.has(key)) continue; 
+
+        const existed = existingByKey.get(key)?.member;
+        if (existed) {
+          const keep: IMatchTeamMember = { ...existed };
+          if (kind === 'membership') keep.membershipName = displayName;
+          else keep.guestName = displayName;
+          newTeams[ti].members.push(keep);
+        } else {
+          if (kind === 'membership') {
+            newTeams[ti].members.push({
+              membershipId: membership.membershipId,
+              membershipName: displayName,
+              role: 'participant',
+              sessionToken: generateSessionToken(),
+            });
+          } else {
+            newTeams[ti].members.push({
+              guestName: displayName,
+              role: 'participant',
+              sessionToken: generateSessionToken(),
+            });
+          }
+        }
+
+        seenKeys.add(key);
+      }
+    }
+
+    const hostCount =
+      newTeams[0].members.filter(m => m.role === 'host').length +
+      newTeams[1].members.filter(m => m.role === 'host').length;
+    if (hostCount !== 1) {
+      return void res.status(400).json({ success:false, message: 'Dữ liệu không hợp lệ: host bị trùng hoặc bị mất.' });
+    }
+    const seen = new Set<string>();
+    for (let ti = 0; ti < 2; ti++) {
+      for (const m of newTeams[ti].members) {
+        const k = keyOf(m);
+        if (!k) continue;
+        if (seen.has(k)) return void res.status(400).json({ success:false, message:'Một người xuất hiện ở cả 2 đội.'});
+        seen.add(k);
+      }
+    }
+
+    match.teams[0].members = newTeams[0].members;
+    match.teams[1].members = newTeams[1].members;
+
+    const updated = await match.save();
+    getIO().to(updated.matchId).emit('match_updated', updated);
+
+    res.status(200).json({ success:true, data: updated });
+  } catch (e) {
+    res.status(500).json({ success:false, message: MESSAGES.MSG100 });
+  }
 };
 
 export const startMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = (req as any).match as IMatch;
-        const matchMember = (req as any).matchMember; // Lấy từ middleware
+        const matchMember = (req as any).matchMember; 
 
         if (!match) {
             res.status(404).json({
@@ -547,9 +534,6 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
             });
             return;
         }
-
-        // Middleware requireHostRole đã kiểm tra quyền rồi
-        // matchMember đã được xác thực là host
 
         if (match.status !== 'pending') {
             res.status(400).json({
@@ -615,7 +599,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
 export const endMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = (req as any).match as IMatch;
-        const matchMember = (req as any).matchMember; // Lấy từ middleware
+        const matchMember = (req as any).matchMember; 
 
         if (!match) {
             res.status(404).json({
@@ -624,9 +608,6 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
             });
             return;
         }
-
-        // Middleware requireHostRole đã kiểm tra quyền rồi
-        // matchMember đã được xác thực là host
 
         if (match.status === 'completed') {
             res.status(400).json({
@@ -675,7 +656,7 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
 export const deleteMatch = async (req: Request, res: Response): Promise<void> => {
     try {
         const match = (req as any).match as IMatch;
-        const matchMember = (req as any).matchMember; // Lấy từ middleware
+        const matchMember = (req as any).matchMember; 
 
         if (!match) {
             res.status(404).json({
@@ -684,9 +665,6 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
             });
             return;
         }
-
-        // Middleware requireHostRole đã kiểm tra quyền rồi
-        // matchMember đã được xác thực là host
 
         const matchIdToDelete = match.matchId;
 
@@ -780,7 +758,7 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
         if (!phoneNumber || !clubId) {
             res.status(400).json({
                 success: false,
-                message: MESSAGES.MSG46 
+                message: MESSAGES.MSG46
             });
             return;
         }
@@ -845,9 +823,9 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         const { matchCode, teamIndex = 0, joinerInfo } = req.body;
 
         if (!matchCode || !joinerInfo) {
-            res.status(400).json({ 
-                success: false, 
-                message: MESSAGES.MSG84 
+            res.status(400).json({
+                success: false,
+                message: MESSAGES.MSG84
             });
             return;
         }
@@ -859,8 +837,8 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         );
 
         if (!hasValidInfo) {
-            res.status(400).json({ 
-                success: false, 
+            res.status(400).json({
+                success: false,
                 message: MESSAGES.MSG46
             });
             return;
@@ -889,17 +867,17 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         let isAlreadyJoined = false;
 
         if (joinerInfo.membershipId && joinerInfo.membershipName) {
-            newMember = { 
-                membershipId: joinerInfo.membershipId, 
+            newMember = {
+                membershipId: joinerInfo.membershipId,
                 membershipName: joinerInfo.membershipName,
                 role: 'participant',
                 sessionToken: generateSessionToken(),
             };
-            
-            isAlreadyJoined = match.teams.some(team => 
+
+            isAlreadyJoined = match.teams.some(team =>
                 team.members.some(member => member.membershipId === joinerInfo.membershipId)
             );
-            
+
         } else if (joinerInfo.phoneNumber) {
             const membership = await Membership.findOne({ phoneNumber: joinerInfo.phoneNumber });
             if (!membership) {
@@ -926,31 +904,31 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 }
             }
 
-            isAlreadyJoined = match.teams.some(team => 
+            isAlreadyJoined = match.teams.some(team =>
                 team.members.some(member => member.membershipId === membership.membershipId)
             );
-            newMember = { 
-                membershipId: membership.membershipId, 
+            newMember = {
+                membershipId: membership.membershipId,
                 membershipName: membership.fullName,
                 role: 'participant',
                 sessionToken: generateSessionToken(),
             };
-            
+
         } else if (joinerInfo.guestName) {
-            newMember = { 
+            newMember = {
                 guestName: joinerInfo.guestName,
                 role: 'participant',
                 sessionToken: generateSessionToken(),
             };
-            
-            isAlreadyJoined = match.teams.some(team => 
-                team.members.some(member => 
+
+            isAlreadyJoined = match.teams.some(team =>
+                team.members.some(member =>
                     member.guestName === joinerInfo.guestName
                 )
             );
         } else {
-            res.status(400).json({ 
-                success: false, 
+            res.status(400).json({
+                success: false,
                 message: MESSAGES.MSG46
             });
             return;
@@ -967,11 +945,11 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
 
-        res.status(200).json({ 
-            success: true, 
-            data: updatedMatch, 
+        res.status(200).json({
+            success: true,
+            data: updatedMatch,
             message: 'Tham gia trận đấu thành công.',
-            userSessionToken: newMember.sessionToken // Trả về sessionToken của user mới join
+            userSessionToken: newMember.sessionToken 
         });
 
     } catch (error: any) {
@@ -984,8 +962,8 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         const { matchCode, leaverInfo } = req.body;
 
         if (!matchCode || !leaverInfo) {
-            res.status(400).json({ 
-                success: false, 
+            res.status(400).json({
+                success: false,
                 message: MESSAGES.MSG84
             });
             return;
@@ -998,8 +976,8 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         );
 
         if (!hasValidInfo) {
-            res.status(400).json({ 
-                success: false, 
+            res.status(400).json({
+                success: false,
                 message: MESSAGES.MSG46
             });
             return;
@@ -1032,13 +1010,13 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                     break;
                 }
             }
-            
+
         } else if (leaverInfo.phoneNumber) {
             const membership = await Membership.findOne({ phoneNumber: leaverInfo.phoneNumber });
             if (!membership) {
-                res.status(404).json({ 
-                    success: false, 
-                    message: MESSAGES.MSG61 
+                res.status(404).json({
+                    success: false,
+                    message: MESSAGES.MSG61
                 });
                 return;
             }
@@ -1066,7 +1044,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                     break;
                 }
             }
-            
+
         } else if (leaverInfo.guestName) {
             for (let i = 0; i < match.teams.length; i++) {
                 const foundMemberIndex = match.teams[i].members.findIndex(member =>
@@ -1137,24 +1115,15 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
     }
 };
 
-// API mới để Frontend lấy sessionToken của mình
 export const getUserSessionToken = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchId } = req.params;
         const { membershipId, guestName } = req.body;
 
-        if (!matchId) {
-            res.status(400).json({
-                success: false,
-                message: 'Vui lòng cung cấp matchId.'
-            });
-            return;
-        }
-
         if (!membershipId && !guestName) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp membershipId hoặc guestName.'
+                message: 'Cần cung cấp membershipId hoặc guestName'
             });
             return;
         }
@@ -1163,33 +1132,24 @@ export const getUserSessionToken = async (req: Request, res: Response): Promise<
         if (!match) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy trận đấu.'
+                message: MESSAGES.MSG81
             });
             return;
         }
-
-        // Tìm sessionToken của user
-        let userSessionToken = null;
-        let userRole = null;
-        let userName = null;
-
+        
+        let member = null;
         for (const team of match.teams) {
-            const member = team.members.find(m => 
+            member = team.members.find(m =>
                 (membershipId && m.membershipId === membershipId) ||
                 (guestName && m.guestName === guestName)
             );
-            if (member) {
-                userSessionToken = member.sessionToken;
-                userRole = member.role;
-                userName = member.membershipName || member.guestName;
-                break;
-            }
+            if (member) break;
         }
 
-        if (!userSessionToken) {
+        if (!member) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy thông tin người dùng trong trận đấu này.'
+                message: 'Không tìm thấy user trong trận đấu này'
             });
             return;
         }
@@ -1197,12 +1157,17 @@ export const getUserSessionToken = async (req: Request, res: Response): Promise<
         res.status(200).json({
             success: true,
             data: {
-                sessionToken: userSessionToken,
-                role: userRole,
-                userName: userName,
-                matchId: matchId
+                matchId: match.matchId,
+                role: member.role,
+                sessionToken: member.sessionToken,
+                userInfo: {
+                    membershipId: member.membershipId,
+                    membershipName: member.membershipName,
+                    guestName: member.guestName
+                }
             }
         });
+
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }

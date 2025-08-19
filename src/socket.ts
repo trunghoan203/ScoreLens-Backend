@@ -10,7 +10,6 @@ export const initializeSocket = (serverIo: Server) => {
     io.on('connection', (socket: Socket) => {
         console.log(`[Socket.IO] Người dùng đã kết nối: ${socket.id}`);
 
-        // Authenticate match user với sessionToken
         socket.on('authenticate_match', async (data: { matchId: string; sessionToken: string }) => {
             try {
                 if (!data.matchId || !data.sessionToken) {
@@ -31,7 +30,6 @@ export const initializeSocket = (serverIo: Server) => {
                     return;
                 }
 
-                // Tìm member với sessionToken
                 let member = null;
                 for (const team of match.teams) {
                     member = team.members.find(m => m.sessionToken === data.sessionToken);
@@ -46,13 +44,11 @@ export const initializeSocket = (serverIo: Server) => {
                     return;
                 }
 
-                // Lưu thông tin user vào socket data
                 socket.data.matchId = data.matchId;
                 socket.data.sessionToken = data.sessionToken;
                 socket.data.role = member.role;
                 socket.data.member = member;
 
-                // Join match room
                 socket.join(data.matchId);
 
                 socket.emit('auth_result', { 
@@ -75,7 +71,6 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Join match room (legacy - giữ lại để tương thích)
         socket.on('join_match_room', (matchId: string) => {
             if (matchId) {
                 console.log(`[Socket.IO] Người dùng ${socket.id} đang vào phòng ${matchId}`);
@@ -83,7 +78,6 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Leave match room
         socket.on('leave_match_room', (matchId: string) => {
             if (matchId) {
                 console.log(`[Socket.IO] Người dùng ${socket.id} đang rời phòng ${matchId}`);
@@ -91,7 +85,19 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Join role room for notifications
+        socket.on('token_invalidated', (data: { sessionToken: string; message: string }) => {
+            if (socket.data.sessionToken === data.sessionToken) {
+                console.log(`[Socket.IO] Token bị invalidate cho socket ${socket.id}`);
+                socket.emit('token_invalidated', {
+                    success: false,
+                    message: data.message,
+                    code: 'TOKEN_INVALIDATED'
+                });
+                
+                socket.disconnect();
+            }
+        });
+
         socket.on('join_role_room', (data: { userId: string; role: string }) => {
             if (data.userId && data.role) {
                 const roomName = `role_${data.role}`;
@@ -102,13 +108,11 @@ export const initializeSocket = (serverIo: Server) => {
                 socket.join(roomName);
                 socket.join(userRoomName);
                 
-                // Lưu thông tin user vào socket data
                 socket.data.userId = data.userId;
                 socket.data.role = data.role;
             }
         });
 
-        // Leave role room
         socket.on('leave_role_room', (data: { userId: string; role: string }) => {
             if (data.userId && data.role) {
                 const roomName = `role_${data.role}`;
@@ -120,11 +124,9 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Handle notification read status
         socket.on('mark_notification_read', async (notificationId: string) => {
             try {
                 if (socket.data.userId) {
-                    // Emit event để client khác biết notification đã được đọc
                     socket.broadcast.emit('notification_read', {
                         notificationId,
                         userId: socket.data.userId
@@ -135,7 +137,6 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Handle typing indicators
         socket.on('typing_start', (data: { matchId: string; userId: string; userName: string }) => {
             if (data.matchId) {
                 socket.to(data.matchId).emit('user_typing', {
@@ -155,11 +156,9 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Handle disconnect
         socket.on('disconnect', () => {
             console.log(`[Socket.IO] Người dùng đã ngắt kết nối: ${socket.id}`);
             
-            // Clean up user data
             if (socket.data.userId && socket.data.role) {
                 const roomName = `role_${socket.data.role}`;
                 const userRoomName = `user_${socket.data.userId}`;
@@ -170,7 +169,6 @@ export const initializeSocket = (serverIo: Server) => {
                 console.log(`[Socket.IO] Dọn dẹp phòng cho người dùng ${socket.data.userId}`);
             }
 
-            // Clean up match data
             if (socket.data.matchId) {
                 socket.leave(socket.data.matchId);
                 console.log(`[Socket.IO] Dọn dẹp phòng trận đấu ${socket.data.matchId}`);
@@ -186,28 +184,24 @@ export const getIO = (): Server => {
     return io;
 };
 
-// Helper function để gửi thông báo cho user cụ thể
 export const sendNotificationToUser = (userId: string, event: string, data: any) => {
     if (io) {
         io.to(`user_${userId}`).emit(event, data);
     }
 };
 
-// Helper function để gửi thông báo cho role cụ thể
 export const sendNotificationToRole = (role: string, event: string, data: any) => {
     if (io) {
         io.to(`role_${role}`).emit(event, data);
     }
 };
 
-// Helper function để gửi thông báo cho tất cả
 export const broadcastNotification = (event: string, data: any) => {
     if (io) {
         io.emit(event, data);
     }
 };
 
-// Helper function để gửi thông báo cho match room
 export const sendNotificationToMatch = (matchId: string, event: string, data: any) => {
     if (io) {
         io.to(matchId).emit(event, data);

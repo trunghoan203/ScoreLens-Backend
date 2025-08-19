@@ -55,7 +55,6 @@ const MatchTeamMemberSchema = new Schema({
   sessionToken: {
     type: String,
     required: true,
-    unique: true,
   },
 }, { _id: false });
 
