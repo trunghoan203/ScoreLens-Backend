@@ -860,8 +860,8 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
         const membership = await Membership.findOne({ phoneNumber });
 
         if (!membership) {
-            res.status(200).json({
-                success: true,
+            res.status(404).json({
+                success: false,
                 isMember: false,
                 message: MESSAGES.MSG61
             });
