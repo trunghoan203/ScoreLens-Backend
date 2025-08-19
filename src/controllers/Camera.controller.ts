@@ -30,7 +30,7 @@ export const createCamera = async (req: Request & { manager?: any }, res: Respon
             return;
         }
         const camera = await Camera.create({ tableId, IPAddress, username, password });
-        res.status(201).json({ success: true, camera });
+        res.status(201).json({ success: true, message: MESSAGES.MSG52, camera });
         return;
     } catch (error) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -62,7 +62,7 @@ export const updateCamera = async (req: Request & { manager?: any }, res: Respon
         camera.password = password || camera.password;
         if (typeof isConnect === 'boolean') camera.isConnect = isConnect;
         await camera.save();
-        res.json({ success: true, camera });
+        res.json({ success: true, message: MESSAGES.MSG53, camera });
         return;
     } catch (error) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });

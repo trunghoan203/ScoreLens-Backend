@@ -36,7 +36,8 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
 
         res.status(201).json({
             success: true,
-            table
+            table,
+            message: MESSAGES.MSG37
         });
     } catch (error) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -63,7 +64,8 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
 
         res.json({
             success: true,
-            table
+            table,
+            message: MESSAGES.MSG38
         });
     } catch (error) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });

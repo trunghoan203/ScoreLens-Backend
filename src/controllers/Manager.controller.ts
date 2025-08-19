@@ -26,7 +26,7 @@ export const loginManager = async (req: Request, res: Response): Promise<void> =
 
     await sendMail({
       email: manager.email,
-      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập',
+      subject: 'ScoreLens - Mã Xác Thực Mới',
       template: 'activation-mail.ejs',
       data: {
         user: { name: manager.fullName },
@@ -67,6 +67,12 @@ export const verifyLogin = async (req: Request, res: Response): Promise<void> =>
     manager.activationCode = null;
     manager.activationCodeExpires = null;
     await manager.save();
+
+    res.status(200).json({
+      success: true,
+      message: MESSAGES.MSG01,
+      data: { email: manager.email }
+    });
 
     sendToken(manager, 200, res);
   } catch (error) {
@@ -187,7 +193,7 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
 
     await sendMail({
       email: manager.email,
-      subject: 'ScoreLens - Mã Xác Thực Đăng Nhập Mới',
+      subject: 'ScoreLens - Mã Xác Thực Mới',
       template: 'activation-mail.ejs',
       data: {
         user: { name: manager.fullName },

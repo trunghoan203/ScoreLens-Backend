@@ -59,7 +59,7 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
       brand.clubIds = [...brand.clubIds, ...clubIds];
       await brand.save();
 
-      res.status(201).json({ success: true, clubs: createdClubs });
+      res.status(201).json({ success: true, message: MESSAGES.MSG140 });
 
       return;
     }
@@ -121,7 +121,7 @@ export const updateClub = async (req: Request & { admin?: any }, res: Response):
     }
     if (status !== undefined) club.status = status;
     await club.save();
-    res.status(200).json({ success: true, club });
+    res.status(200).json({ success: true, message: MESSAGES.MSG141, club });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -146,7 +146,7 @@ export const deleteClub = async (req: Request & { admin?: any }, res: Response):
     brand.clubIds = brand.clubIds.filter(id => id !== clubId);
     await brand.save();
 
-    res.status(200).json({ success: true, message: MESSAGES.MSG118 });
+    res.status(200).json({ success: true, message: MESSAGES.MSG142 });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

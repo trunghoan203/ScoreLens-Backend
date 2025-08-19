@@ -171,6 +171,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
 
         res.status(201).json({
             success: true,
+            message: MESSAGES.MSG75,
             data: savedMatch.toObject(),
             creatorGuestToken: guestToken
         });
@@ -444,6 +445,7 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
 
         res.status(200).json({
             success: true,
+            message: MESSAGES.MSG78,
             data: updatedMatch
         });
     } catch (error: any) {
@@ -500,6 +502,7 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
 
         res.status(200).json({
             success: true,
+            message: MESSAGES.MSG76,
             data: finishedMatch
         });
     } catch (error: any) {
