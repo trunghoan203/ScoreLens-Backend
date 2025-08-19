@@ -406,8 +406,16 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
     const { search = '', status, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
-    if (status) query.status = status;
+    // Default: exclude newly registered admins (status = null)
+    if (status) {
+      query.status = status;
+    } else {
+      query.status = { $ne: null };
+    }
+
     if (search) query.fullName = { $regex: search, $options: 'i' };
+    // Only include admins who have created brand (brandId exists)
+    query.brandId = { $ne: null };
 
     const admins = await Admin.find(query)
       .skip((Number(page) - 1) * Number(limit))
@@ -433,11 +441,15 @@ export const listAdmins = async (req: Request, res: Response): Promise<void> => 
       })
     );
 
-    const total = await Admin.countDocuments(query);
+    // Ensure admin has brand and at least one club (branch) created
+    const eligibleAdmins = adminsWithDetails.filter((a) => a.brand && Array.isArray(a.clubs) && a.clubs.length > 0);
+
+    // total after eligibility filter
+    const total = eligibleAdmins.length;
 
     res.json({
       success: true,
-      admins: adminsWithDetails,
+      admins: eligibleAdmins,
       pagination: {
         page: Number(page),
         limit: Number(limit),
