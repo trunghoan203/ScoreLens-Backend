@@ -35,7 +35,6 @@ const MembershipSchema = new Schema({
   timestamps: true
 });
 
-// Tự động sinh membershipId trước khi save
 MembershipSchema.pre('save', function (next) {
   if (!this.membershipId) {
     this.membershipId = `MB-${Date.now()}`;
@@ -43,4 +42,4 @@ MembershipSchema.pre('save', function (next) {
   next();
 });
 
-export const Membership = mongoose.model<IMembership>('Membership', MembershipSchema); 
+export const Membership = mongoose.model<IMembership>('Membership', MembershipSchema);

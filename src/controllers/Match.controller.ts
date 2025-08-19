@@ -317,24 +317,16 @@ export const updateScore = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-// helpers
-const samePerson = (a: IMatchTeamMember, b: IMatchTeamMember) => {
-    if (a.membershipId && b.membershipId) return a.membershipId === b.membershipId;
-    if (a.guestName && b.guestName) return a.guestName.trim().toLowerCase() === b.guestName.trim().toLowerCase();
-    return false;
-};
-
 export const updateTeamMembers = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { teams } = req.body;
-    const match = (req as any).match as IMatch;
+    try {
+        const { teams } = req.body;
+        const match = (req as any).match as IMatch;
 
     if (!req.body) return void res.status(400).json({ success:false, message: MESSAGES.MSG120 });
     if (!Array.isArray(teams) || teams.length !== 2) return void res.status(400).json({ success:false, message: MESSAGES.MSG87 });
     if (!match) return void res.status(404).json({ success:false, message: MESSAGES.MSG81 });
     if (match.status === 'completed') return void res.status(400).json({ success:false, message: MESSAGES.MSG85 });
 
-    // Helpers
     const trim = (s:any) => typeof s === 'string' ? s.trim() : s;
     const normalizePhone = (s:string) => trim(s);
     const stripGuestPrefix = (s:string) => trim(s).replace(/^Guest\s+/i, '');
@@ -368,16 +360,21 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
       });
     });
 
+    const managerCaller = (req as any).manager;
     if (!originalHost || hostKey === null) {
-      return void res.status(400).json({ success:false, message: 'Dữ liệu không hợp lệ: không tìm thấy host hiện tại.' });
+      if (!managerCaller) {
+        return void res.status(400).json({ success:false, message: 'Dữ liệu không hợp lệ: không tìm thấy host hiện tại.' });
+      }
     }
 
     let hostMembershipPhone: string | null = null;
-    if ((originalHost as any).membershipId) {
-      const hostMem = await Membership.findOne({ membershipId: (originalHost as any).membershipId });
-      if (hostMem?.phoneNumber) hostMembershipPhone = normalizePhone(hostMem.phoneNumber);
-    } else if ((originalHost as any).guestName) {
-      hostMembershipPhone = normalizePhone((originalHost as any).guestName as string);
+    if (originalHost) {
+      if ((originalHost as any).membershipId) {
+        const hostMem = await Membership.findOne({ membershipId: (originalHost as any).membershipId });
+        if (hostMem?.phoneNumber) hostMembershipPhone = normalizePhone(hostMem.phoneNumber);
+      } else if ((originalHost as any).guestName) {
+        hostMembershipPhone = normalizePhone((originalHost as any).guestName as string);
+      }
     }
 
     const resolveIncoming = async (raw:any) => {
@@ -388,7 +385,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
         if (tableBrandId && mem.brandId !== tableBrandId) return { error: MESSAGES.MSG61 };
 
         const k = `mem:${mem.membershipId}`;
-        const isHost = (originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId;
+        const isHost = !!(originalHost && (originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId);
         return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
       }
 
@@ -400,9 +397,10 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
           if (tableBrandId && mem.brandId !== tableBrandId) return { error: MESSAGES.MSG61 };
 
           const k = `mem:${mem.membershipId}`;
-          const isHost =
-            ((originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId) ||
-            (!!hostMembershipPhone && phone === hostMembershipPhone);
+          const isHost = !!(
+            (originalHost && (originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId) ||
+            (!!hostMembershipPhone && phone === hostMembershipPhone)
+          );
           return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
         }
         const isHost = !!hostMembershipPhone && phone === hostMembershipPhone;
@@ -424,31 +422,122 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
           if (tableBrandId && mem.brandId !== tableBrandId) return { error: MESSAGES.MSG61 };
 
           const k = `mem:${mem.membershipId}`;
-          const isHost =
-            ((originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId) ||
+          const isHost = !!(
+            (originalHost && (originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId) ||
             (!!hostMembershipPhone && mem.phoneNumber === hostMembershipPhone) ||
-            (mem.fullName === (originalHost as any).membershipName);
+            (originalHost && mem.fullName === (originalHost as any).membershipName)
+          );
           return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
         }
         
-        const isHost = (originalHost as any).guestName && guestName === (originalHost as any).guestName;
+        const isHost = !!(originalHost && (originalHost as any).guestName && guestName === (originalHost as any).guestName);
         return { key: isHost ? hostKey! : `guest:${guestName}`, kind: 'guest', displayName: guestName, isHost };
       }
 
       return { error: 'Member input không hợp lệ' };
     };
 
+    if ((!originalHost || hostKey === null) && managerCaller) {
+      const newTeamsForManager = [
+        { teamName: match.teams[0].teamName, members: [] as IMatchTeamMember[] },
+        { teamName: match.teams[1].teamName, members: [] as IMatchTeamMember[] },
+      ];
+
+      let hostAssigned = false;
+      const seenKeysMgr = new Set<string>();
+
+      for (let ti = 0; ti < 2; ti++) {
+        const inputArr = teams[ti];
+        if (!Array.isArray(inputArr)) {
+          return void res.status(400).json({ success:false, message: `Members cho đội ${ti} phải là một mảng.` });
+        }
+        for (const raw of inputArr) {
+          const r:any = await resolveIncoming(raw);
+          if (r?.error) return void res.status(403).json({ success:false, message: r.error });
+
+          const key = r.key as string;
+          if (seenKeysMgr.has(key)) {
+            return void res.status(409).json({ success:false, message: MESSAGES.MSG79 });
+          }
+          seenKeysMgr.add(key);
+
+          const existed = existingByKey.get(key)?.member;
+          if (!hostAssigned) {
+            if (existed) {
+              newTeamsForManager[ti].members.push({ ...existed, role: 'host' });
+            } else if (r.kind === 'membership') {
+              newTeamsForManager[ti].members.push({
+                membershipId: r.membership.membershipId,
+                membershipName: r.displayName,
+                role: 'host',
+                sessionToken: generateSessionToken(),
+                        });
+                    } else {
+              newTeamsForManager[ti].members.push({
+                guestName: r.displayName,
+                role: 'host',
+                sessionToken: generateSessionToken(),
+              });
+            }
+            hostAssigned = true;
+          } else {
+            if (existed) {
+              newTeamsForManager[ti].members.push({ ...existed });
+            } else if (r.kind === 'membership') {
+              newTeamsForManager[ti].members.push({
+                membershipId: r.membership.membershipId,
+                membershipName: r.displayName,
+                role: 'participant',
+                sessionToken: generateSessionToken(),
+              });
+            } else {
+              newTeamsForManager[ti].members.push({
+                guestName: r.displayName,
+                role: 'participant',
+                sessionToken: generateSessionToken(),
+              });
+            }
+          }
+        }
+      }
+
+      if (!hostAssigned) {
+        return void res.status(400).json({ success:false, message: 'Dữ liệu không hợp lệ: thiếu thành viên để gán host.' });
+      }
+
+      const seenMgr = new Set<string>();
+      for (let ti = 0; ti < 2; ti++) {
+        for (const m of newTeamsForManager[ti].members) {
+          const k = keyOf(m);
+          if (!k) continue;
+          if (seenMgr.has(k)) return void res.status(409).json({ success:false, message: MESSAGES.MSG79 });
+          seenMgr.add(k);
+        }
+      }
+
+      match.teams[0].members = newTeamsForManager[0].members;
+      match.teams[1].members = newTeamsForManager[1].members;
+
+      const updatedMgr = await match.save();
+      getIO().to(updatedMgr.matchId).emit('match_updated', updatedMgr);
+      return void res.status(200).json({ success:true, data: updatedMgr });
+    }
+
     const newTeams = [
       { teamName: match.teams[0].teamName, members: [] as IMatchTeamMember[] },
       { teamName: match.teams[1].teamName, members: [] as IMatchTeamMember[] },
     ];
 
+    if (!originalHost) {
+      return void res.status(500).json({ success:false, message: MESSAGES.MSG100 });
+    }
+    const originalHostMember = originalHost as IMatchTeamMember;
     newTeams[hostTeamIndex].members.push({
-      membershipId: (originalHost as IMatchTeamMember).membershipId,
-      membershipName: (originalHost as IMatchTeamMember).membershipName,
-      guestName: (originalHost as IMatchTeamMember).guestName,
-      role: (originalHost as IMatchTeamMember).role,
-      sessionToken: (originalHost as IMatchTeamMember).sessionToken,
+      membershipId: originalHostMember.membershipId,
+      membershipName: originalHostMember.membershipName,
+      guestName: originalHostMember.guestName,
+      role: originalHostMember.role,
+      sessionToken: originalHostMember.sessionToken,
     });
 
     const seenKeys = new Set<string>([hostKey!]); 
@@ -466,7 +555,9 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
 
         if (isHost || key === hostKey) continue;
 
-        if (seenKeys.has(key)) continue; 
+        if (seenKeys.has(key)) {
+          return void res.status(409).json({ success:false, message: MESSAGES.MSG79 });
+        } 
 
         const existed = existingByKey.get(key)?.member;
         if (existed) {
@@ -481,15 +572,15 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
               membershipName: displayName,
               role: 'participant',
               sessionToken: generateSessionToken(),
-            });
-          } else {
+                        });
+                    } else {
             newTeams[ti].members.push({
               guestName: displayName,
               role: 'participant',
               sessionToken: generateSessionToken(),
-            });
-          }
-        }
+                        });
+                    }
+                }
 
         seenKeys.add(key);
       }
@@ -506,7 +597,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
       for (const m of newTeams[ti].members) {
         const k = keyOf(m);
         if (!k) continue;
-        if (seen.has(k)) return void res.status(400).json({ success:false, message:'Một người xuất hiện ở cả 2 đội.'});
+        if (seen.has(k)) return void res.status(409).json({ success:false, message: MESSAGES.MSG79 });
         seen.add(k);
       }
     }
@@ -520,7 +611,7 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
     res.status(200).json({ success:true, data: updated });
   } catch (e) {
     res.status(500).json({ success:false, message: MESSAGES.MSG100 });
-  }
+    }
 };
 
 export const startMatch = async (req: Request, res: Response): Promise<void> => {
@@ -826,8 +917,8 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         const { matchCode, teamIndex = 0, joinerInfo } = req.body;
 
         if (!matchCode || !joinerInfo) {
-            res.status(400).json({
-                success: false,
+            res.status(400).json({ 
+                success: false, 
                 message: MESSAGES.MSG84
             });
             return;
@@ -840,8 +931,8 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         );
 
         if (!hasValidInfo) {
-            res.status(400).json({
-                success: false,
+            res.status(400).json({ 
+                success: false, 
                 message: MESSAGES.MSG46
             });
             return;
@@ -870,17 +961,17 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
         let isAlreadyJoined = false;
 
         if (joinerInfo.membershipId && joinerInfo.membershipName) {
-            newMember = {
-                membershipId: joinerInfo.membershipId,
+            newMember = { 
+                membershipId: joinerInfo.membershipId, 
                 membershipName: joinerInfo.membershipName,
                 role: 'participant',
                 sessionToken: generateSessionToken(),
             };
-
-            isAlreadyJoined = match.teams.some(team =>
+            
+            isAlreadyJoined = match.teams.some(team => 
                 team.members.some(member => member.membershipId === joinerInfo.membershipId)
             );
-
+            
         } else if (joinerInfo.phoneNumber) {
             const membership = await Membership.findOne({ phoneNumber: joinerInfo.phoneNumber });
             if (!membership) {
@@ -907,31 +998,31 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
                 }
             }
 
-            isAlreadyJoined = match.teams.some(team =>
+            isAlreadyJoined = match.teams.some(team => 
                 team.members.some(member => member.membershipId === membership.membershipId)
             );
-            newMember = {
-                membershipId: membership.membershipId,
+            newMember = { 
+                membershipId: membership.membershipId, 
                 membershipName: membership.fullName,
                 role: 'participant',
                 sessionToken: generateSessionToken(),
             };
-
+            
         } else if (joinerInfo.guestName) {
             newMember = {
                 guestName: joinerInfo.guestName,
                 role: 'participant',
                 sessionToken: generateSessionToken(),
             };
-
-            isAlreadyJoined = match.teams.some(team =>
-                team.members.some(member =>
+            
+            isAlreadyJoined = match.teams.some(team => 
+                team.members.some(member => 
                     member.guestName === joinerInfo.guestName
                 )
             );
         } else {
-            res.status(400).json({
-                success: false,
+            res.status(400).json({ 
+                success: false, 
                 message: MESSAGES.MSG46
             });
             return;
@@ -965,8 +1056,8 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         const { matchCode, leaverInfo } = req.body;
 
         if (!matchCode || !leaverInfo) {
-            res.status(400).json({
-                success: false,
+            res.status(400).json({ 
+                success: false, 
                 message: MESSAGES.MSG84
             });
             return;
@@ -979,8 +1070,8 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
         );
 
         if (!hasValidInfo) {
-            res.status(400).json({
-                success: false,
+            res.status(400).json({ 
+                success: false, 
                 message: MESSAGES.MSG46
             });
             return;
@@ -1013,12 +1104,12 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                     break;
                 }
             }
-
+            
         } else if (leaverInfo.phoneNumber) {
             const membership = await Membership.findOne({ phoneNumber: leaverInfo.phoneNumber });
             if (!membership) {
-                res.status(404).json({
-                    success: false,
+                res.status(404).json({ 
+                    success: false, 
                     message: MESSAGES.MSG61
                 });
                 return;
@@ -1047,7 +1138,7 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
                     break;
                 }
             }
-
+            
         } else if (leaverInfo.guestName) {
             for (let i = 0; i < match.teams.length; i++) {
                 const foundMemberIndex = match.teams[i].members.findIndex(member =>
