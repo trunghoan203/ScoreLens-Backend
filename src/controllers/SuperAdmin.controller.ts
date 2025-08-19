@@ -44,7 +44,7 @@ export const registerSuperAdmin = async (req: Request, res: Response): Promise<v
 
     res.status(201).json({
       success: true,
-      message: MESSAGES.MSG123,
+      message: MESSAGES.MSG03,
       data: { email: newAdmin.email }
     });
   } catch (error) {
@@ -121,7 +121,7 @@ export const loginSuperAdmin = async (req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
-      message: MESSAGES.MSG123,
+      message: MESSAGES.MSG01,
       data: { email: admin.email }
     });
   } catch (error) {
