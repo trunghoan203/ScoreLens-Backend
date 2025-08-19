@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
-import { Feedback } from '../models/Feedback.model';
+import { Feedback, IFeedback } from '../models/Feedback.model';
+import { Brand } from '../models/Brand.model';
+import { NotificationService } from '../services/Notification.service';
+import { MESSAGES } from '../config/messages';
 
 // User tạo feedback
 export const createFeedback = async (req: Request, res: Response): Promise<void> => {
@@ -7,7 +10,7 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
         const { clubInfo, tableInfo, content, createdBy } = req.body;
 
         if (!clubInfo?.clubId || !tableInfo?.tableId || !content || !createdBy.type) {
-            res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG46 });
             return;
         }
 
@@ -18,17 +21,47 @@ export const createFeedback = async (req: Request, res: Response): Promise<void>
             content
         });
 
+        try {
+            await NotificationService.createFeedbackNotification(feedback.feedbackId, {
+                createdBy,
+                tableId: tableInfo.tableId,
+                clubId: clubInfo.clubId,
+                status: feedback.status
+            });
+        } catch (notificationError) {
+        }
+
         res.status(201).json({ success: true, feedback });
     } catch (error: any) {
-        console.log(error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
 // Lấy danh sách feedback (lọc theo club, status, ngày)
-export const getFeedbacks = async (req: Request, res: Response): Promise<void> => {
+export const getFeedbacks = async (req: Request & { manager?: any; admin?: any; superAdmin?: any }, res: Response): Promise<void> => {
     try {
-        const feedbacks = await Feedback.aggregate([
+        let matchCondition: any = {};
+
+        if (req.manager) {
+            matchCondition.clubId = req.manager.clubId;
+        } else if (req.admin) {
+
+            const brand = await Brand.findOne({ brandId: req.admin.brandId });
+            if (brand && brand.clubIds && brand.clubIds.length > 0) {
+                matchCondition.clubId = { $in: brand.clubIds };
+            } else {
+                res.json({ success: true, feedbacks: [] });
+                return;
+            }
+        }
+
+        const pipeline: any[] = [];
+
+        if (Object.keys(matchCondition).length > 0) {
+            pipeline.push({ $match: matchCondition });
+        }
+
+        pipeline.push(
             {
                 $lookup: {
                     from: 'clubs',
@@ -56,8 +89,34 @@ export const getFeedbacks = async (req: Request, res: Response): Promise<void> =
                     path: '$tableInfo',
                     preserveNullAndEmptyArrays: true
                 }
+            },
+            {
+                $lookup: {
+                    from: 'brands',
+                    localField: 'clubInfo.brandId',
+                    foreignField: 'brandId',
+                    as: 'brandInfo'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$brandInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    'clubInfo.brandName': '$brandInfo.brandName'
+                }
+            },
+            {
+                $project: {
+                    brandInfo: 0
+                }
             }
-        ]);
+        );
+
+        const feedbacks = await Feedback.aggregate(pipeline);
 
         res.json({ success: true, feedbacks });
     } catch (error: any) {
@@ -69,11 +128,27 @@ export const getFeedbacks = async (req: Request, res: Response): Promise<void> =
 };
 
 // Lấy chi tiết feedback
-export const getFeedbackDetail = async (req: Request, res: Response): Promise<void> => {
+export const getFeedbackDetail = async (req: Request & { manager?: any; admin?: any; superAdmin?: any }, res: Response): Promise<void> => {
     try {
         const { feedbackId } = req.params;
+
+        let matchCondition: any = { feedbackId };
+
+        if (req.manager) {
+            matchCondition.clubId = req.manager.clubId;
+        } else if (req.admin) {
+
+            const brand = await Brand.findOne({ brandId: req.admin.brandId });
+            if (brand && brand.clubIds && brand.clubIds.length > 0) {
+                matchCondition.clubId = { $in: brand.clubIds };
+            } else {
+                res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
+                return;
+            }
+        }
+
         const result = await Feedback.aggregate([
-            { $match: { feedbackId } },
+            { $match: matchCondition },
             {
                 $lookup: {
                     from: 'clubs',
@@ -92,6 +167,33 @@ export const getFeedbackDetail = async (req: Request, res: Response): Promise<vo
             },
             { $unwind: '$clubInfo' },
             { $unwind: '$tableInfo' },
+            // Thêm lookup với brands để lấy brandName
+            {
+                $lookup: {
+                    from: 'brands',
+                    localField: 'clubInfo.brandId',
+                    foreignField: 'brandId',
+                    as: 'brandInfo'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$brandInfo',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // Thêm brandName vào clubInfo
+            {
+                $addFields: {
+                    'clubInfo.brandName': '$brandInfo.brandName'
+                }
+            },
+            // Loại bỏ brandInfo không cần thiết
+            {
+                $project: {
+                    brandInfo: 0
+                }
+            },
             {
                 $addFields: {
                     history: {
@@ -119,9 +221,24 @@ export const getFeedbackDetail = async (req: Request, res: Response): Promise<vo
 export const updateFeedback = async (req: Request & { manager?: any; admin?: any; superAdmin?: any }, res: Response): Promise<void> => {
     try {
         const { feedbackId } = req.params;
-        const { note, status, needSupport } = req.body;
+        const { note, status } = req.body;
 
-        const feedback = await Feedback.findOne({ feedbackId });
+        let queryCondition: any = { feedbackId };
+
+        if (req.manager) {
+            queryCondition.clubId = req.manager.clubId;
+        } else if (req.admin) {
+
+            const brand = await Brand.findOne({ brandId: req.admin.brandId });
+            if (brand && brand.clubIds && brand.clubIds.length > 0) {
+                queryCondition.clubId = { $in: brand.clubIds };
+            } else {
+                res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
+                return;
+            }
+        }
+
+        const feedback = await Feedback.findOne(queryCondition);
 
         if (!feedback) {
             res.status(404).json({ success: false, message: 'Không tìm thấy feedback.' });
@@ -153,10 +270,21 @@ export const updateFeedback = async (req: Request & { manager?: any; admin?: any
             date: new Date()
         });
 
+        const oldStatus = feedback.status;
         if (status) feedback.status = status;
-        if (typeof needSupport === 'boolean') feedback.needSupport = needSupport;
 
         await feedback.save();
+
+        if (status && status !== oldStatus) {
+            try {
+                await NotificationService.createStatusChangeNotification(feedback.feedbackId, {
+                    clubId: feedback.clubId,
+                    tableId: feedback.tableId
+                }, status);
+            } catch (notificationError) {
+            }
+        }
+
         res.json({ success: true, feedback });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });

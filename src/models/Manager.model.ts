@@ -1,6 +1,7 @@
 import { Schema, model } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { IManager } from '../interfaces/Manager.interface';
+import { MESSAGES } from '../config/messages';
 
 const ManagerSchema: Schema<IManager> = new Schema({
     managerId: {
@@ -79,7 +80,7 @@ ManagerSchema.methods.signAccessToken = function (): string {
     const accessTokenExpire = process.env.ACCESS_TOKEN_EXPIRE;
 
     if (!accessTokenSecret || !accessTokenExpire) {
-        throw new Error('ACCESS_TOKEN or ACCESS_TOKEN_EXPIRE is not defined in environment variables');
+        throw new Error(MESSAGES.MSG133);
     }
 
     return jwt.sign({ managerId: this.managerId, role: 'MANAGER' }, accessTokenSecret,
@@ -91,7 +92,7 @@ ManagerSchema.methods.signRefreshToken = function (): string {
     const refreshTokenExpire = process.env.REFRESH_TOKEN_EXPIRE;
 
     if (!refreshTokenSecret || !refreshTokenExpire) {
-        throw new Error('REFRESH_TOKEN or REFRESH_TOKEN_EXPIRE is not defined in environment variables');
+        throw new Error(MESSAGES.MSG132);
     }
 
     return jwt.sign({ managerId: this.managerId, role: 'MANAGER' }, refreshTokenSecret,

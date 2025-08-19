@@ -6,6 +6,7 @@ export interface IMembership extends Document {
   fullName: string;
   phoneNumber: string;
   totalPlayTime?: number;
+  status: 'active' | 'inactive';
 }
 
 const MembershipSchema = new Schema({
@@ -29,6 +30,11 @@ const MembershipSchema = new Schema({
   totalPlayTime: {
     type: Number,
     default: 0
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
   }
 }, {
   timestamps: true

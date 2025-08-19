@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const allowedOrigins = process.env.ORIGIN?.split(',') || [];
-allowedOrigins.push('http://localhost:3000', 'https://scorelens-omega.vercel.app');
+allowedOrigins.push('http://localhost:3000', 'https://scorelens-omega.vercel.app', 'https://scorelens.io.vn');
 
 // cors
 app.use(
@@ -45,7 +45,7 @@ app.use(
             if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
             } else {
-                return callback(new Error('Not allowed by CORS'));
+                return callback(new Error('Không được CORS cho phép'));
             }
         },
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -58,7 +58,7 @@ app.use(
 const limiter = rateLimit({
     max: 2000,
     windowMs: 60 * 1000 * 1000,
-    message: 'Too many requests from this IP, please try again in one hour!'
+    message: 'Có quá nhiều yêu cầu từ IP này, vui lòng thử lại sau một giờ!'
 });
 app.use('/api', limiter);
 

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Match } from '../../models/Match.model';
+import { MESSAGES } from '../../config/messages';
 
 export const isMatchCreator = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -8,18 +9,18 @@ export const isMatchCreator = async (req: Request, res: Response, next: NextFunc
         const { actorMembershipId, actorGuestToken } = req.body;
 
         if (!matchId) {
-            res.status(400).json({ success: false, message: 'Match ID is required in request params.' });
+            res.status(400).json({ success: false, message: 'Match ID là bắt buộc trong request params.' });
             return;
         }
         
         if (!actorMembershipId && !actorGuestToken) {
-            res.status(403).json({ success: false, message: 'An actor identifier (actorMembershipId or actorGuestToken) is required.' });
+            res.status(403).json({ success: false, message: MESSAGES.MSG97 });
             return;
         }
 
         const match = await Match.findOne({ matchId: matchId });
         if (!match) {
-            res.status(404).json({ success: false, message: 'Match not found.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG81 });
             return;
         }
 
@@ -38,11 +39,10 @@ export const isMatchCreator = async (req: Request, res: Response, next: NextFunc
         
         res.status(403).json({
             success: false,
-            message: 'Forbidden: Only the creator of the match can perform this action.'
+            message: 'Chỉ có chủ phòng mới có thể thực hiện hành động này.'
         });
 
     } catch (error: any) {
-        console.error('isMatchParticipant middleware error:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };

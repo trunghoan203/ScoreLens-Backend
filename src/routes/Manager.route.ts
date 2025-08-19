@@ -1,6 +1,14 @@
 import express from 'express';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
-import { listTables, createTable, updateTable, deleteTable, getTableById, getTablesByClub } from '../controllers/Table.controller';
+import {
+    listTables,
+    createTable,
+    updateTable,
+    deleteTable,
+    getTableById,
+    getTablesByClub,
+    verifyTable
+} from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import { listCameras, createCamera, updateCamera, deleteCamera } from '../controllers/Camera.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -14,8 +22,8 @@ import {
     endMatch,
     deleteMatch,
     getMatchesByTable,
-    verifyTable,
     getMatchHistory,
+    joinMatch,
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
@@ -38,14 +46,14 @@ managerRouter.delete('/table/:tableId', isAuthenticated, deleteTable);
 
 // Public table routes (không cần xác thực)
 managerRouter.post('/table/verify', verifyTable);
-managerRouter.get('/table/:id', getTableById);
 managerRouter.get('/table/club/:clubId', getTablesByClub);
+managerRouter.get('/table/:tableId', getTableById);
 
 // Membership management routes for manager
 managerRouter.get('/membership', isAuthenticated, listMemberships);
 managerRouter.post('/membership', isAuthenticated, createMembership);
 managerRouter.put('/membership/:membershipId', isAuthenticated, updateMembership);
-managerRouter.delete('/membership/:membershipId', isAuthenticated, deleteMembership);
+managerRouter.delete('/membership/:membershipId', isAuthenticated, deleteMembership)
 
 // Camera management routes for manager
 managerRouter.get('/camera', isAuthenticated, listCameras);
@@ -66,10 +74,13 @@ managerRouter.get('/matches/table/:tableId', isAuthenticated, getMatchesByTable)
 managerRouter.get('/matches/history/:membershipId', isAuthenticated, getMatchHistory);
 
 managerRouter.put('/matches/:id/score', isAuthenticated, findMatchById, updateScore);
-managerRouter.put('/matches/:id/teams/:teamIndex/members', isAuthenticated, findMatchById, updateTeamMembers);
+managerRouter.put('/matches/:id/teams', isAuthenticated, findMatchById, updateTeamMembers);
 managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
 managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
+
+// Public match routes (không cần xác thực)
+managerRouter.post('/matches/join', joinMatch);
 
 
 export default managerRouter;

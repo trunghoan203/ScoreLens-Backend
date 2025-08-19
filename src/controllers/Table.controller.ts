@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Table } from '../models/Table.model';
+import { MESSAGES } from '../config/messages';
 
 const escapeRegex = (text: string): string => {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -21,8 +22,7 @@ export const listTables = async (req: Request & { manager?: any }, res: Response
         const tables = await Table.find(query);
         res.json({ success: true, tables });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -31,10 +31,16 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
     try {
         const { name, category } = req.body;
         const clubId = req.manager.clubId;
+
         const table = await Table.create({ clubId, name, category });
-        res.status(201).json({ success: true, table });
+
+        res.status(201).json({
+            success: true,
+            table,
+            message: MESSAGES.MSG37
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -44,18 +50,25 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
         const { tableId } = req.params;
         const { name, category, status } = req.body;
         const clubId = req.manager.clubId;
+
         const table = await Table.findOneAndUpdate(
             { tableId, clubId },
             { name, category, status },
             { new: true }
         );
+
         if (!table) {
-            res.status(404).json({ success: false, message: 'Table not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG40 });
             return;
         }
-        res.json({ success: true, table });
+
+        res.json({
+            success: true,
+            table,
+            message: MESSAGES.MSG38
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -64,37 +77,48 @@ export const deleteTable = async (req: Request & { manager?: any }, res: Respons
     try {
         const { tableId } = req.params;
         const clubId = req.manager.clubId;
-        const table = await Table.findOneAndDelete({ tableId, clubId });
+
+        const table = await Table.findOne({ tableId, clubId });
         if (!table) {
-            res.status(404).json({ success: false, message: 'Table not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG40 });
             return;
         }
-        res.json({ success: true, message: 'Table deleted' });
+
+        await Table.findOneAndDelete({ tableId, clubId });
+        res.json({ success: true, message: MESSAGES.MSG41 });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
-// @desc    Xác thực bàn chơi bằng QR code
-// @route   POST /api/tables/verify
-// @access  Public
+// Xác thực bàn chơi bằng QR code
 export const verifyTable = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tableId } = req.body;
+        const { qrData } = req.body;
 
-        if (!tableId) {
+        if (!qrData) {
             res.status(400).json({
                 success: false,
-                message: 'Vui lòng cung cấp tableId.'
+                message: MESSAGES.MSG42
             });
             return;
         }
 
-        const table = await Table.findOne({ tableId });
+        const [tableId, clubId] = qrData.split('|');
+
+        if (!tableId || !clubId) {
+            res.status(400).json({
+                success: false,
+                message: MESSAGES.MSG42
+            });
+            return;
+        }
+
+        const table = await Table.findOne({ tableId, clubId });
         if (!table) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy bàn chơi với mã này.'
+                message: MESSAGES.MSG43
             });
             return;
         }
@@ -110,18 +134,11 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             }
         });
     } catch (error: any) {
-        console.error('Error verifying table:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
-// @desc    Lấy thông tin bàn chơi
-// @route   GET /api/tables/:id
-// @access  Public
+// Lấy thông tin bàn chơi bằng Id
 export const getTableById = async (req: Request, res: Response): Promise<void> => {
     try {
         const table = await Table.findById(req.params.id);
@@ -129,7 +146,7 @@ export const getTableById = async (req: Request, res: Response): Promise<void> =
         if (!table) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy bàn chơi.'
+                message: MESSAGES.MSG43
             });
             return;
         }
@@ -139,18 +156,11 @@ export const getTableById = async (req: Request, res: Response): Promise<void> =
             data: table
         });
     } catch (error: any) {
-        console.error('Error getting table:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
-// @desc    Lấy danh sách bàn chơi theo club
-// @route   GET /api/tables/club/:clubId
-// @access  Public
+// Lấy danh sách bàn chơi theo club
 export const getTablesByClub = async (req: Request, res: Response): Promise<void> => {
     try {
         const { clubId } = req.params;
@@ -168,14 +178,10 @@ export const getTablesByClub = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({
             success: true,
-            data: tables
+            data: tables,
+            message: MESSAGES.MSG47
         });
     } catch (error: any) {
-        console.error('Error getting tables by club:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
-}; 
+};
