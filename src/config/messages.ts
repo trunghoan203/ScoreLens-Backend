@@ -154,11 +154,11 @@ export const getMessage = (code: MessageCode): string => {
 // Helper function to get message with parameters
 export const getMessageWithParams = (code: MessageCode, params: Record<string, string>): string => {
   let message = MESSAGES[code] || 'Thông báo không xác định';
-  
+
   Object.entries(params).forEach(([key, value]) => {
     message = message.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
   });
-  
+
   return message;
 };
 

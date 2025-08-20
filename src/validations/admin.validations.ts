@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { 
-  emailSchema, 
-  passwordSchema, 
-  textSchema, 
-  phoneNumberSchema, 
-  urlSchema, 
-  dateOfBirthSchema, 
-  addressSchema, 
+import {
+  emailSchema,
+  passwordSchema,
+  textSchema,
+  phoneNumberSchema,
+  urlSchema,
+  dateOfBirthSchema,
+  addressSchema,
   citizenCodeSchema
 } from './common.validations';
 
@@ -73,4 +73,31 @@ export const updateManagerSchema = z.object({
   email: emailSchema.optional(),
   citizenCode: citizenCodeSchema.optional(),
   address: addressSchema.optional(),
+});
+
+// Forgot password validation
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+// Set new password validation
+export const setNewPasswordSchema = z.object({
+  email: emailSchema,
+  newPassword: passwordSchema,
+});
+
+// Verify reset code validation
+export const verifyResetCodeSchema = z.object({
+  email: emailSchema,
+  resetCode: z.string().min(6, 'Mã xác thực phải có ít nhất 6 ký tự').max(6, 'Mã xác thực phải có đúng 6 ký tự'),
+});
+
+// Resend verification code validation
+export const resendVerificationCodeSchema = z.object({
+  email: emailSchema,
+});
+
+// Resend reset password code validation
+export const resendResetPasswordCodeSchema = z.object({
+  email: emailSchema,
 });
