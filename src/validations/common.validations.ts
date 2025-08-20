@@ -32,10 +32,13 @@ export const phoneNumberSchema = z.string()
     'Số điện thoại không hợp lệ'
   );
 
-export const urlSchema = z.string().regex(
-  /^https:\/\/[^\s\/$.?#].[^\s]*$/i,
-  'URL không hợp lệ, phải bắt đầu bằng https://'
-);
+export const urlSchema = z
+  .union([
+    z.literal(""),
+    z.string().regex(/^https:\/\/[^\s\/$.?#].[^\s]*$/i, "URL không hợp lệ, phải bắt đầu bằng https://"),
+  ])
+  .optional();
+
 
 export const imageUrlSchema = z.string().regex(
   /^https?:\/\/[^\s\/$.?#].[^\s]*$/i,
