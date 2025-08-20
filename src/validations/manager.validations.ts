@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { 
-  textSchema, 
+import {
+  textSchema,
   phoneNumberSchema,
   ipAddressSchema,
   emailSchema
@@ -12,10 +12,13 @@ export const loginManagerSchema = z.object({
 
 export const createTableSchema = z.object({
   name: textSchema,
+  category: z.enum(['pool-8', 'carom']),
 });
 
 export const updateTableSchema = z.object({
   name: textSchema.optional(),
+  category: z.enum(['pool-8', 'carom']).optional(),
+  status: z.enum(['empty', 'inuse', 'maintenance']).optional(),
 });
 
 export const createMembershipSchema = z.object({
