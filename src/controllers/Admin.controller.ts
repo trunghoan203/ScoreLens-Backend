@@ -15,6 +15,7 @@ import { Camera } from '../models/Camera.model';
 import { Feedback } from '../models/Feedback.model';
 import { Match } from '../models/Match.model';
 import { MESSAGES } from '../config/messages';
+import crypto from 'crypto';
 
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -774,5 +775,44 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    }
+};
+
+export const getSignUrl = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
+    try {
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+        if (!cloudName || !apiKey || !apiSecret) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Cloudinary configuration not found' 
+            });
+            return;
+        }
+
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        
+        // Generate signature using Cloudinary's signing algorithm
+        const signature = crypto
+            .createHash('sha1')
+            .update(`timestamp=${timestamp}${apiSecret}`)
+            .digest('hex');
+
+        res.status(200).json({
+            success: true,
+            data: {
+                timestamp,
+                signature,
+                cloud_name: cloudName,
+                api_key: apiKey
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Failed to generate signature' 
+        });
     }
 };
