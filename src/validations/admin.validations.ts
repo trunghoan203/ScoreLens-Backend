@@ -5,57 +5,60 @@ import {
   textSchema,
   phoneNumberSchema,
   urlSchema,
+  imageUrlSchema,
   dateOfBirthSchema,
   addressSchema,
   citizenCodeSchema
 } from './common.validations';
 
-// Admin registration validation
 export const adminRegisterSchema = z.object({
   fullName: textSchema,
   email: emailSchema,
   password: passwordSchema,
 });
 
-// Admin login validation
 export const adminLoginSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
 });
 
-// Create brand validation
 export const createBrandSchema = z.object({
   brandName: textSchema,
   phoneNumber: phoneNumberSchema,
-  website: urlSchema,
+  website: urlSchema.optional(),
+  logo_url: imageUrlSchema,
   citizenCode: citizenCodeSchema,
 });
 
-// Update brand validation
 export const updateBrandSchema = z.object({
   brandName: textSchema.optional(),
   phoneNumber: phoneNumberSchema.optional(),
   website: urlSchema.optional(),
+  logo_url: imageUrlSchema.optional(),
   citizenCode: citizenCodeSchema.optional(),
 });
 
-// Create club validation
-export const createClubSchema = z.object({
+const clubPayloadSchema = z.object({
   clubName: textSchema,
   address: addressSchema,
   phoneNumber: phoneNumberSchema,
-  tableNumber: z.number().min(1, 'Số bàn ít nhất là 1')
+  tableNumber: z.number().min(1, 'Số bàn ít nhất là 1'),
+  status: z.string().optional(),
 });
 
-// Update club validation
+export const createClubSchema = z.union([
+  clubPayloadSchema,
+  z.array(clubPayloadSchema).min(1, 'Danh sách club không được rỗng')
+]);
+
 export const updateClubSchema = z.object({
   clubName: textSchema.optional(),
   address: addressSchema.optional(),
   phoneNumber: phoneNumberSchema.optional(),
-  tableNumber: z.number().min(1, 'Số bàn ít nhất là 1').optional()
+  tableNumber: z.number().min(1, 'Số bàn ít nhất là 1').optional(),
+  status: z.string().optional(),
 });
 
-// Manager creation validation
 export const createManagerSchema = z.object({
   fullName: textSchema,
   phoneNumber: phoneNumberSchema,
@@ -65,7 +68,6 @@ export const createManagerSchema = z.object({
   address: addressSchema,
 });
 
-// Manager update validation
 export const updateManagerSchema = z.object({
   fullName: textSchema.optional(),
   phoneNumber: phoneNumberSchema.optional(),
@@ -75,29 +77,24 @@ export const updateManagerSchema = z.object({
   address: addressSchema.optional(),
 });
 
-// Forgot password validation
 export const forgotPasswordSchema = z.object({
   email: emailSchema,
 });
 
-// Set new password validation
 export const setNewPasswordSchema = z.object({
   email: emailSchema,
   newPassword: passwordSchema,
 });
 
-// Verify reset code validation
 export const verifyResetCodeSchema = z.object({
   email: emailSchema,
   resetCode: z.string().min(6, 'Mã xác thực phải có ít nhất 6 ký tự').max(6, 'Mã xác thực phải có đúng 6 ký tự'),
 });
 
-// Resend verification code validation
 export const resendVerificationCodeSchema = z.object({
   email: emailSchema,
 });
 
-// Resend reset password code validation
 export const resendResetPasswordCodeSchema = z.object({
   email: emailSchema,
 });

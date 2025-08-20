@@ -32,13 +32,16 @@ export const updateMembershipSchema = z.object({
 });
 
 export const createCameraSchema = z.object({
+  tableId: textSchema,
   IPAddress: ipAddressSchema,
   username: textSchema,
   password: textSchema,
 });
 
 export const updateCameraSchema = z.object({
+  tableId: textSchema.optional(),
   IPAddress: ipAddressSchema.optional(),
   username: textSchema.optional(),
   password: textSchema.optional(),
+  isConnect: z.boolean().optional(),
 });
