@@ -33,12 +33,17 @@ export const phoneNumberSchema = z.string()
   );
 
 export const urlSchema = z.string().regex(
-  /^https:\/\/[^\s/$.?#].[^\s]*$/i,
+  /^https:\/\/[^\s\/$.?#].[^\s]*$/i,
   'URL không hợp lệ, phải bắt đầu bằng https://'
 );
 
+export const imageUrlSchema = z.string().regex(
+  /^https?:\/\/[^\s\/$.?#].[^\s]*$/i,
+  'URL ảnh không hợp lệ, phải bắt đầu bằng http:// hoặc https://'
+);
+
 export const addressSchema = z.string()
-  .min(20, 'Địa chỉ phải có ít nhất 20 ký tự')
+  .min(5, 'Địa chỉ phải có ít nhất 5 ký tự')
   .max(255, 'Địa chỉ không được vượt quá 255 ký tự');
 
 export const dateOfBirthSchema = z.string()

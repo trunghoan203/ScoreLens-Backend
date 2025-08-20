@@ -15,7 +15,7 @@ export const createBrand = async (req: Request & { admin?: any }, res: Response)
         }
         const { brandName, phoneNumber, website, logo_url, citizenCode } = req.body;
         if (!brandName || !phoneNumber || !citizenCode || !logo_url) {
-            res.status(400).json({ success: false, message: MESSAGES.MSG107 });
+            res.status(400).json({ success: false, message: MESSAGES.MSG111 });
             return;
         }
         const brandId = `BR-${Date.now()}`;
