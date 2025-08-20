@@ -752,7 +752,7 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
     try {
         const adminId = req.admin.adminId;
         const admin = await Admin.findOne({ adminId });
-        
+
         if (!admin) {
             res.status(404).json({ success: false, message: MESSAGES.MSG116 });
             return;
@@ -760,7 +760,7 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
 
         const template = 'register-success.ejs';
         const subject = 'ScoreLens - Đơn đăng ký thành công.';
-        
+
         await sendMail({
             email: admin.email,
             subject,
@@ -768,9 +768,9 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
             data: { user: { name: admin.fullName } }
         });
 
-        res.status(200).json({ 
-            success: true, 
-            message: MESSAGES.MSG125 
+        res.status(200).json({
+            success: true,
+            message: MESSAGES.MSG125
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
