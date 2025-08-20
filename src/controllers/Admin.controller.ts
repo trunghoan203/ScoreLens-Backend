@@ -135,11 +135,11 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
         // Tạo access token
         const accessToken = admin.signAccessToken();
-        
+
         // Tạo refresh token với remember me option
         const { RememberPasswordService } = await import('../services/RememberPassword.service');
         const { token: refreshToken, expiresAt } = await RememberPasswordService.createRefreshToken(
-            admin.adminId, 
+            admin.adminId,
             rememberMe === true
         );
 
@@ -185,12 +185,12 @@ function parseExpiresIn(expiresIn: string): number {
 export const logoutAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
         const { refreshToken } = req.body;
-        
+
         if (refreshToken) {
             const { RememberPasswordService } = await import('../services/RememberPassword.service');
             await RememberPasswordService.revokeRefreshToken(refreshToken);
         }
-        
+
         res.cookie('access_token', '', { maxAge: 1 });
         res.cookie('refresh_token', '', { maxAge: 1 });
         res.status(200).json({ success: true, message: MESSAGES.MSG02 });
