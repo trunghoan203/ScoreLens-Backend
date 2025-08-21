@@ -60,6 +60,7 @@ export const updateClubSchema = z.object({
 });
 
 export const createManagerSchema = z.object({
+  clubId: z.string(),
   fullName: textSchema,
   phoneNumber: phoneNumberSchema,
   dateOfBirth: dateOfBirthSchema,
@@ -69,6 +70,7 @@ export const createManagerSchema = z.object({
 });
 
 export const updateManagerSchema = z.object({
+  clubId: z.string().optional(),
   fullName: textSchema.optional(),
   phoneNumber: phoneNumberSchema.optional(),
   dateOfBirth: dateOfBirthSchema.optional(),

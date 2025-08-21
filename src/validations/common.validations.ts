@@ -32,10 +32,13 @@ export const phoneNumberSchema = z.string()
     'Số điện thoại không hợp lệ'
   );
 
-export const urlSchema = z.string().regex(
-  /^https:\/\/[^\s\/$.?#].[^\s]*$/i,
-  'URL không hợp lệ, phải bắt đầu bằng https://'
-);
+export const urlSchema = z
+  .union([
+    z.literal(""),
+    z.string().regex(/^https:\/\/[^\s\/$.?#].[^\s]*$/i, "URL không hợp lệ, phải bắt đầu bằng https://"),
+  ])
+  .optional();
+
 
 export const imageUrlSchema = z.string().regex(
   /^https?:\/\/[^\s\/$.?#].[^\s]*$/i,
@@ -46,15 +49,16 @@ export const addressSchema = z.string()
   .min(5, 'Địa chỉ phải có ít nhất 5 ký tự')
   .max(255, 'Địa chỉ không được vượt quá 255 ký tự');
 
-export const dateOfBirthSchema = z.string()
-  .regex(
-    /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/,
-    "Ngày sinh không hợp lệ (định dạng phải là dd/mm/yyyy)"
-  )
-  .refine((dateStr) => {
-    const [day, month, year] = dateStr.split("/").map(Number);
-    const dob = new Date(year, month - 1, day);
-    const today = new Date();
+export const dateOfBirthSchema = z.union([
+  z.string()
+    .regex(
+      /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/,
+      "Ngày sinh không hợp lệ (định dạng phải là dd/mm/yyyy)"
+    )
+    .refine((dateStr) => {
+      const [day, month, year] = dateStr.split("/").map(Number);
+      const dob = new Date(year, month - 1, day);
+      const today = new Date();
 
     const isValidDate =
       dob.getFullYear() === year &&
@@ -62,9 +66,21 @@ export const dateOfBirthSchema = z.string()
       dob.getDate() === day;
 
     return isValidDate && dob <= today;
+    }, {
+      message: "Ngày sinh không hợp lệ hoặc ở tương lai",
+    })
+    .transform((dateStr) => {
+      const [day, month, year] = dateStr.split("/").map(Number);
+      return new Date(year, month - 1, day);
+    }),
+  z.date().refine((date) => {
+    const today = new Date();
+    return date <= today;
   }, {
-    message: "Ngày sinh không hợp lệ hoặc ở tương lai",
-  });
+    message: "Ngày sinh không được ở tương lai",
+  })
+]);
+
 
 export const ipAddressSchema = z.string().regex(
   /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/,

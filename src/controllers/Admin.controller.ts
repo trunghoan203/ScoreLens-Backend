@@ -15,7 +15,16 @@ import { Camera } from '../models/Camera.model';
 import { Feedback } from '../models/Feedback.model';
 import { Match } from '../models/Match.model';
 import { MESSAGES } from '../config/messages';
-
+import crypto from 'crypto';
+import { z } from "zod";
+import {
+    emailSchema,
+    phoneNumberSchema,
+    dateOfBirthSchema,
+    citizenCodeSchema,
+    addressSchema,
+    textSchema,
+  } from "../validations/common.validations";
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, email, password } = req.body;
@@ -412,34 +421,42 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
     }
 };
 
-export const createManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
-    const { fullName, email, phoneNumber, dateOfBirth, citizenCode, address, clubId } = req.body;
+    const createManagerSchema = z.object({
+        fullName: textSchema,
+        email: emailSchema,
+        phoneNumber: phoneNumberSchema,
+        dateOfBirth: dateOfBirthSchema,
+        citizenCode: citizenCodeSchema,
+        address: addressSchema,
+        clubId: z.string()
+    });
 
+export const createManager = catchAsync(
+    async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
     const adminId = req.admin?.adminId;
     if (!adminId) {
         return next(new ErrorHandler(MESSAGES.MSG110, 401));
     }
 
-    if (!fullName || !email || !phoneNumber || !dateOfBirth || !citizenCode || !address || !clubId) {
-        return next(new ErrorHandler(MESSAGES.MSG111, 400));
-    }
+      const parsedData = createManagerSchema.parse(req.body);
 
-    const newManager = await AdminService.createManagerByAdmin(adminId.toString(), {
-        fullName,
-        email,
-        phoneNumber,
-        dateOfBirth,
-        citizenCode,
-        address,
-        clubId
-    });
+      const newManager = await AdminService.createManagerByAdmin(
+        adminId.toString(),
+        parsedData
+      );
 
     res.status(201).json({
         success: true,
         message: MESSAGES.MSG112,
         data: newManager,
-    });
-});
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+  
 
 export const updateManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const { managerId } = req.params;
@@ -774,5 +791,44 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    }
+};
+
+export const getSignUrl = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
+    try {
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+        if (!cloudName || !apiKey || !apiSecret) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Cloudinary configuration not found' 
+            });
+            return;
+        }
+
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        
+        // Generate signature using Cloudinary's signing algorithm
+        const signature = crypto
+            .createHash('sha1')
+            .update(`timestamp=${timestamp}${apiSecret}`)
+            .digest('hex');
+
+        res.status(200).json({
+            success: true,
+            data: {
+                timestamp,
+                signature,
+                cloud_name: cloudName,
+                api_key: apiKey
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Failed to generate signature' 
+        });
     }
 };
