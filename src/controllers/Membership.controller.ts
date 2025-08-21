@@ -3,7 +3,6 @@ import { Membership } from '../models/Membership.model';
 import { Club } from '../models/Club.model';
 import { MESSAGES } from '../config/messages';
 
-// Lấy danh sách hội viên
 export const listMemberships = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const manager = req.manager;
@@ -23,7 +22,6 @@ export const listMemberships = async (req: Request & { manager?: any }, res: Res
     }
 };
 
-// Thêm hội viên
 export const createMembership = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const { fullName, phoneNumber, status = 'active' } = req.body;
@@ -35,6 +33,15 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
         }
         const brandId = club.brandId;
 
+        const existingMembership = await Membership.findOne({ brandId, phoneNumber });
+        if (existingMembership) {
+            res.status(400).json({ 
+                success: false, 
+                message: MESSAGES.MSG67
+            });
+            return;
+        }
+
         const membership = await Membership.create({ brandId, fullName, phoneNumber, status });
         res.status(201).json({ success: true, membership, message: MESSAGES.MSG64 });
         return;
@@ -44,20 +51,37 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
     }
 };
 
-// Sửa hội viên
 export const updateMembership = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const { membershipId } = req.params;
         const { fullName, phoneNumber, status } = req.body;
+        
+        const existingMembership = await Membership.findOne({ membershipId });
+        if (!existingMembership) {
+            res.status(404).json({ success: false, message: MESSAGES.MSG61 });
+            return;
+        }
+
+        if (phoneNumber && phoneNumber !== existingMembership.phoneNumber) {
+            const duplicateMembership = await Membership.findOne({ 
+                brandId: existingMembership.brandId, 
+                phoneNumber,
+                membershipId: { $ne: membershipId }
+            });
+            if (duplicateMembership) {
+                res.status(400).json({ 
+                    success: false, 
+                    message: MESSAGES.MSG67
+                });
+                return;
+            }
+        }
+
         const membership = await Membership.findOneAndUpdate(
             { membershipId },
             { fullName, phoneNumber, status },
             { new: true }
         );
-        if (!membership) {
-            res.status(404).json({ success: false, message: MESSAGES.MSG61 });
-            return;
-        }
         res.json({ success: true, membership, message: MESSAGES.MSG66 });
         return;
     } catch (error) {
@@ -66,7 +90,6 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
     }
 };
 
-// Xóa hội viên
 export const deleteMembership = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const { membershipId } = req.params;
@@ -83,9 +106,6 @@ export const deleteMembership = async (req: Request & { manager?: any }, res: Re
     }
 };
 
-// @desc    Tìm kiếm membership theo mã
-// @route   GET /api/memberships/search/:membershipId
-// @access  Public
 export const searchMembership = async (req: Request, res: Response): Promise<void> => {
     try {
         const { membershipId } = req.params;

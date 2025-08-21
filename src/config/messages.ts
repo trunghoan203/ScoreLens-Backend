@@ -57,6 +57,7 @@ export const MESSAGES = {
   MSG64: 'Thành viên đã được tạo thành công.',
   MSG65: 'Vui lòng cung cấp membershipId.',
   MSG66: 'Thành viên đã được cập nhật thành công.',
+  MSG67: 'Số điện thoại đã được sử dụng bởi hội viên khác',
 
   // Notification
   MSG70: 'Thiếu userId hoặc role',

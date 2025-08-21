@@ -11,7 +11,15 @@ import {
     verifyTable
 } from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
-import { listCameras, createCamera, updateCamera, deleteCamera } from '../controllers/Camera.controller';
+import { 
+    listCameras, 
+    createCamera, 
+    updateCamera, 
+    deleteCamera, 
+    cameraConnection,
+    startVideoStream,
+    stopVideoStream
+} from '../controllers/Camera.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
 import {
     createMatch,
@@ -70,9 +78,14 @@ managerRouter.delete('/membership/:membershipId', isAuthenticated, deleteMembers
 
 // Camera management routes for manager
 managerRouter.get('/camera', isAuthenticated, listCameras);
+managerRouter.post('/camera/test-connection', isAuthenticated, cameraConnection);
 managerRouter.post('/camera', isAuthenticated, validate(createCameraSchema), createCamera);
 managerRouter.put('/camera/:cameraId', isAuthenticated, validate(updateCameraSchema), updateCamera);
 managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
+
+// Video stream routes for manager
+managerRouter.post('/camera/:cameraId/stream/start', isAuthenticated, startVideoStream);
+managerRouter.post('/camera/:cameraId/stream/stop', isAuthenticated, stopVideoStream);
 
 // Feedback management routes for manager
 managerRouter.get('/feedback', isAuthenticated, getFeedbacks);
