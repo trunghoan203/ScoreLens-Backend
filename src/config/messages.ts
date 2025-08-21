@@ -51,6 +51,7 @@ export const MESSAGES = {
   // Membership
   MSG60: 'Câu lạc bộ không tồn tại',
   MSG61: 'Thành viên không tồn tại',
+  MSG150: 'Mã hội viên không đúng',
   MSG62: 'Thành viên đã được xóa',
   MSG63: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
   MSG64: 'Thành viên đã được tạo thành công.',
