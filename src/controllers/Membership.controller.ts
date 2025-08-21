@@ -35,14 +35,16 @@ export const createMembership = async (req: Request & { manager?: any }, res: Re
 
         const existingMembership = await Membership.findOne({ brandId, phoneNumber });
         if (existingMembership) {
-            res.status(400).json({ 
-                success: false, 
+            res.status(400).json({
+                success: false,
                 message: MESSAGES.MSG67
             });
             return;
         }
 
-        const membership = await Membership.create({ brandId, fullName, phoneNumber, status });
+        const trimmedFullName = fullName ? fullName.trim() : fullName;
+
+        const membership = await Membership.create({ brandId, fullName: trimmedFullName, phoneNumber, status });
         res.status(201).json({ success: true, membership, message: MESSAGES.MSG64 });
         return;
     } catch (error) {
@@ -55,7 +57,7 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
     try {
         const { membershipId } = req.params;
         const { fullName, phoneNumber, status } = req.body;
-        
+
         const existingMembership = await Membership.findOne({ membershipId });
         if (!existingMembership) {
             res.status(404).json({ success: false, message: MESSAGES.MSG61 });
@@ -63,23 +65,26 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
         }
 
         if (phoneNumber && phoneNumber !== existingMembership.phoneNumber) {
-            const duplicateMembership = await Membership.findOne({ 
-                brandId: existingMembership.brandId, 
+            const duplicateMembership = await Membership.findOne({
+                brandId: existingMembership.brandId,
                 phoneNumber,
                 membershipId: { $ne: membershipId }
             });
             if (duplicateMembership) {
-                res.status(400).json({ 
-                    success: false, 
+                res.status(400).json({
+                    success: false,
                     message: MESSAGES.MSG67
                 });
                 return;
             }
         }
 
+        // Trim khoảng trắng từ fullName trước khi lưu
+        const trimmedFullName = fullName ? fullName.trim() : fullName;
+
         const membership = await Membership.findOneAndUpdate(
             { membershipId },
-            { fullName, phoneNumber, status },
+            { fullName: trimmedFullName, phoneNumber, status },
             { new: true }
         );
         res.json({ success: true, membership, message: MESSAGES.MSG66 });
