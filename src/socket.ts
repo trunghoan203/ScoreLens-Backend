@@ -1,11 +1,140 @@
 import { Server, Socket } from 'socket.io';
 import { MESSAGES } from './config/messages';
 import { Match } from './models/Match.model';
+import { Camera } from './models/Camera.model';
+import { spawn } from 'child_process';
+import WebSocket from 'ws';
+import { URL } from 'url';
 
 let io: Server;
+let wss: WebSocket.Server;
+const activeRawStreams = new Map<string, any>();
 
-export const initializeSocket = (serverIo: Server) => {
+export const initializeSocket = (serverIo: Server, httpServer: any) => {
     io = serverIo;
+
+    wss = new WebSocket.Server({
+        noServer: true,
+        perMessageDeflate: false,
+    });
+
+    wss.on('connection', (ws: WebSocket, req: any) => {
+        const url = new URL(req.url, 'http://localhost');
+        const cameraId = url.searchParams.get('cameraId') || 'unknown';
+        
+                    if (!cameraId || cameraId === 'unknown') {
+                ws.close();
+                return;
+            }
+
+        Camera.findOne({ cameraId }).then(camera => {
+            if (!camera) {
+                ws.close();
+                return;
+            }
+
+            const rtspUrl = `rtsp://${camera.username}:${camera.password}@${camera.IPAddress}:554/cam/realmonitor?channel=1&subtype=0`;
+
+            const ffmpegArgs = [
+                '-rtsp_transport', 'tcp',
+                '-fflags', 'nobuffer',
+                '-flags', 'low_delay',
+                '-avioflags', 'direct',
+                '-timeout', '5000000',
+                '-i', rtspUrl,
+
+                '-f', 'mpegts',
+                '-codec:v', 'mpeg1video',
+                '-r', '25',
+                '-b:v', '1500k',
+                '-g', '25',
+                '-bf', '0',
+                '-pix_fmt', 'yuv420p',
+                '-an',
+                '-tune', 'zerolatency',
+                '-flush_packets', '1',
+                '-muxdelay', '0',
+                '-muxpreload', '0',
+                '-mpegts_flags', '+resend_headers',
+
+                'pipe:1',
+            ];
+            
+            let ffmpeg;
+            try {
+                ffmpeg = spawn('ffmpeg', ffmpegArgs);
+            } catch (e) {
+                ws.close(1011, 'ffmpeg spawn error');
+                return;
+            }
+
+            activeRawStreams.set(cameraId, ffmpeg);
+
+            const pingInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.ping();
+                } else {
+                    clearInterval(pingInterval);
+                }
+            }, 15000);
+
+            ffmpeg.stdout.on('data', (data) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                }
+            });
+
+            ffmpeg.stderr.on('data', (data) => {
+                // Silent FFmpeg stderr
+            });
+
+            ffmpeg.on('close', (code, signal) => {
+                console.log(`[FFMPEG] ${cameraId} exit code=${code} signal=${signal}`);
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close(1011, 'ffmpeg closed');
+                }
+                activeRawStreams.delete(cameraId);
+                clearInterval(pingInterval);
+            });
+
+            ffmpeg.on('error', (error) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close(1011, 'ffmpeg error');
+                }
+                activeRawStreams.delete(cameraId);
+                clearInterval(pingInterval);
+            });
+
+            const close = () => {
+                clearInterval(pingInterval);
+                try { 
+                    ffmpeg.kill('SIGINT'); 
+                    activeRawStreams.delete(cameraId);
+                } catch {}
+                console.log(`[Raw WebSocket] ${cameraId} client closed`);
+            };
+
+            ws.on('close', close);
+            ws.on('error', (e) => {
+                close();
+            });
+
+        }).catch(error => {
+            ws.close();
+        });
+    });
+
+    httpServer.on('upgrade', (request: any, socket: any, head: any) => {
+        const { pathname } = new URL(request.url, 'http://localhost');
+        
+        if (pathname === '/api/stream') {
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
+            return;
+        }
+        
+    });
 
     io.on('connection', (socket: Socket) => {
         console.log(`[Socket.IO] Người dùng đã kết nối: ${socket.id}`);
@@ -173,7 +302,11 @@ export const initializeSocket = (serverIo: Server) => {
                 socket.leave(socket.data.matchId);
                 console.log(`[Socket.IO] Dọn dẹp phòng trận đấu ${socket.data.matchId}`);
             }
+
+
         });
+
+
     });
 };
 
