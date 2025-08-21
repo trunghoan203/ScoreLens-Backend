@@ -26,9 +26,9 @@ export const MESSAGES = {
   MSG23: 'Mã xác thực không hợp lệ',
   MSG24: 'Mã xác thực đã hết hạn',
   // Super Admin
-  MSG30: 'Super Admin không tồn tại',
-  MSG31: 'Admin không tồn tại',
-  MSG32: 'Manager không tồn tại',
+  MSG30: 'Quản trị viên không tồn tại',
+  MSG31: 'Chủ doanh nghiệp không tồn tại',
+  MSG32: 'Quản lý không tồn tại',
 
   // Table
   MSG37: 'Bàn đã được tạo thành công.',
@@ -50,17 +50,18 @@ export const MESSAGES = {
 
   // Membership
   MSG60: 'Câu lạc bộ không tồn tại',
-  MSG61: 'Thành viên không tồn tại',
-  MSG62: 'Thành viên đã được xóa',
+  MSG61: 'Hội viên không tồn tại',
+  MSG150: 'Mã hội viên không đúng',
+  MSG62: 'Hội viên đã được xóa',
   MSG63: 'Xác thực thành công. Bạn có thể tạo trận đấu.',
-  MSG64: 'Thành viên đã được tạo thành công.',
+  MSG64: 'Hội viên đã được tạo thành công.',
   MSG65: 'Vui lòng cung cấp membershipId.',
-  MSG66: 'Thành viên đã được cập nhật thành công.',
+  MSG66: 'Hội viên đã được cập nhật thành công.',
   MSG67: 'Số điện thoại đã được sử dụng bởi hội viên khác',
 
   // Notification
-  MSG70: 'Thiếu userId hoặc role',
-  MSG71: 'Thiếu userId',
+  MSG70: 'Thiếu ID người dùng hoặc role',
+  MSG71: 'Thiếu ID người dùng',
   MSG72: 'Không tìm thấy thông báo hoặc bạn không có quyền truy cập',
   MSG73: 'Đã đánh dấu tất cả thông báo là đã đọc',
   MSG74: 'Đã xóa thông báo thành công',
@@ -75,10 +76,10 @@ export const MESSAGES = {
   MSG81: 'Trận đấu không tồn tại.',
   MSG82: 'Tài khoản hội viên của ${fullName} đang bị cấm',
   MSG83: 'Người tạo không thuộc cùng thương hiệu với câu lạc bộ',
-  MSG84: 'Vui lòng cung cấp teamIndex và score.',
-  MSG85: 'Không thể cập nhật thông tin trận đấu đã hoàn thành hoặc đã bị hủy.',
-  MSG86: 'Chỉ số đội không hợp lệ.',
-  MSG87: 'Teams phải có 2 thành viên trở lên.',
+  MSG84: 'Vui lòng cung cấp đội và điểm số.',
+  MSG85: 'Không thể cập nhật thông tin trận đấu.',
+  MSG86: 'Đội không hợp lệ.',
+  MSG87: 'Đội phải có 2 hội viên trở lên.',
   MSG88: 'Trận đấu đã kết thúc rồi.',
   MSG89: 'Trận đấu đã được xóa thành công.',
 
@@ -91,7 +92,7 @@ export const MESSAGES = {
   MSG95: 'Không được phép truy cập tài nguyên này.',
   MSG96: 'Match ID là bắt buộc trong params.',
   MSG97: 'Cần có định danh người thực hiện (actorMembershipId hoặc actorGuestToken).',
-  MSG98: 'Token không hợp lệ: Không tìm thấy thành viên.',
+  MSG98: 'Token không hợp lệ: Không tìm thấy hội viên.',
   MSG99: 'Không có file được upload.',
 
   // Error
@@ -100,24 +101,24 @@ export const MESSAGES = {
   MSG102: 'Dữ liệu trùng lặp ${Object.keys(error.keyValue)} đã được nhập',
   MSG103: 'Json web token không hợp lệ, hãy thử lại',
   MSG104: 'Json web token đã hết hạn, hãy thử lại',
-  MSG105: 'Lỗi khi xóa tài khoản admin.',
+  MSG105: 'Lỗi khi xóa tài khoản Chủ doanh nghiệp.',
 
   // Admin Service
-  MSG107: 'Admin đã có brand, không thể tạo thêm.',
-  MSG108: 'Tài khoản Admin và tất cả dữ liệu liên quan đã được xóa thành công.',
-  MSG109: 'Admin chưa có brand được gán.',
-  MSG110: 'Lỗi xác thực: Không tìm thấy Admin ID trong token.',
+  MSG107: 'Chủ doanh nghiệp đã có thương hiệu, không thể tạo thêm.',
+  MSG108: 'Tài khoản Chủ doanh nghiệp và tất cả dữ liệu liên quan đã được xóa thành công.',
+  MSG109: 'Chủ doanh nghiệp chưa có thương hiệu được gán.',
+  MSG110: 'Lỗi xác thực: Không tìm thấy ID Chủ doanh nghiệp trong token.',
   MSG111: 'Vui lòng điền đầy đủ tất cả các trường bắt buộc.',
-  MSG112: 'Tài khoản Manager đã được tạo thành công.',
-  MSG113: 'Manager ID là bắt buộc.',
-  MSG114: 'Thông tin Manager đã được cập nhật thành công.',
-  MSG115: 'Manager đã được xóa thành công.',
-  MSG116: 'Admin không tồn tại.',
-  MSG117: 'Brand không tồn tại hoặc bạn không có quyền.',
-  MSG118: 'Xóa brand thành công',
-  MSG119: 'Manager đã được vô hiệu hóa thành công.',
+  MSG112: 'Tài khoản Quản lý đã được tạo thành công.',
+  MSG113: 'ID Quản lý là bắt buộc.',
+  MSG114: 'Thông tin Quản lý đã được cập nhật thành công.',
+  MSG115: 'Quản lý đã được xóa thành công.',
+  MSG116: 'Quản lý không tồn tại.',
+  MSG117: 'Thương hiệu không tồn tại hoặc bạn không có quyền.',
+  MSG118: 'Xóa thương hiệu thành công',
+  MSG119: 'Quản lý đã được vô hiệu hóa thành công.',
 
-  MSG120: 'Request body là bắt buộc',
+  MSG120: 'Thông tin gửi lên không đầy đủ',
   MSG121: 'Email là bắt buộc',
   MSG122: 'Refresh token là bắt buộc',
 
@@ -133,9 +134,9 @@ export const MESSAGES = {
   MSG133: 'ACCESS_TOKEN hoặc ACCESS_TOKEN_EXPIRE không được xác định trong các biến môi trường',
 
   // Brand
-  MSG134: 'Brand đã được tạo thành công.',
-  MSG135: 'Brand đã được cập nhật thành công.',
-  MSG136: 'Brand đã được xóa thành công.',
+  MSG134: 'Thương hiệu đã được tạo thành công.',
+  MSG135: 'Thương hiệu đã được cập nhật thành công.',
+  MSG136: 'Thương hiệu đã được xóa thành công.',
 
   // Club
   MSG140: 'Câu lạc bộ đã được tạo thành công.',
