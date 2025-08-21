@@ -36,6 +36,7 @@ export const createCameraSchema = z.object({
   IPAddress: ipAddressSchema,
   username: textSchema,
   password: textSchema,
+  isConnect: z.boolean(),
 });
 
 export const updateCameraSchema = z.object({
