@@ -1,7 +1,7 @@
 import express from 'express';
 import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf, deleteAdminAccount, sendRegisterSuccessMail, getSignUrl } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
-import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
+import { createClub, updateClub, deleteClub, getClubs, getClubDetail, checkClubNameExists } from '../controllers/Club.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
@@ -24,6 +24,7 @@ import {
 import upload from '../middlewares/upload.middleware';
 import { Request, Response } from 'express';
 import { MESSAGES } from '../config/messages';
+import { Club } from '../models/Club.model';
 
 const adminRouter = express.Router();
 
@@ -76,6 +77,7 @@ adminRouter.put('/clubs/:clubId', isAuthenticated, validate(updateClubSchema), u
 adminRouter.delete('/clubs/:clubId', isAuthenticated, deleteClub);
 adminRouter.get('/clubs', isAuthenticated, getClubs);
 adminRouter.get('/clubs/:clubId', isAuthenticated, getClubDetail);
+adminRouter.get('/clubs', checkClubNameExists);
 
 //Feedback Management
 adminRouter.get('/feedback', isAuthenticated, getFeedbacks);

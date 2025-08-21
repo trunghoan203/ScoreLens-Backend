@@ -72,6 +72,12 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
       res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
       return;
     }
+    // Check if club name already exists
+    const existingClub = await Club.findOne({ clubName });
+    if (existingClub) {
+      res.status(400).json({ success: false, message: 'Tên chi nhánh đã tồn tại' });
+      return;
+    }
     const clubId = `CLB-${Date.now()}`;
     const club = await Club.create({
       clubId,
@@ -200,4 +206,10 @@ export const getClubDetail = async (req: Request & { admin?: any }, res: Respons
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+export const checkClubNameExists = async (req: Request, res: Response) => {
+  const { name } = req.query;
+  const existingClub = await Club.findOne({ clubName: name });
+  res.json({ exists: !!existingClub });
 }; 
