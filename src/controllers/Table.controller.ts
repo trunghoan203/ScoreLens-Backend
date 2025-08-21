@@ -32,6 +32,21 @@ export const createTable = async (req: Request & { manager?: any }, res: Respons
         const { name, category } = req.body;
         const clubId = req.manager.clubId;
 
+        const existingTable = await Table.findOne({
+            clubId,
+            name: { $regex: new RegExp(`^${name}$`, 'i') },
+            category
+        });
+
+        if (existingTable) {
+            const categoryLabel = category === 'pool-8' ? 'Pool-8' : 'Carom';
+            res.status(400).json({
+                success: false,
+                message: `Tên bàn "${name}" đã tồn tại trong loại bàn ${categoryLabel}`
+            });
+            return;
+        }
+
         const table = await Table.create({ clubId, name, category });
 
         res.status(201).json({
@@ -50,6 +65,32 @@ export const updateTable = async (req: Request & { manager?: any }, res: Respons
         const { tableId } = req.params;
         const { name, category, status } = req.body;
         const clubId = req.manager.clubId;
+
+        if (name || category) {
+            const currentTable = await Table.findOne({ tableId, clubId });
+            if (!currentTable) {
+                res.status(404).json({ success: false, message: MESSAGES.MSG40 });
+                return;
+            }
+
+            const finalName = name || currentTable.name;
+            const finalCategory = category || currentTable.category;
+
+            const existingTable = await Table.findOne({
+                clubId,
+                name: { $regex: new RegExp(`^${finalName}$`, 'i') },
+                category: finalCategory,
+                tableId: { $ne: tableId }
+            });
+
+            if (existingTable) {
+                res.status(400).json({
+                    success: false,
+                    message: `Tên bàn "${finalName}" đã tồn tại trong loại bàn ${finalCategory === 'pool-8' ? 'Pool-8' : 'Carom'}`
+                });
+                return;
+            }
+        }
 
         const table = await Table.findOneAndUpdate(
             { tableId, clubId },
