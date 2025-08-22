@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Match, IMatchTeamMember, IMatch, IMatchTeam } from '../models/Match.model';
 import { Table } from '../models/Table.model';
 import { Membership } from '../models/Membership.model';
+import { Camera } from '../models/Camera.model';
 import { generateMatchCode, generateSessionToken } from '../utils/generateCode';
 import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
@@ -983,6 +984,22 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
+        const camera = await Camera.findOne({ tableId: tableId });
+        let cameraInfo = null;
+        
+        if (camera) {
+            cameraInfo = {
+                cameraId: camera.cameraId,
+                IPAddress: camera.IPAddress,
+                username: camera.username,
+                password: camera.password,
+                port: '554',
+                isConnect: camera.isConnect,
+                hasCamera: true,
+                rtspUrl: `rtsp://${camera.username}:${camera.password}@${camera.IPAddress}:554/cam/realmonitor?channel=1&subtype=0`
+            };
+        }
+
         res.status(200).json({
             success: true,
             data: {
@@ -990,7 +1007,8 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
                 name: table.name,
                 category: table.category,
                 status: table.status,
-                clubId: table.clubId
+                clubId: table.clubId,
+                camera: cameraInfo
             }
         });
     } catch (error: any) {
@@ -1554,3 +1572,5 @@ export const getUserSessionToken = async (req: Request, res: Response): Promise<
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
+
+

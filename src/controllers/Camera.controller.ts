@@ -4,6 +4,50 @@ import { Table } from '../models/Table.model';
 import { MESSAGES } from '../config/messages';
 import { CameraService } from '../services/Camera.service';
 
+interface StreamState {
+    cameraId: string;
+    isActive: boolean;
+    startTime: Date;
+    viewerCount: number;
+    wsUrl: string;
+}
+
+const activeStreams = new Map<string, StreamState>();
+
+const getStreamState = (cameraId: string): StreamState | null => {
+    return activeStreams.get(cameraId) || null;
+};
+
+const startStream = (cameraId: string, wsUrl: string): StreamState => {
+    const existingState = activeStreams.get(cameraId);
+    if (existingState) {
+        existingState.viewerCount++;
+        return existingState;
+    }
+    
+    const newState: StreamState = {
+        cameraId,
+        isActive: true,
+        startTime: new Date(),
+        viewerCount: 1,
+        wsUrl
+    };
+    activeStreams.set(cameraId, newState);
+    return newState;
+};
+
+const stopStream = (cameraId: string): boolean => {
+    const state = activeStreams.get(cameraId);
+    if (!state) return false;
+    
+    state.viewerCount--;
+    if (state.viewerCount <= 0) {
+        activeStreams.delete(cameraId);
+        return true;
+    }
+    return false;
+};
+
 export const listCameras = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const manager = req.manager;
@@ -167,10 +211,11 @@ export const cameraConnection = async (req: Request & { manager?: any }, res: Re
     }
 };
 
-export const startVideoStream = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
+export const startVideoStream = async (req: Request & { manager?: any; match?: any }, res: Response): Promise<void> => {
     try {
         const { cameraId } = req.params;
         const manager = req.manager;
+        const match = req.match;
         
         const camera = await Camera.findOne({ cameraId });
         if (!camera) {
@@ -178,18 +223,42 @@ export const startVideoStream = async (req: Request & { manager?: any }, res: Re
             return;
         }
 
-        const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
-        if (!table) {
-            res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
+        if (manager) {
+            const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
+            if (!table) {
+                res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
+                return;
+            }
+        } else if (match) {
+            if (match.tableId !== camera.tableId) {
+                res.status(403).json({ success: false, message: 'Camera không thuộc bàn đang chơi' });
+                return;
+            }
+            
+            if (!['pending', 'ongoing'].includes(match.status)) {
+                res.status(403).json({ success: false, message: 'Trận đấu đã kết thúc' });
+                return;
+            }
+        } else {
+            res.status(403).json({ success: false, message: 'Không có quyền truy cập camera' });
             return;
         }
 
         const wsUrl = `ws://${req.get('host')}/api/stream?cameraId=${cameraId}`;
         
+        const streamState = startStream(cameraId, wsUrl);
+        
         res.json({
             success: true,
-            message: 'Raw WebSocket stream đã sẵn sàng',
+            message: streamState.viewerCount === 1 
+                ? 'Video stream đã được khởi động' 
+                : `Đã tham gia stream hiện tại (${streamState.viewerCount} người đang xem)`,
             wsUrl: wsUrl,
+            streamInfo: {
+                isNewStream: streamState.viewerCount === 1,
+                viewerCount: streamState.viewerCount,
+                startTime: streamState.startTime
+            },
             cameraInfo: {
                 cameraId: camera.cameraId,
                 IPAddress: camera.IPAddress,
@@ -207,10 +276,11 @@ export const startVideoStream = async (req: Request & { manager?: any }, res: Re
     }
 };
 
-export const stopVideoStream = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
+export const stopVideoStream = async (req: Request & { manager?: any; match?: any }, res: Response): Promise<void> => {
     try {
         const { cameraId } = req.params;
         const manager = req.manager;
+        const match = req.match;
         
         const camera = await Camera.findOne({ cameraId });
         if (!camera) {
@@ -218,17 +288,45 @@ export const stopVideoStream = async (req: Request & { manager?: any }, res: Res
             return;
         }
 
-        const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
-        if (!table) {
-            res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
+        if (manager) {
+            const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
+            if (!table) {
+                res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
+                return;
+            }
+        } else if (match) {
+            if (match.tableId !== camera.tableId) {
+                res.status(403).json({ success: false, message: 'Camera không thuộc bàn đang chơi' });
+                return;
+            }
+            
+            if (!['pending', 'ongoing'].includes(match.status)) {
+                res.status(403).json({ success: false, message: 'Trận đấu đã kết thúc' });
+                return;
+            }
+        } else {
+            res.status(403).json({ success: false, message: 'Không có quyền truy cập camera' });
             return;
         }
-
-        const result = await CameraService.stopVideoStream(cameraId);
+        
+        const wasCompletelyStopped = stopStream(cameraId);
+        
+        if (wasCompletelyStopped) {
+            const result = await CameraService.stopVideoStream(cameraId);
+        }
+        
+        const currentState = getStreamState(cameraId);
+        const viewerCount = currentState ? currentState.viewerCount : 0;
         
         res.json({
             success: true,
-            message: 'Stream video đã được dừng'
+            message: wasCompletelyStopped 
+                ? 'Video stream đã được dừng hoàn toàn' 
+                : `Đã rời khỏi stream (${viewerCount} người vẫn đang xem)`,
+            streamInfo: {
+                wasCompletelyStopped,
+                remainingViewers: viewerCount
+            }
         });
         return;
     } catch (error) {
