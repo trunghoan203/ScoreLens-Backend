@@ -167,3 +167,39 @@ export const getMembershipById = async (req: Request, res: Response): Promise<vo
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
+
+export const getMembershipByPhoneNumber = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { phoneNumber } = req.params;
+
+        if (!phoneNumber) {
+            res.status(400).json({
+                success: false,
+                message: 'Số điện thoại không được để trống'
+            });
+            return;
+        }
+
+        const membership = await Membership.findOne({ phoneNumber });
+
+        if (!membership) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy hội viên với số điện thoại này'
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                membershipId: membership.membershipId,
+                fullName: membership.fullName,
+                phoneNumber: membership.phoneNumber,
+                status: membership.status
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    }
+};
