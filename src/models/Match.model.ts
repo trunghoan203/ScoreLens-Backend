@@ -28,6 +28,7 @@ export interface IMatch extends Document {
   teams: IMatchTeam[];
   startTime?: Date;
   endTime?: Date;
+  videoUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -122,6 +123,7 @@ const MatchSchema = new Schema({
   teams: [MatchTeamSchema],
   startTime: { type: Date },
   endTime: { type: Date },
+  videoUrl: { type: String, default: null },
 }, { timestamps: true });
 
 export const Match = mongoose.model<IMatch>('Match', MatchSchema);
