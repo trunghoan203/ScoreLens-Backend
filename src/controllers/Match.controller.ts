@@ -1362,33 +1362,36 @@ export const leaveMatch = async (req: Request, res: Response): Promise<void> => 
 
 export const getMatchHistory = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { membershipId } = req.params;
+        const { phoneNumber } = req.params;
         const { limit = 10, page = 1 } = req.query;
         const itemPage = parseInt(limit as string);
         const currentPage = parseInt(page as string);
 
-        if (!membershipId) {
+        if (!phoneNumber) {
             res.status(400).json({
                 success: false,
-                message: 'Mã hội viên không được để trống'
+                message: 'Mã Hội viên không được để trống'
             });
             return;
         }
 
-        const membership = await Membership.findOne({ membershipId });
-        if (!membership) {
+        const memberships = await Membership.find({ phoneNumber });
+        if (!memberships || memberships.length === 0) {
             res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy hội viên với mã hội viên này'
+                message: 'Không tìm thấy Hội viên với số điện thoại này'
             });
             return;
         }
+
+        const membershipIds = memberships.map(m => m.membershipId);
 
         const query = {
             $or: [
-                { createdByMembershipId: membershipId },
-                { 'teams.members.membershipId': membershipId }
-            ]
+                { createdByMembershipId: { $in: membershipIds } },
+                { 'teams.members.membershipId': { $in: membershipIds } }
+            ],
+            status: 'completed'
         };
 
         const matches = await Match.find(query)
@@ -1406,28 +1409,33 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
                     if (club) {
                         clubInfo = {
                             clubId: club.clubId,
-                            clubName: club.clubName
+                            clubName: club.clubName,
+                            address: club.address
                         };
                     }
                 }
 
                 return {
                     ...match.toObject(),
-                    clubInfo
+                    clubInfo,
+                    isAIAssisted: match.isAiAssisted
                 };
             })
         );
 
         const total = await Match.countDocuments(query);
 
+        const firstMembership = memberships[0];
+
         res.status(200).json({
             success: true,
             data: matchesWithClubInfo,
             membershipInfo: {
-                membershipId: membership.membershipId,
-                fullName: membership.fullName,
-                phoneNumber: membership.phoneNumber,
-                status: membership.status
+                membershipId: firstMembership.membershipId,
+                fullName: firstMembership.fullName,
+                phoneNumber: firstMembership.phoneNumber,
+                status: firstMembership.status,
+                totalMemberships: memberships.length
             },
             pagination: {
                 page: currentPage,

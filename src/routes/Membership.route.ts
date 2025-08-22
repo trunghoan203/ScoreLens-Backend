@@ -46,6 +46,6 @@ membershipRoute.put('/matches/:id/end', findMatchById, allowManagerOrHost, endMa
 membershipRoute.delete('/matches/:id', findMatchById, allowManagerOrHost, deleteMatch);
 
 membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
-membershipRoute.get('/matches/history/:membershipId', getMatchHistory);
+membershipRoute.get('/matches/history/:phoneNumber', getMatchHistory);
 
 export default membershipRoute;
