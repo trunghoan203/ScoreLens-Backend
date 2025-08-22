@@ -1364,6 +1364,25 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
     try {
         const { membershipId } = req.params;
         const { limit = 10, page = 1 } = req.query;
+        const itemPage = parseInt(limit as string);
+        const currentPage = parseInt(page as string);
+
+        if (!membershipId) {
+            res.status(400).json({
+                success: false,
+                message: 'Mã hội viên không được để trống'
+            });
+            return;
+        }
+
+        const membership = await Membership.findOne({ membershipId });
+        if (!membership) {
+            res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy hội viên với mã hội viên này'
+            });
+            return;
+        }
 
         const query = {
             $or: [
@@ -1374,19 +1393,47 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
 
         const matches = await Match.find(query)
             .sort({ createdAt: -1 })
-            .limit(parseInt(limit as string))
-            .skip((parseInt(page as string) - 1) * parseInt(limit as string));
+            .limit(itemPage)
+            .skip((currentPage - 1) * itemPage);
+
+        const matchesWithClubInfo = await Promise.all(
+            matches.map(async (match) => {
+                const table = await Table.findOne({ tableId: match.tableId });
+                let clubInfo = null;
+
+                if (table) {
+                    const club = await Club.findOne({ clubId: table.clubId });
+                    if (club) {
+                        clubInfo = {
+                            clubId: club.clubId,
+                            clubName: club.clubName
+                        };
+                    }
+                }
+
+                return {
+                    ...match.toObject(),
+                    clubInfo
+                };
+            })
+        );
 
         const total = await Match.countDocuments(query);
 
         res.status(200).json({
             success: true,
-            data: matches,
+            data: matchesWithClubInfo,
+            membershipInfo: {
+                membershipId: membership.membershipId,
+                fullName: membership.fullName,
+                phoneNumber: membership.phoneNumber,
+                status: membership.status
+            },
             pagination: {
-                page: parseInt(page as string),
-                limit: parseInt(limit as string),
+                page: currentPage,
+                limit: itemPage,
                 total,
-                pages: Math.ceil(total / parseInt(limit as string))
+                pages: Math.ceil(total / itemPage)
             }
         });
     } catch (error: any) {

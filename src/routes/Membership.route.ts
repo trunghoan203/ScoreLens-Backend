@@ -1,7 +1,7 @@
 import { validate } from './../middlewares/validate.middleware';
 import express from 'express';
 import { createFeedback } from '../controllers/Feedback.controller';
-import { searchMembership, getMembershipById } from '../controllers/Membership.controller';
+import { searchMembership, getMembershipById, getMembershipByPhoneNumber } from '../controllers/Membership.controller';
 import {
     verifyMembership,
     createMatch,
@@ -26,6 +26,7 @@ import { createFeedbackSchema, membershipCodeSchema } from '../validations';
 const membershipRoute = express.Router();
 
 membershipRoute.get('/search/:membershipId', searchMembership);
+membershipRoute.get('/phone/:phoneNumber', getMembershipByPhoneNumber);
 membershipRoute.get('/:id', getMembershipById);
 membershipRoute.post('/feedback', validate(createFeedbackSchema), createFeedback);
 
