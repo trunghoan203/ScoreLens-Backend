@@ -11,15 +11,16 @@ import {
     verifyTable
 } from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
-import { 
+import {
     listCameras, 
     createCamera, 
     updateCamera, 
     deleteCamera, 
     cameraConnection,
     startVideoStream,
-    stopVideoStream
+    stopVideoStream,
 } from '../controllers/Camera.controller';
+
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
 import {
     createMatch,
@@ -48,6 +49,7 @@ import {
     emailSchema,
 } from '../validations';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
+import { allowManagerOrHost, allowManagerOrMatchCreator } from '../middlewares/auth/matchRoleAuth.middleware';
 
 const managerRouter = express.Router();
 
@@ -83,9 +85,11 @@ managerRouter.post('/camera', isAuthenticated, validate(createCameraSchema), cre
 managerRouter.put('/camera/:cameraId', isAuthenticated, validate(updateCameraSchema), updateCamera);
 managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
 
-// Video stream routes for manager
-managerRouter.post('/camera/:cameraId/stream/start', isAuthenticated, startVideoStream);
-managerRouter.post('/camera/:cameraId/stream/stop', isAuthenticated, stopVideoStream);
+// Video stream routes - Manager hoặc người tạo match có thể truy cập
+managerRouter.post('/camera/:cameraId/stream/start', allowManagerOrMatchCreator, startVideoStream);
+managerRouter.post('/camera/:cameraId/stream/stop', allowManagerOrMatchCreator, stopVideoStream);
+
+
 
 // Feedback management routes for manager
 managerRouter.get('/feedback', isAuthenticated, getFeedbacks);
