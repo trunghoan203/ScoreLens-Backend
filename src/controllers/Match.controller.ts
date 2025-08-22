@@ -1441,6 +1441,54 @@ export const getMatchHistory = async (req: Request, res: Response): Promise<void
     }
 };
 
+export const updateVideoUrl = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { videoUrl } = req.body;
+        const match = (req as any).match as IMatch;
+
+        if (!match) {
+            res.status(404).json({
+                success: false,
+                message: MESSAGES.MSG81
+            });
+            return;
+        }
+
+        if (videoUrl === undefined) {
+            res.status(400).json({
+                success: false,
+                message: 'Video URL không được để trống'
+            });
+            return;
+        }
+
+        // Validate URL format if provided
+        if (videoUrl && videoUrl !== '') {
+            try {
+                new URL(videoUrl);
+            } catch {
+                res.status(400).json({
+                    success: false,
+                    message: 'Video URL không hợp lệ'
+                });
+                return;
+            }
+        }
+
+        match.videoUrl = videoUrl;
+        const updatedMatch = await match.save();
+
+        getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
+
+        res.status(200).json({
+            success: true,
+            data: updatedMatch
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    }
+};
+
 export const getUserSessionToken = async (req: Request, res: Response): Promise<void> => {
     try {
         const { matchId } = req.params;
@@ -1469,7 +1517,7 @@ export const getUserSessionToken = async (req: Request, res: Response): Promise<
                 (membershipId && m.membershipId === membershipId) ||
                 (guestName && m.guestName === guestName)
             );
-            if (member) break;
+                if (member) break;
         }
 
         if (!member) {

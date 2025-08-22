@@ -33,6 +33,7 @@ import {
     getMatchesByTable,
     getMatchHistory,
     joinMatch,
+    updateVideoUrl,
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
@@ -45,7 +46,6 @@ import {
     createCameraSchema,
     updateCameraSchema,
     emailSchema,
-    phoneNumberSchema
 } from '../validations';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
 
@@ -101,6 +101,7 @@ managerRouter.get('/matches/history/:membershipId', isAuthenticated, getMatchHis
 
 managerRouter.put('/matches/:id/score', isAuthenticated, findMatchById, updateScore);
 managerRouter.put('/matches/:id/teams', isAuthenticated, findMatchById, updateTeamMembers);
+managerRouter.put('/matches/:id/video-url', isAuthenticated, findMatchById, updateVideoUrl);
 managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
 managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
