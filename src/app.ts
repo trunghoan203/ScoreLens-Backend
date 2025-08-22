@@ -44,7 +44,7 @@ app.use(
             }
         },
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'x-session-token'],
         credentials: true
     })
 );
