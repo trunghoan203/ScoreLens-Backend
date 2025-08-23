@@ -199,6 +199,7 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                     firstGuestMember.role = 'host';
                 }
             }
+        } else if (managerIdFromToken) {
         }
 
         const matchId = `MT-${Date.now()}`;
@@ -485,6 +486,19 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                     return { key: hostKey!, kind: 'host', displayName: guestName, isHost: true };
                 }
 
+                for (const [key, value] of existingByKey.entries()) {
+                    const member = value.member;
+                    if ((member as any).membershipName &&
+                        (member as any).membershipName.toLowerCase().trim() === guestName.toLowerCase().trim()) {
+                        const mem = await Membership.findOne({ membershipId: (member as any).membershipId });
+                        if (mem) {
+                            const k = `mem:${mem.membershipId}`;
+                            const isHost = !!(originalHost && (originalHost as any).membershipId && mem.membershipId === (originalHost as any).membershipId);
+                            return { key: isHost ? hostKey! : k, kind: 'membership', displayName: mem.fullName, membership: mem, isHost };
+                        }
+                    }
+                }
+
                 const looksLikePhone = /^\d{10,}$/.test(guestName);
 
                 if (looksLikePhone) {
@@ -531,7 +545,6 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                 { teamName: match.teams[1].teamName, members: [] as IMatchTeamMember[] },
             ];
 
-            let hostAssigned = false;
             const seenKeysMgr = new Set<string>();
             const processingMembershipIds = new Set<string>();
 
@@ -560,47 +573,24 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
                     seenKeysMgr.add(key);
 
                     const existed = existingByKey.get(key)?.member;
-                    if (!hostAssigned) {
-                        if (existed) {
-                            newTeamsForManager[ti].members.push({ ...existed, role: 'host' });
-                        } else if (r.kind === 'membership') {
-                            newTeamsForManager[ti].members.push({
-                                membershipId: r.membership.membershipId,
-                                membershipName: r.displayName,
-                                role: 'host',
-                                sessionToken: generateSessionToken(),
-                            });
-                        } else {
-                            newTeamsForManager[ti].members.push({
-                                guestName: r.displayName,
-                                role: 'host',
-                                sessionToken: generateSessionToken(),
-                            });
-                        }
-                        hostAssigned = true;
+                    if (existed) {
+                        // Khi Manager chỉnh sửa, tất cả thành viên đều là participant
+                        newTeamsForManager[ti].members.push({ ...existed, role: 'participant' });
+                    } else if (r.kind === 'membership') {
+                        newTeamsForManager[ti].members.push({
+                            membershipId: r.membership.membershipId,
+                            membershipName: r.displayName,
+                            role: 'participant',
+                            sessionToken: generateSessionToken(),
+                        });
                     } else {
-                        if (existed) {
-                            newTeamsForManager[ti].members.push({ ...existed });
-                        } else if (r.kind === 'membership') {
-                            newTeamsForManager[ti].members.push({
-                                membershipId: r.membership.membershipId,
-                                membershipName: r.displayName,
-                                role: 'participant',
-                                sessionToken: generateSessionToken(),
-                            });
-                        } else {
-                            newTeamsForManager[ti].members.push({
-                                guestName: r.displayName,
-                                role: 'participant',
-                                sessionToken: generateSessionToken(),
-                            });
-                        }
+                        newTeamsForManager[ti].members.push({
+                            guestName: r.displayName,
+                            role: 'participant',
+                            sessionToken: generateSessionToken(),
+                        });
                     }
                 }
-            }
-
-            if (!hostAssigned) {
-                return void res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ: thiếu thành viên để gán host.' });
             }
 
             const seenMgr = new Set<string>();
@@ -986,7 +976,7 @@ export const verifyTable = async (req: Request, res: Response): Promise<void> =>
 
         const camera = await Camera.findOne({ tableId: tableId });
         let cameraInfo = null;
-        
+
         if (camera) {
             cameraInfo = {
                 cameraId: camera.cameraId,
@@ -1028,17 +1018,6 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        const membership = await Membership.findOne({ phoneNumber });
-
-        if (!membership) {
-            res.status(404).json({
-                success: false,
-                isMember: false,
-                message: MESSAGES.MSG61
-            });
-            return;
-        }
-
         const club = await Club.findOne({ clubId: clubId });
         if (!club) {
             res.status(404).json({
@@ -1048,20 +1027,34 @@ export const verifyMembership = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        if (membership.brandId !== club.brandId) {
-            res.status(403).json({
-                success: false,
-                isMember: true,
-                isBrandCompatible: false,
-                message: MESSAGES.MSG83,
-                data: {
-                    membershipId: membership.membershipId,
-                    fullName: membership.fullName,
-                    phoneNumber: membership.phoneNumber,
-                    status: membership.status,
-                    brandId: membership.brandId
-                }
-            });
+        const membership = await Membership.findOne({
+            phoneNumber: phoneNumber,
+            brandId: club.brandId
+        });
+
+        if (!membership) {
+            const anyMembership = await Membership.findOne({ phoneNumber: phoneNumber });
+            if (anyMembership) {
+                res.status(403).json({
+                    success: false,
+                    isMember: true,
+                    isBrandCompatible: false,
+                    message: MESSAGES.MSG83,
+                    data: {
+                        membershipId: anyMembership.membershipId,
+                        fullName: anyMembership.fullName,
+                        phoneNumber: anyMembership.phoneNumber,
+                        status: anyMembership.status,
+                        brandId: anyMembership.brandId
+                    }
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    isMember: false,
+                    message: MESSAGES.MSG61
+                });
+            }
             return;
         }
 
@@ -1543,7 +1536,7 @@ export const getUserSessionToken = async (req: Request, res: Response): Promise<
                 (membershipId && m.membershipId === membershipId) ||
                 (guestName && m.guestName === guestName)
             );
-                if (member) break;
+            if (member) break;
         }
 
         if (!member) {
