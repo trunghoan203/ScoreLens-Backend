@@ -46,6 +46,7 @@ import {
     createCameraSchema,
     updateCameraSchema,
     resendLoginCodeSchema,
+    updateFeedbackSchema
 } from '../validations';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
 import { allowManagerOrMatchCreator } from '../middlewares/auth/matchRoleAuth.middleware';
@@ -93,7 +94,7 @@ managerRouter.post('/camera/:cameraId/stream/stop', allowManagerOrMatchCreator, 
 // Feedback management routes for manager
 managerRouter.get('/feedback', isAuthenticated, getFeedbacks);
 managerRouter.get('/feedback/:feedbackId', isAuthenticated, getFeedbackDetail);
-managerRouter.put('/feedback/:feedbackId', isAuthenticated, updateFeedback);
+managerRouter.put('/feedback/:feedbackId', isAuthenticated, validate(updateFeedbackSchema), updateFeedback);
 
 // Match management routes for manager
 managerRouter.post('/matches', isAuthenticated, createMatch);
