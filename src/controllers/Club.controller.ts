@@ -31,6 +31,23 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
         res.status(400).json({ success: false, message: MESSAGES.MSG120 });
         return;
       }
+
+      const addresses = clubsData.map(data => data.address);
+      const uniqueAddresses = new Set(addresses);
+      if (addresses.length !== uniqueAddresses.size) {
+        res.status(400).json({ success: false, message: 'Không thể tạo nhiều chi nhánh với cùng địa chỉ' });
+        return;
+      }
+
+      for (const data of clubsData) {
+        const { address } = data;
+        const existingClub = await Club.findOne({ brandId: brand.brandId, address });
+        if (existingClub) {
+          res.status(400).json({ success: false, message: `Địa chỉ "${address}" đã tồn tại trong hệ thống` });
+          return;
+        }
+      }
+
       const createdClubs = [];
       for (const data of clubsData) {
         const { clubName, address, phoneNumber, tableNumber, status } = data;
@@ -72,6 +89,14 @@ export const createClub = async (req: Request & { admin?: any }, res: Response):
       res.status(400).json({ success: false, message: 'Số bàn không thể là 0' });
       return;
     }
+
+    // Kiểm tra địa chỉ trùng với các club hiện có
+    const existingClub = await Club.findOne({ brandId: brand.brandId, address });
+    if (existingClub) {
+      res.status(400).json({ success: false, message: `Địa chỉ "${address}" đã tồn tại trong hệ thống` });
+      return;
+    }
+
     const clubId = `CLB-${Date.now()}`;
     const club = await Club.create({
       clubId,
@@ -110,7 +135,18 @@ export const updateClub = async (req: Request & { admin?: any }, res: Response):
     }
     const { clubName, address, phoneNumber, tableNumber, status } = req.body;
     if (clubName !== undefined) club.clubName = clubName;
-    if (address !== undefined) club.address = address;
+    if (address !== undefined) {
+      const existingClub = await Club.findOne({
+        brandId: brand.brandId,
+        address,
+        clubId: { $ne: clubId }
+      });
+      if (existingClub) {
+        res.status(400).json({ success: false, message: `Địa chỉ "${address}" đã tồn tại trong hệ thống` });
+        return;
+      }
+      club.address = address;
+    }
     if (phoneNumber !== undefined) club.phoneNumber = phoneNumber;
     if (tableNumber !== undefined) {
       if (tableNumber === 0) {
