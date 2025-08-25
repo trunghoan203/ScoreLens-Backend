@@ -5,6 +5,7 @@ import { Camera } from './models/Camera.model';
 import { spawn } from 'child_process';
 import WebSocket from 'ws';
 import { URL } from 'url';
+import { DashboardStatsService } from './services/DashboardStats.service';
 
 let io: Server;
 let wss: WebSocket.Server;
@@ -21,11 +22,11 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
     wss.on('connection', (ws: WebSocket, req: any) => {
         const url = new URL(req.url, 'http://localhost');
         const cameraId = url.searchParams.get('cameraId') || 'unknown';
-        
-                    if (!cameraId || cameraId === 'unknown') {
-                ws.close();
-                return;
-            }
+
+        if (!cameraId || cameraId === 'unknown') {
+            ws.close();
+            return;
+        }
 
         Camera.findOne({ cameraId }).then(camera => {
             if (!camera) {
@@ -59,7 +60,7 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
 
                 'pipe:1',
             ];
-            
+
             let ffmpeg;
             try {
                 ffmpeg = spawn('ffmpeg', ffmpegArgs);
@@ -107,10 +108,10 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
 
             const close = () => {
                 clearInterval(pingInterval);
-                try { 
-                    ffmpeg.kill('SIGINT'); 
+                try {
+                    ffmpeg.kill('SIGINT');
                     activeRawStreams.delete(cameraId);
-                } catch {}
+                } catch { }
                 console.log(`[Raw WebSocket] ${cameraId} client closed`);
             };
 
@@ -126,14 +127,14 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
 
     httpServer.on('upgrade', (request: any, socket: any, head: any) => {
         const { pathname } = new URL(request.url, 'http://localhost');
-        
+
         if (pathname === '/api/stream') {
             wss.handleUpgrade(request, socket, head, (ws) => {
                 wss.emit('connection', ws, request);
             });
             return;
         }
-        
+
     });
 
     io.on('connection', (socket: Socket) => {
@@ -142,19 +143,19 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
         socket.on('authenticate_match', async (data: { matchId: string; sessionToken: string }) => {
             try {
                 if (!data.matchId || !data.sessionToken) {
-                    socket.emit('auth_result', { 
-                        success: false, 
-                        message: 'Thiếu thông tin xác thực' 
+                    socket.emit('auth_result', {
+                        success: false,
+                        message: 'Thiếu thông tin xác thực'
                     });
                     return;
                 }
 
                 const match = await Match.findOne({ matchId: data.matchId });
-                
+
                 if (!match) {
-                    socket.emit('auth_result', { 
-                        success: false, 
-                        message: 'Không tìm thấy trận đấu' 
+                    socket.emit('auth_result', {
+                        success: false,
+                        message: 'Không tìm thấy trận đấu'
                     });
                     return;
                 }
@@ -166,9 +167,9 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
                 }
 
                 if (!member) {
-                    socket.emit('auth_result', { 
-                        success: false, 
-                        message: 'SessionToken không hợp lệ' 
+                    socket.emit('auth_result', {
+                        success: false,
+                        message: 'SessionToken không hợp lệ'
                     });
                     return;
                 }
@@ -180,8 +181,8 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
 
                 socket.join(data.matchId);
 
-                socket.emit('auth_result', { 
-                    success: true, 
+                socket.emit('auth_result', {
+                    success: true,
                     role: member.role,
                     message: 'Xác thực thành công',
                     userInfo: {
@@ -193,9 +194,9 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
 
             } catch (error) {
                 console.error('[Socket.IO] Lỗi xác thực:', error);
-                socket.emit('auth_result', { 
-                    success: false, 
-                    message: 'Lỗi xác thực' 
+                socket.emit('auth_result', {
+                    success: false,
+                    message: 'Lỗi xác thực'
                 });
             }
         });
@@ -222,7 +223,7 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
                     message: data.message,
                     code: 'TOKEN_INVALIDATED'
                 });
-                
+
                 socket.disconnect();
             }
         });
@@ -231,12 +232,12 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
             if (data.userId && data.role) {
                 const roomName = `role_${data.role}`;
                 const userRoomName = `user_${data.userId}`;
-                
+
                 console.log(`[Socket.IO] Người dùng ${data.userId} (${data.role}) tham gia phòng: ${roomName}, ${userRoomName}`);
-                
+
                 socket.join(roomName);
                 socket.join(userRoomName);
-                
+
                 socket.data.userId = data.userId;
                 socket.data.role = data.role;
             }
@@ -246,7 +247,7 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
             if (data.userId && data.role) {
                 const roomName = `role_${data.role}`;
                 const userRoomName = `user_${data.userId}`;
-                
+
                 console.log(`[Socket.IO] Người dùng ${data.userId} (${data.role}) rời phòng: ${roomName}, ${userRoomName}`);
                 socket.leave(roomName);
                 socket.leave(userRoomName);
@@ -285,16 +286,25 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
             }
         });
 
+        // Dashboard stats events
+        socket.on('request_dashboard_stats', async () => {
+            try {
+                await DashboardStatsService.emitDashboardStatsToSocket(socket.id);
+            } catch (error) {
+                console.error('Error handling request_dashboard_stats:', error);
+            }
+        });
+
         socket.on('disconnect', () => {
             console.log(`[Socket.IO] Người dùng đã ngắt kết nối: ${socket.id}`);
-            
+
             if (socket.data.userId && socket.data.role) {
                 const roomName = `role_${socket.data.role}`;
                 const userRoomName = `user_${socket.data.userId}`;
-                
+
                 socket.leave(roomName);
                 socket.leave(userRoomName);
-                
+
                 console.log(`[Socket.IO] Dọn dẹp phòng cho người dùng ${socket.data.userId}`);
             }
 
@@ -302,8 +312,6 @@ export const initializeSocket = (serverIo: Server, httpServer: any) => {
                 socket.leave(socket.data.matchId);
                 console.log(`[Socket.IO] Dọn dẹp phòng trận đấu ${socket.data.matchId}`);
             }
-
-
         });
 
 

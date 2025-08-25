@@ -1,5 +1,4 @@
 import express from 'express';
-import { z } from 'zod';
 import { loginManager, verifyLogin, getProfile, logoutManager, resendLoginCode } from '../controllers/Manager.controller';
 import {
     listTables,
@@ -12,10 +11,10 @@ import {
 } from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import {
-    listCameras, 
-    createCamera, 
-    updateCamera, 
-    deleteCamera, 
+    listCameras,
+    createCamera,
+    updateCamera,
+    deleteCamera,
     cameraConnection,
     startVideoStream,
     stopVideoStream,
@@ -46,16 +45,16 @@ import {
     updateMembershipSchema,
     createCameraSchema,
     updateCameraSchema,
-    emailSchema,
+    resendLoginCodeSchema,
 } from '../validations';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
-import { allowManagerOrHost, allowManagerOrMatchCreator } from '../middlewares/auth/matchRoleAuth.middleware';
+import { allowManagerOrMatchCreator } from '../middlewares/auth/matchRoleAuth.middleware';
 
 const managerRouter = express.Router();
 
 managerRouter.post('/login', validate(loginManagerSchema), loginManager);
 managerRouter.post('/login/verify', verifyLogin);
-managerRouter.post('/resend-login-code', validate(emailSchema), resendLoginCode);
+managerRouter.post('/resend-login-code', validate(resendLoginCodeSchema), resendLoginCode);
 
 // Protected routes (require authentication)
 managerRouter.post('/logout', isAuthenticated, logoutManager);

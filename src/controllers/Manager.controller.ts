@@ -161,7 +161,7 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
     }
 
     const { email } = req.body;
-
+    console.log(req.body);
     if (!email) {
       res.status(400).json({ success: false, message: MESSAGES.MSG121 });
       return;
@@ -202,6 +202,7 @@ export const resendLoginCode = async (req: Request, res: Response): Promise<void
     });
 
   } catch (error: any) {
+    console.log(error);
     res.status(500).json({ success: false, message: MESSAGES.MSG100 });
   }
 };

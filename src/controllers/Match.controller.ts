@@ -8,6 +8,7 @@ import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
 import { Club } from '../models/Club.model';
 import { MESSAGES } from '../config/messages';
+import { DashboardStatsService } from '../services/DashboardStats.service';
 
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -243,6 +244,9 @@ export const createMatch = async (req: Request, res: Response): Promise<void> =>
                 break;
             }
         }
+
+        // Emit dashboard stats update
+        await DashboardStatsService.emitDashboardStatsUpdate();
 
         res.status(201).json({
             success: true,
@@ -825,6 +829,9 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
 
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
+        // Emit dashboard stats update
+        await DashboardStatsService.emitDashboardStatsUpdate();
+
         res.status(200).json({
             success: true,
             message: MESSAGES.MSG78,
@@ -882,6 +889,9 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
 
         await Table.findOneAndUpdate({ tableId: match.tableId }, { status: 'empty' });
 
+        // Emit dashboard stats update
+        await DashboardStatsService.emitDashboardStatsUpdate();
+
         res.status(200).json({
             success: true,
             message: MESSAGES.MSG76,
@@ -911,6 +921,9 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
         await Match.deleteOne({ matchId: match.matchId });
 
         getIO().to(matchIdToDelete).emit('match_deleted', { matchId: matchIdToDelete, message: 'Trận đấu đã bị người tạo hủy.' });
+
+        // Emit dashboard stats update
+        await DashboardStatsService.emitDashboardStatsUpdate();
 
         res.status(200).json({
             success: true,

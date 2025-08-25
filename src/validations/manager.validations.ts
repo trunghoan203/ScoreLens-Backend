@@ -10,6 +10,10 @@ export const loginManagerSchema = z.object({
   email: emailSchema,
 });
 
+export const resendLoginCodeSchema = z.object({
+  email: emailSchema,
+});
+
 export const createTableSchema = z.object({
   name: textSchema,
   category: z.enum(['pool-8', 'carom']),
