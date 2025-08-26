@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf, deleteAdminAccount, sendRegisterSuccessMail, getSignUrl } from '../controllers/Admin.controller';
+import { registerAdmin, verifyAdmin, loginAdmin, logoutAdmin, refreshToken, getAdminProfile, forgotPassword, verifyResetCode, setNewPassword, createManager, updateManager, deleteManager, deactivateManager, getAllManagers, resendVerificationCode, resendResetPasswordCode, getManagerDetail, setStatusPendingSelf, deleteAdminAccount, sendRegisterSuccessMail, getSignUrl, getDashboardData, getClubDashboardData, getDashboardStats } from '../controllers/Admin.controller';
 import { createBrand, updateBrand, getBrands, getBrandDetail, deleteBrand } from '../controllers/Brand.controller';
 import { createClub, updateClub, deleteClub, getClubs, getClubDetail } from '../controllers/Club.controller';
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -83,5 +83,10 @@ adminRouter.get('/feedback/:feedbackId', isAuthenticated, getFeedbackDetail);
 adminRouter.put('/feedback/:feedbackId', isAuthenticated, validate(updateFeedbackSchema), updateFeedback);
 
 adminRouter.get('/sign-url', isAuthenticated, getSignUrl);
+
+// Dashboard API
+adminRouter.get('/dashboard', isAuthenticated, getDashboardData);
+adminRouter.get('/dashboard/stats', isAuthenticated, getDashboardStats);
+adminRouter.get('/dashboard/club/:clubId', isAuthenticated, getClubDashboardData);
 
 export default adminRouter; 
