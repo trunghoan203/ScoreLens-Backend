@@ -5,7 +5,6 @@ export interface IMembership extends Document {
   brandId: string;
   fullName: string;
   phoneNumber: string;
-  totalPlayTime?: number;
   status: 'active' | 'inactive';
 }
 
@@ -27,10 +26,6 @@ const MembershipSchema = new Schema({
     type: String,
     required: true
   },
-  totalPlayTime: {
-    type: Number,
-    default: 0
-  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
@@ -40,7 +35,6 @@ const MembershipSchema = new Schema({
   timestamps: true
 });
 
-// Tự động sinh membershipId trước khi save
 MembershipSchema.pre('save', function (next) {
   if (!this.membershipId) {
     this.membershipId = `MB-${Date.now()}`;
@@ -48,4 +42,4 @@ MembershipSchema.pre('save', function (next) {
   next();
 });
 
-export const Membership = mongoose.model<IMembership>('Membership', MembershipSchema); 
+export const Membership = mongoose.model<IMembership>('Membership', MembershipSchema);

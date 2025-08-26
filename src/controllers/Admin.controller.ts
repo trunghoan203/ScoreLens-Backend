@@ -14,19 +14,29 @@ import { Table } from '../models/Table.model';
 import { Camera } from '../models/Camera.model';
 import { Feedback } from '../models/Feedback.model';
 import { Match } from '../models/Match.model';
-
+import { MESSAGES } from '../config/messages';
+import crypto from 'crypto';
+import { z } from "zod";
+import {
+    emailSchema,
+    phoneNumberSchema,
+    dateOfBirthSchema,
+    citizenCodeSchema,
+    addressSchema,
+    textSchema,
+  } from "../validations/common.validations";
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, email, password } = req.body;
 
         if (!fullName || !email || !password) {
-            res.status(400).json({ success: false, message: 'Please provide fullName, email, and password' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG05 });
             return;
         }
 
         const existingAdmin = await Admin.findOne({ email });
         if (existingAdmin) {
-            res.status(400).json({ success: false, message: 'Email already registered' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG06 });
             return;
         }
 
@@ -55,7 +65,7 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
 
         res.status(201).json({
             success: true,
-            message: `Activation code sent to ${newAdmin.email}. It will expire in 10 minutes.`,
+            message: MESSAGES.MSG03,
         });
 
     } catch (error: any) {
@@ -69,22 +79,22 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         if (admin.isVerified) {
-            res.status(400).json({ success: false, message: 'Account already verified' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG18 });
             return;
         }
 
         if (admin.activationCode !== activationCode) {
-            res.status(400).json({ success: false, message: 'Invalid activation code' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG23 });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Activation code expired' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG24 });
             return;
         }
 
@@ -95,7 +105,7 @@ export const verifyAdmin = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({
             success: true,
-            message: 'Account verified successfully. You can now log in.',
+            message: MESSAGES.MSG04,
         });
 
     } catch (error: any) {
@@ -108,24 +118,24 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
         const { email, password, rememberMe } = req.body;
 
         if (!email || !password) {
-            res.status(400).json({ success: false, message: 'Please provide email and password' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG21 });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+password');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Invalid credentials' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG08 });
             return;
         }
 
         if (!admin.isVerified) {
-            res.status(403).json({ success: false, message: 'Account not verified. Please check your email for verification code.' });
+            res.status(403).json({ success: false, message: MESSAGES.MSG09 });
             return;
         }
 
         const isPasswordMatched = await (admin as any).comparePassword(password);
         if (!isPasswordMatched) {
-            res.status(401).json({ success: false, message: 'Invalid credentials' });
+            res.status(401).json({ success: false, message: MESSAGES.MSG08 });
             return;
         }
 
@@ -134,11 +144,11 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
         // Tạo access token
         const accessToken = admin.signAccessToken();
-        
+
         // Tạo refresh token với remember me option
         const { RememberPasswordService } = await import('../services/RememberPassword.service');
         const { token: refreshToken, expiresAt } = await RememberPasswordService.createRefreshToken(
-            admin.adminId, 
+            admin.adminId,
             rememberMe === true
         );
 
@@ -148,6 +158,7 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
         res.status(200).json({
             success: true,
+            message: MESSAGES.MSG01,
             data: {
                 accessToken,
                 refreshToken,
@@ -183,15 +194,15 @@ function parseExpiresIn(expiresIn: string): number {
 export const logoutAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
         const { refreshToken } = req.body;
-        
+
         if (refreshToken) {
             const { RememberPasswordService } = await import('../services/RememberPassword.service');
             await RememberPasswordService.revokeRefreshToken(refreshToken);
         }
-        
+
         res.cookie('access_token', '', { maxAge: 1 });
         res.cookie('refresh_token', '', { maxAge: 1 });
-        res.status(200).json({ success: true, message: 'Logged out successfully' });
+        res.status(200).json({ success: true, message: MESSAGES.MSG02 });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -202,7 +213,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         const { refreshToken } = req.body;
 
         if (!refreshToken) {
-            res.status(400).json({ success: false, message: 'Refresh token is required' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG122 });
             return;
         }
 
@@ -214,6 +225,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
         res.status(200).json({
             success: true,
+            message: MESSAGES.MSG02,
             data: {
                 accessToken,
                 refreshToken: newRefreshToken,
@@ -225,7 +237,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         if (error.message.includes('Invalid') || error.message.includes('expired') || error.message.includes('revoked')) {
             res.status(401).json({ success: false, message: error.message });
         } else {
-            res.status(500).json({ success: false, message: 'Internal server error' });
+            res.status(500).json({ success: false, message: MESSAGES.MSG100 });
         }
     }
 };
@@ -236,7 +248,7 @@ export const getAdminProfile = async (req: Request & { admin?: any }, res: Respo
         const admin = await Admin.findOne({ adminId: adminId });
 
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
@@ -251,23 +263,23 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
         const { email } = req.body;
 
         if (!email) {
-            res.status(400).json({ success: false, message: 'Please provide email' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG22 });
             return;
         }
 
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         if (!admin.isVerified) {
-            res.status(403).json({ success: false, message: 'Account not verified' });
+            res.status(403).json({ success: false, message: MESSAGES.MSG19 });
             return;
         }
 
         const resetCode = generateRandomCode(6);
-        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         admin.activationCode = resetCode;
         admin.activationCodeExpires = resetCodeExpires;
@@ -275,7 +287,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Reset Password Code',
+            subject: 'ScoreLens - Mã Đặt Lại Mật Khẩu',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
@@ -285,7 +297,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({
             success: true,
-            message: `Password reset code sent to ${admin.email}. It will expire in 10 minutes.`
+            message: MESSAGES.MSG124
         });
 
     } catch (error: any) {
@@ -298,23 +310,23 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
         const { email, resetCode, newPassword } = req.body;
 
         if (!email || !resetCode || !newPassword) {
-            res.status(400).json({ success: false, message: 'Please provide email, reset code, and new password' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email, mã đặt lại và mật khẩu mới' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         if (!admin.activationCode || admin.activationCode !== resetCode) {
-            res.status(400).json({ success: false, message: 'Invalid reset code' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG15 });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Reset code expired' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG16 });
             return;
         }
 
@@ -326,7 +338,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
         res.status(200).json({
             success: true,
-            message: 'Password reset successfully. You can now login with your new password.'
+            message: MESSAGES.MSG12
         });
 
     } catch (error: any) {
@@ -339,23 +351,23 @@ export const verifyResetCode = async (req: Request, res: Response): Promise<void
         const { email, resetCode } = req.body;
 
         if (!email || !resetCode) {
-            res.status(400).json({ success: false, message: 'Please provide email and reset code' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email và mã đặt lại' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         if (!admin.activationCode || admin.activationCode !== resetCode) {
-            res.status(400).json({ success: false, message: 'Invalid reset code' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG15 });
             return;
         }
 
         if (admin.activationCodeExpires && new Date() > admin.activationCodeExpires) {
-            res.status(400).json({ success: false, message: 'Reset code expired' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG16 });
             return;
         }
 
@@ -366,7 +378,7 @@ export const verifyResetCode = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({
             success: true,
-            message: 'Reset code verified successfully. You can now set your new password.'
+            message: MESSAGES.MSG13
         });
 
     } catch (error: any) {
@@ -379,19 +391,19 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
         const { email, newPassword } = req.body;
 
         if (!email || !newPassword) {
-            res.status(400).json({ success: false, message: 'Please provide email and new password' });
+            res.status(400).json({ success: false, message: 'Vui lòng cung cấp email và mật khẩu mới' });
             return;
         }
 
         const admin = await Admin.findOne({ email }).select('+activationCode');
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         // Check if reset code was already verified (activationCode should be null)
         if (admin.activationCode !== null) {
-            res.status(400).json({ success: false, message: 'Please verify your reset code first' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG17 });
             return;
         }
 
@@ -401,7 +413,7 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({
             success: true,
-            message: 'Password updated successfully. You can now login with your new password.'
+            message: MESSAGES.MSG14
         });
 
     } catch (error: any) {
@@ -409,34 +421,42 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
     }
 };
 
-export const createManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
-    const { fullName, email, phoneNumber, dateOfBirth, citizenCode, address, clubId } = req.body;
+    const createManagerSchema = z.object({
+        fullName: textSchema,
+        email: emailSchema,
+        phoneNumber: phoneNumberSchema,
+        dateOfBirth: dateOfBirthSchema,
+        citizenCode: citizenCodeSchema,
+        address: addressSchema,
+        clubId: z.string()
+    });
 
+export const createManager = catchAsync(
+    async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler(MESSAGES.MSG110, 401));
     }
 
-    if (!fullName || !email || !phoneNumber || !dateOfBirth || !citizenCode || !address || !clubId) {
-        return next(new ErrorHandler('Vui lòng điền đầy đủ tất cả các trường bắt buộc.', 400));
-    }
+      const parsedData = createManagerSchema.parse(req.body);
 
-    const newManager = await AdminService.createManagerByAdmin(adminId.toString(), {
-        fullName,
-        email,
-        phoneNumber,
-        dateOfBirth,
-        citizenCode,
-        address,
-        clubId
-    });
+      const newManager = await AdminService.createManagerByAdmin(
+        adminId.toString(),
+        parsedData
+      );
 
     res.status(201).json({
         success: true,
-        message: 'Tài khoản Manager đã được tạo thành công.',
+        message: MESSAGES.MSG112,
         data: newManager,
-    });
-});
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+  
 
 export const updateManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const { managerId } = req.params;
@@ -444,40 +464,38 @@ export const updateManager = catchAsync(async (req: Request & { admin?: any }, r
 
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler(MESSAGES.MSG110, 401));
     }
 
     if (!managerId) {
-        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+        return next(new ErrorHandler(MESSAGES.MSG113, 400));
     }
 
     const updatedManager = await AdminService.updateManagerByAdmin(adminId.toString(), managerId, updateData);
 
     res.status(200).json({
         success: true,
-        message: 'Thông tin Manager đã được cập nhật thành công.',
+        message: MESSAGES.MSG114,
         data: updatedManager,
     });
 });
 
 export const deleteManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
-    console.log('Request Params:', req.params);
     const { managerId } = req.params;
-    console.log('Extracted managerId:', managerId);
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler(MESSAGES.MSG110, 401));
     }
 
     if (!managerId) {
-        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+        return next(new ErrorHandler(MESSAGES.MSG113, 400));
     }
 
     await AdminService.deleteManagerByAdmin(adminId.toString(), managerId);
 
     res.status(200).json({
         success: true,
-        message: 'Manager đã được xóa thành công.',
+        message: MESSAGES.MSG115,
     });
 });
 
@@ -486,18 +504,18 @@ export const deactivateManager = catchAsync(async (req: Request & { admin?: any 
 
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler(MESSAGES.MSG110, 401));
     }
 
     if (!managerId) {
-        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+        return next(new ErrorHandler(MESSAGES.MSG113, 400));
     }
 
     const deactivatedManager = await AdminService.deactivateManagerByAdmin(adminId.toString(), managerId);
 
     res.status(200).json({
         success: true,
-        message: 'Manager đã được vô hiệu hóa thành công.',
+        message: MESSAGES.MSG119,
         data: deactivatedManager,
     });
 });
@@ -515,7 +533,7 @@ export const getAllManagers = catchAsync(async (req: Request & { admin?: any }, 
 export const getManagerDetail = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const { managerId } = req.params;
     if (!managerId) {
-        return next(new ErrorHandler('Manager ID là bắt buộc.', 400));
+        return next(new ErrorHandler(MESSAGES.MSG113, 400));
     }
     const manager = await AdminService.getManagerDetailByAdmin(managerId);
     res.status(200).json({
@@ -529,32 +547,32 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
     try {
         // Kiểm tra req.body có tồn tại không
         if (!req.body) {
-            res.status(400).json({ success: false, message: 'Request body is required' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG120 });
             return;
         }
 
         const { email } = req.body;
 
         if (!email) {
-            res.status(400).json({ success: false, message: 'Email is required' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG121 });
             return;
         }
 
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         // Kiểm tra xem tài khoản đã được verify chưa
         if (admin.isVerified) {
-            res.status(400).json({ success: false, message: 'Account is already verified' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG18 });
             return;
         }
 
         // Tạo mã xác thực mới
         const activationCode = generateRandomCode(6);
-        const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+        const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         // Cập nhật mã xác thực mới
         admin.activationCode = activationCode;
@@ -564,7 +582,7 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
         // Gửi email với mã mới
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Admin Email Verification',
+            subject: 'ScoreLens - Mã Xác Thực Mới',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
@@ -574,13 +592,12 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
 
         res.status(200).json({
             success: true,
-            message: 'Verification code has been resent to your email. It will expire in 10 minutes.',
+            message: MESSAGES.MSG123,
             data: { email: admin.email }
         });
 
     } catch (error: any) {
-        console.error('Resend verification code error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -589,32 +606,32 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
     try {
         // Kiểm tra req.body có tồn tại không
         if (!req.body) {
-            res.status(400).json({ success: false, message: 'Request body is required' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG120 });
             return;
         }
 
         const { email } = req.body;
 
         if (!email) {
-            res.status(400).json({ success: false, message: 'Email is required' });
+            res.status(400).json({ success: false, message: MESSAGES.MSG121 });
             return;
         }
 
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin not found' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG31 });
             return;
         }
 
         // Kiểm tra xem tài khoản đã được verify chưa
         if (!admin.isVerified) {
-            res.status(403).json({ success: false, message: 'Account is not verified. Please verify your account first.' });
+            res.status(403).json({ success: false, message: MESSAGES.MSG19 });
             return;
         }
 
         // Tạo mã reset password mới
         const resetCode = generateRandomCode(6);
-        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
+        const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         // Cập nhật mã reset mới
         admin.activationCode = resetCode;
@@ -624,7 +641,7 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
         // Gửi email với mã mới
         await sendMail({
             email: admin.email,
-            subject: 'ScoreLens - Reset Password Code',
+            subject: 'ScoreLens - Mã Đặt Lại Mật Khẩu',
             template: 'activation-mail.ejs',
             data: {
                 user: { name: admin.fullName },
@@ -634,13 +651,12 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
 
         res.status(200).json({
             success: true,
-            message: 'Password reset code has been resent to your email. It will expire in 10 minutes.',
+            message: MESSAGES.MSG124,
             data: { email: admin.email }
         });
 
     } catch (error: any) {
-        console.error('Resend reset password code error:', error);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
 
@@ -648,7 +664,7 @@ export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: 
     try {
         const adminId = req.admin?.adminId;
         if (!adminId) {
-            res.status(401).json({ success: false, message: 'Unauthorized' });
+            res.status(401).json({ success: false, message: MESSAGES.MSG20 });
             return;
         }
         const admin = await Admin.findOneAndUpdate(
@@ -657,7 +673,7 @@ export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: 
             { new: true }
         );
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG116 });
             return;
         }
         res.json({ success: true, admin });
@@ -670,17 +686,17 @@ export const setStatusPendingSelf = async (req: Request & { admin?: any }, res: 
 export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const adminId = req.admin?.adminId;
     if (!adminId) {
-        return next(new ErrorHandler('Authentication error: Admin ID not found in token.', 401));
+        return next(new ErrorHandler(MESSAGES.MSG110, 401));
     }
 
     const admin = await Admin.findOne({ adminId });
     if (!admin) {
-        return next(new ErrorHandler('Admin không tồn tại.', 404));
+        return next(new ErrorHandler(MESSAGES.MSG116, 404));
     }
 
     const brandId = admin.brandId;
     if (!brandId) {
-        return next(new ErrorHandler('Admin chưa có brand được gán.', 400));
+        return next(new ErrorHandler(MESSAGES.MSG109, 400));
     }
 
     const session = await Admin.db.startSession();
@@ -689,7 +705,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
     try {
         const brand = await Brand.findOne({ brandId }).session(session);
         if (!brand) {
-            throw new Error('Brand không tồn tại.');
+            throw new Error(MESSAGES.MSG117);
         }
 
         const clubIds = brand.clubIds || [];
@@ -726,7 +742,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
 
         res.status(200).json({
             success: true,
-            message: 'Tài khoản Admin và tất cả dữ liệu liên quan đã được xóa thành công.',
+            message: MESSAGES.MSG108,
             deletedData: {
                 admin: 1,
                 brand: 1,
@@ -742,7 +758,7 @@ export const deleteAdminAccount = catchAsync(async (req: Request & { admin?: any
 
     } catch (error: any) {
         await session.abortTransaction();
-        return next(new ErrorHandler(`Lỗi khi xóa tài khoản admin: ${error.message}`, 500));
+        return next(new ErrorHandler(MESSAGES.MSG105, 500));
     } finally {
         session.endSession();
     }
@@ -753,15 +769,15 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
     try {
         const adminId = req.admin.adminId;
         const admin = await Admin.findOne({ adminId });
-        
+
         if (!admin) {
-            res.status(404).json({ success: false, message: 'Admin không tồn tại.' });
+            res.status(404).json({ success: false, message: MESSAGES.MSG116 });
             return;
         }
 
         const template = 'register-success.ejs';
         const subject = 'ScoreLens - Đơn đăng ký thành công.';
-        
+
         await sendMail({
             email: admin.email,
             subject,
@@ -769,11 +785,553 @@ export const sendRegisterSuccessMail = async (req: Request & { admin?: any }, re
             data: { user: { name: admin.fullName } }
         });
 
-        res.status(200).json({ 
-            success: true, 
-            message: 'Email thông báo đăng ký thành công đã được gửi.' 
+        res.status(200).json({
+            success: true,
+            message: MESSAGES.MSG125
         });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };
+
+export const getSignUrl = async (req: Request & { admin?: any }, res: Response): Promise<void> => {
+    try {
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+        if (!cloudName || !apiKey || !apiSecret) {
+            res.status(500).json({ 
+                success: false, 
+                message: 'Cloudinary configuration not found' 
+            });
+            return;
+        }
+
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        
+        // Generate signature using Cloudinary's signing algorithm
+        const signature = crypto
+            .createHash('sha1')
+            .update(`timestamp=${timestamp}${apiSecret}`)
+            .digest('hex');
+
+        res.status(200).json({
+            success: true,
+            data: {
+                timestamp,
+                signature,
+                cloud_name: cloudName,
+                api_key: apiKey
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Failed to generate signature' 
+        });
+    }
+};
+
+export const getDashboardData = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.admin?.adminId;
+        if (!adminId) {
+            return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        }
+
+        const admin = await Admin.findOne({ adminId }).select('brandId');
+        if (!admin || !admin.brandId) {
+            return next(new ErrorHandler('Admin không có brand được gán', 400));
+        }
+
+        const brandId = admin.brandId;
+
+        // Sử dụng aggregation pipeline để lấy tất cả dữ liệu trong một query
+        const dashboardData = await Club.aggregate([
+            // Match clubs thuộc brand của admin
+            { $match: { brandId: brandId } },
+            
+            // Lookup tables
+            {
+                $lookup: {
+                    from: 'tables',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'tables'
+                }
+            },
+            
+            // Lookup managers
+            {
+                $lookup: {
+                    from: 'managers',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'managers'
+                }
+            },
+            
+            // Lookup feedbacks
+            {
+                $lookup: {
+                    from: 'feedbacks',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'feedbacks'
+                }
+            },
+            
+            // Project để tính toán các metrics
+            {
+                $project: {
+                    clubId: 1,
+                    clubName: 1,
+                    status: 1,
+                    address: 1,
+                    phoneNumber: 1,
+                    tableNumber: 1,
+                    
+                    // Tính toán table metrics
+                    totalTables: { $size: '$tables' },
+                    tablesInUse: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'inuse'] }
+                            }
+                        }
+                    },
+                    emptyTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'empty'] }
+                            }
+                        }
+                    },
+                    maintenanceTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'maintenance'] }
+                            }
+                        }
+                    },
+                    
+                    // Tính toán manager metrics
+                    totalManagers: { $size: '$managers' },
+                    workingManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', true] }
+                            }
+                        }
+                    },
+                    onLeaveManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', false] }
+                            }
+                        }
+                    },
+                    
+                    // Tính toán feedback metrics
+                    totalFeedbacks: { $size: '$feedbacks' },
+                    pendingFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $ne: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    },
+                    resolvedFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $eq: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        // Lấy tổng số membership của brand
+        const totalMemberships = await Membership.countDocuments({ brandId });
+        const activeMemberships = await Membership.countDocuments({ 
+            brandId, 
+            status: 'active' 
+        });
+
+        // Tính toán tổng quan
+        const summary = {
+            totalBranches: dashboardData.length,
+            openBranches: dashboardData.filter(club => club.status === 'open').length,
+            closedBranches: dashboardData.filter(club => club.status === 'closed').length,
+            maintenanceBranches: dashboardData.filter(club => club.status === 'maintenance').length,
+            
+            totalTables: dashboardData.reduce((sum, club) => sum + club.totalTables, 0),
+            tablesInUse: dashboardData.reduce((sum, club) => sum + club.tablesInUse, 0),
+            emptyTables: dashboardData.reduce((sum, club) => sum + club.emptyTables, 0),
+            maintenanceTables: dashboardData.reduce((sum, club) => sum + club.maintenanceTables, 0),
+            
+            totalManagers: dashboardData.reduce((sum, club) => sum + club.totalManagers, 0),
+            workingManagers: dashboardData.reduce((sum, club) => sum + club.workingManagers, 0),
+            onLeaveManagers: dashboardData.reduce((sum, club) => sum + club.onLeaveManagers, 0),
+            
+            totalFeedbacks: dashboardData.reduce((sum, club) => sum + club.totalFeedbacks, 0),
+            pendingFeedbacks: dashboardData.reduce((sum, club) => sum + club.pendingFeedbacks, 0),
+            resolvedFeedbacks: dashboardData.reduce((sum, club) => sum + club.resolvedFeedbacks, 0),
+            
+            totalMemberships,
+            activeMemberships,
+            inactiveMemberships: totalMemberships - activeMemberships
+        };
+
+        const branchComparison = dashboardData.map(club => ({
+            branchName: club.clubName,
+            tables: club.totalTables,
+            managers: club.totalManagers
+        }));
+
+        const tableStatusDistribution = [
+            { status: 'Đang sử dụng', count: summary.tablesInUse, percentage: Math.round((summary.tablesInUse / summary.totalTables) * 100) || 0 },
+            { status: 'Trống', count: summary.emptyTables, percentage: Math.round((summary.emptyTables / summary.totalTables) * 100) || 0 },
+            { status: 'Bảo trì', count: summary.maintenanceTables, percentage: Math.round((summary.maintenanceTables / summary.totalTables) * 100) || 0 }
+        ];
+
+        res.status(200).json({
+            success: true,
+            data: {
+                summary,
+                branchDetails: dashboardData,
+                branchComparison,
+                tableStatusDistribution
+            }
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Lỗi khi lấy dữ liệu dashboard', 500));
+    }
+});
+
+export const getClubDashboardData = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.admin?.adminId;
+        const { clubId } = req.params;
+        
+        if (!adminId) {
+            return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        }
+
+        if (!clubId) {
+            return next(new ErrorHandler('Club ID không được cung cấp', 400));
+        }
+
+        const admin = await Admin.findOne({ adminId }).select('brandId');
+        if (!admin || !admin.brandId) {
+            return next(new ErrorHandler('Admin không có brand được gán', 400));
+        }
+
+        const brandId = admin.brandId;
+
+        const club = await Club.findOne({ clubId, brandId });
+        if (!club) {
+            return next(new ErrorHandler('Club không tồn tại hoặc không thuộc quyền quản lý', 404));
+        }
+
+        // Sử dụng aggregation pipeline để lấy dữ liệu chi tiết của club
+        const clubData = await Club.aggregate([
+            { $match: { clubId: clubId, brandId: brandId } },
+            
+            // Lookup tables với thông tin chi tiết
+            {
+                $lookup: {
+                    from: 'tables',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'tables'
+                }
+            },
+            
+            // Lookup managers với thông tin chi tiết
+            {
+                $lookup: {
+                    from: 'managers',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'managers'
+                }
+            },
+            
+            // Lookup feedbacks với thông tin chi tiết
+            {
+                $lookup: {
+                    from: 'feedbacks',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'feedbacks'
+                }
+            },
+            
+            // Lookup matches để tính toán doanh thu (nếu cần)
+            {
+                $lookup: {
+                    from: 'matches',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'matches'
+                }
+            },
+            
+            // Project để tính toán các metrics chi tiết
+            {
+                $project: {
+                    clubId: 1,
+                    clubName: 1,
+                    status: 1,
+                    address: 1,
+                    phoneNumber: 1,
+                    tableNumber: 1,
+                    createdAt: 1,
+                    
+                    // Table details
+                    tables: {
+                        $map: {
+                            input: '$tables',
+                            as: 'table',
+                            in: {
+                                tableId: '$$table.tableId',
+                                name: '$$table.name',
+                                category: '$$table.category',
+                                status: '$$table.status',
+                                qrCodeData: '$$table.qrCodeData'
+                            }
+                        }
+                    },
+                    
+                    // Manager details
+                    managers: {
+                        $map: {
+                            input: '$managers',
+                            as: 'manager',
+                            in: {
+                                managerId: '$$manager.managerId',
+                                fullName: '$$manager.fullName',
+                                email: '$$manager.email',
+                                phoneNumber: '$$manager.phoneNumber',
+                                isActive: '$$manager.isActive',
+                                lastLogin: '$$manager.lastLogin'
+                            }
+                        }
+                    },
+                    
+                    // Feedback details
+                    feedbacks: {
+                        $map: {
+                            input: '$feedbacks',
+                            as: 'feedback',
+                            in: {
+                                feedbackId: '$$feedback.feedbackId',
+                                content: '$$feedback.content',
+                                status: '$$feedback.status',
+                                createdAt: '$$feedback.createdAt',
+                                createdBy: '$$feedback.createdBy'
+                            }
+                        }
+                    },
+                    
+                    // Metrics
+                    totalTables: { $size: '$tables' },
+                    tablesInUse: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'inuse'] }
+                            }
+                        }
+                    },
+                    emptyTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'empty'] }
+                            }
+                        }
+                    },
+                    maintenanceTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'maintenance'] }
+                            }
+                        }
+                    },
+                    
+                    totalManagers: { $size: '$managers' },
+                    workingManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', true] }
+                            }
+                        }
+                    },
+                    onLeaveManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', false] }
+                            }
+                        }
+                    },
+                    
+                    totalFeedbacks: { $size: '$feedbacks' },
+                    pendingFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $ne: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    },
+                    resolvedFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $eq: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    },
+                    
+                    // Match metrics (nếu cần)
+                    totalMatches: { $size: '$matches' },
+                    todayMatches: {
+                        $size: {
+                            $filter: {
+                                input: '$matches',
+                                cond: {
+                                    $gte: ['$$this.createdAt', new Date(new Date().setHours(0, 0, 0, 0))]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        if (clubData.length === 0) {
+            return next(new ErrorHandler('Không tìm thấy dữ liệu club', 404));
+        }
+
+        const clubDetail = clubData[0];
+
+        res.status(200).json({
+            success: true,
+            data: clubDetail
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Lỗi khi lấy dữ liệu club dashboard', 500));
+    }
+});
+
+export const getDashboardStats = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.admin?.adminId;
+        if (!adminId) {
+            return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        }
+
+        const admin = await Admin.findOne({ adminId }).select('brandId');
+        if (!admin || !admin.brandId) {
+            return next(new ErrorHandler('Admin không có brand được gán', 400));
+        }
+
+        const brandId = admin.brandId;
+
+        // Sử dụng Promise.all để chạy song song các query đơn giản
+        const [
+            totalBranches,
+            openBranches,
+            totalTables,
+            tablesInUse,
+            emptyTables,
+            maintenanceTables,
+            totalManagers,
+            workingManagers,
+            totalFeedbacks,
+            pendingFeedbacks,
+            totalMemberships,
+            activeMemberships
+        ] = await Promise.all([
+            Club.countDocuments({ brandId }),
+            Club.countDocuments({ brandId, status: 'open' }),
+            Table.countDocuments({ clubId: { $in: await Club.distinct('clubId', { brandId }) } }),
+            Table.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
+                status: 'inuse' 
+            }),
+            Table.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
+                status: 'empty' 
+            }),
+            Table.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
+                status: 'maintenance' 
+            }),
+            Manager.countDocuments({ brandId }),
+            Manager.countDocuments({ brandId, isActive: true }),
+            Feedback.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) } 
+            }),
+            Feedback.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) },
+                status: { $ne: 'resolved' }
+            }),
+            Membership.countDocuments({ brandId }),
+            Membership.countDocuments({ brandId, status: 'active' })
+        ]);
+
+        const stats = {
+            branches: {
+                total: totalBranches,
+                open: openBranches,
+                closed: totalBranches - openBranches
+            },
+            tables: {
+                total: totalTables,
+                inUse: tablesInUse,
+                empty: emptyTables,
+                maintenance: maintenanceTables
+            },
+            managers: {
+                total: totalManagers,
+                working: workingManagers,
+                onLeave: totalManagers - workingManagers
+            },
+            feedbacks: {
+                total: totalFeedbacks,
+                pending: pendingFeedbacks,
+                resolved: totalFeedbacks - pendingFeedbacks
+            },
+            memberships: {
+                total: totalMemberships,
+                active: activeMemberships,
+                inactive: totalMemberships - activeMemberships
+            }
+        };
+
+        res.status(200).json({
+            success: true,
+            data: stats
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Lỗi khi lấy thống kê dashboard', 500));
+    }
+});

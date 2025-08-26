@@ -21,7 +21,6 @@ const storage = multer.diskStorage({
   }
 });
 
-// Lọc file chỉ cho phép ảnh
 function fileFilter(req: Request, file: Express.Multer.File, cb: FileFilterCallback) {
   const allowedTypes = /jpeg|jpg|png/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -30,7 +29,7 @@ function fileFilter(req: Request, file: Express.Multer.File, cb: FileFilterCallb
     cb(null, true);
   } else {
     cb(new Error('Chỉ cho phép upload file ảnh (jpg, jpeg, png)'));
-  }
+  } 
 }
 
 const upload = multer({

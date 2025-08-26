@@ -1,6 +1,7 @@
+import { validate } from './../middlewares/validate.middleware';
 import express from 'express';
 import { createFeedback } from '../controllers/Feedback.controller';
-import { searchMembership, getMembershipById } from '../controllers/Membership.controller';
+import { searchMembership, getMembershipById, getMembershipByPhoneNumber } from '../controllers/Membership.controller';
 import {
     verifyMembership,
     createMatch,
@@ -16,41 +17,35 @@ import {
     joinMatch,
     leaveMatch,
     getMatchHistory,
+    getUserSessionToken,
 } from '../controllers/Match.controller';
-import { isMatchCreator } from '../middlewares/auth/matchAuth.middleware';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
+import { allowManagerOrHost } from '../middlewares/auth/matchRoleAuth.middleware';
+import { createFeedbackSchema, membershipCodeSchema } from '../validations';
 
 const membershipRoute = express.Router();
 
-// Public routes
 membershipRoute.get('/search/:membershipId', searchMembership);
+membershipRoute.get('/phone/:phoneNumber', getMembershipByPhoneNumber);
 membershipRoute.get('/:id', getMembershipById);
+membershipRoute.post('/feedback', validate(createFeedbackSchema), createFeedback);
 
-// Protected routes
-membershipRoute.post('/feedback', createFeedback);
-
-//Match Management
 membershipRoute.post('/matches/verify-table', verifyTable);
-membershipRoute.post('/matches/verify-membership', verifyMembership);
+membershipRoute.post('/matches/verify-membership', validate(membershipCodeSchema), verifyMembership);
 membershipRoute.post('/matches', createMatch);
 membershipRoute.get('/matches/:id', getMatchById);
 membershipRoute.get('/matches/code/:matchCode', getMatchByCode);
 membershipRoute.post('/matches/join', joinMatch);
 membershipRoute.post('/matches/leave', leaveMatch);
-membershipRoute.put('/matches/:id/score', isMatchCreator, updateScore);
-membershipRoute.put('/matches/:id/teams', isMatchCreator, updateTeamMembers);
-membershipRoute.put('/matches/:id/start', isMatchCreator, startMatch);
-membershipRoute.put('/matches/:id/end', isMatchCreator, endMatch);
-membershipRoute.delete('/matches/:id', isMatchCreator, deleteMatch);
+membershipRoute.post('/matches/:matchId/session-token', getUserSessionToken);
 
-// History and other getters
+membershipRoute.put('/matches/:id/score', findMatchById, allowManagerOrHost, updateScore);
+membershipRoute.put('/matches/:id/teams', findMatchById, allowManagerOrHost, updateTeamMembers);
+membershipRoute.put('/matches/:id/start', findMatchById, allowManagerOrHost, startMatch);
+membershipRoute.put('/matches/:id/end', findMatchById, allowManagerOrHost, endMatch);
+membershipRoute.delete('/matches/:id', findMatchById, allowManagerOrHost, deleteMatch);
+
 membershipRoute.get('/matches/table/:tableId', getMatchesByTable);
-membershipRoute.get('/matches/history/:membershipId', getMatchHistory);
-
-// Additional Match routes with findMatchById middleware
-membershipRoute.patch('/matches/:id/score', findMatchById, updateScore);
-membershipRoute.patch('/matches/:id/teams', findMatchById, updateTeamMembers);
-membershipRoute.patch('/matches/:id/start', findMatchById, startMatch);
-membershipRoute.patch('/matches/:id/end', findMatchById, endMatch);
+membershipRoute.get('/matches/history/:phoneNumber', getMatchHistory);
 
 export default membershipRoute;

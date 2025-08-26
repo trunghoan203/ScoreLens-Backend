@@ -1,75 +1,271 @@
 import { Server, Socket } from 'socket.io';
+import { MESSAGES } from './config/messages';
+import { Match } from './models/Match.model';
+import { Camera } from './models/Camera.model';
+import { spawn } from 'child_process';
+import WebSocket from 'ws';
+import { URL } from 'url';
 
 let io: Server;
+let wss: WebSocket.Server;
+const activeRawStreams = new Map<string, any>();
 
-export const initializeSocket = (serverIo: Server) => {
+export const initializeSocket = (serverIo: Server, httpServer: any) => {
     io = serverIo;
 
-    io.on('connection', (socket: Socket) => {
-        console.log(`[Socket.IO] User connected: ${socket.id}`);
+    wss = new WebSocket.Server({
+        noServer: true,
+        perMessageDeflate: false,
+    });
 
-        // Join match room
+    wss.on('connection', (ws: WebSocket, req: any) => {
+        const url = new URL(req.url, 'http://localhost');
+        const cameraId = url.searchParams.get('cameraId') || 'unknown';
+        
+                    if (!cameraId || cameraId === 'unknown') {
+                ws.close();
+                return;
+            }
+
+        Camera.findOne({ cameraId }).then(camera => {
+            if (!camera) {
+                ws.close();
+                return;
+            }
+
+            const rtspUrl = `rtsp://${camera.username}:${camera.password}@${camera.IPAddress}:554/cam/realmonitor?channel=1&subtype=0`;
+
+            const ffmpegArgs = [
+                '-rtsp_transport', 'tcp',
+                '-fflags', 'nobuffer',
+                '-flags', 'low_delay',
+                '-avioflags', 'direct',
+                '-timeout', '5000000',
+                '-i', rtspUrl,
+
+                '-f', 'mpegts',
+                '-codec:v', 'mpeg1video',
+                '-r', '25',
+                '-b:v', '1500k',
+                '-g', '25',
+                '-bf', '0',
+                '-pix_fmt', 'yuv420p',
+                '-an',
+                '-tune', 'zerolatency',
+                '-flush_packets', '1',
+                '-muxdelay', '0',
+                '-muxpreload', '0',
+                '-mpegts_flags', '+resend_headers',
+
+                'pipe:1',
+            ];
+            
+            let ffmpeg;
+            try {
+                ffmpeg = spawn('ffmpeg', ffmpegArgs);
+            } catch (e) {
+                ws.close(1011, 'ffmpeg spawn error');
+                return;
+            }
+
+            activeRawStreams.set(cameraId, ffmpeg);
+
+            const pingInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.ping();
+                } else {
+                    clearInterval(pingInterval);
+                }
+            }, 15000);
+
+            ffmpeg.stdout.on('data', (data) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                }
+            });
+
+            ffmpeg.stderr.on('data', (data) => {
+                // Silent FFmpeg stderr
+            });
+
+            ffmpeg.on('close', (code, signal) => {
+                console.log(`[FFMPEG] ${cameraId} exit code=${code} signal=${signal}`);
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close(1011, 'ffmpeg closed');
+                }
+                activeRawStreams.delete(cameraId);
+                clearInterval(pingInterval);
+            });
+
+            ffmpeg.on('error', (error) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close(1011, 'ffmpeg error');
+                }
+                activeRawStreams.delete(cameraId);
+                clearInterval(pingInterval);
+            });
+
+            const close = () => {
+                clearInterval(pingInterval);
+                try { 
+                    ffmpeg.kill('SIGINT'); 
+                    activeRawStreams.delete(cameraId);
+                } catch {}
+                console.log(`[Raw WebSocket] ${cameraId} client closed`);
+            };
+
+            ws.on('close', close);
+            ws.on('error', (e) => {
+                close();
+            });
+
+        }).catch(error => {
+            ws.close();
+        });
+    });
+
+    httpServer.on('upgrade', (request: any, socket: any, head: any) => {
+        const { pathname } = new URL(request.url, 'http://localhost');
+        
+        if (pathname === '/api/stream') {
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
+            return;
+        }
+        
+    });
+
+    io.on('connection', (socket: Socket) => {
+        console.log(`[Socket.IO] Người dùng đã kết nối: ${socket.id}`);
+
+        socket.on('authenticate_match', async (data: { matchId: string; sessionToken: string }) => {
+            try {
+                if (!data.matchId || !data.sessionToken) {
+                    socket.emit('auth_result', { 
+                        success: false, 
+                        message: 'Thiếu thông tin xác thực' 
+                    });
+                    return;
+                }
+
+                const match = await Match.findOne({ matchId: data.matchId });
+                
+                if (!match) {
+                    socket.emit('auth_result', { 
+                        success: false, 
+                        message: 'Không tìm thấy trận đấu' 
+                    });
+                    return;
+                }
+
+                let member = null;
+                for (const team of match.teams) {
+                    member = team.members.find(m => m.sessionToken === data.sessionToken);
+                    if (member) break;
+                }
+
+                if (!member) {
+                    socket.emit('auth_result', { 
+                        success: false, 
+                        message: 'SessionToken không hợp lệ' 
+                    });
+                    return;
+                }
+
+                socket.data.matchId = data.matchId;
+                socket.data.sessionToken = data.sessionToken;
+                socket.data.role = member.role;
+                socket.data.member = member;
+
+                socket.join(data.matchId);
+
+                socket.emit('auth_result', { 
+                    success: true, 
+                    role: member.role,
+                    message: 'Xác thực thành công',
+                    userInfo: {
+                        name: member.membershipName || member.guestName,
+                        role: member.role
+                    }
+                });
+
+
+            } catch (error) {
+                console.error('[Socket.IO] Lỗi xác thực:', error);
+                socket.emit('auth_result', { 
+                    success: false, 
+                    message: 'Lỗi xác thực' 
+                });
+            }
+        });
+
         socket.on('join_match_room', (matchId: string) => {
             if (matchId) {
-                console.log(`[Socket.IO] User ${socket.id} is joining room for match ${matchId}`);
+                console.log(`[Socket.IO] Người dùng ${socket.id} đang vào phòng ${matchId}`);
                 socket.join(matchId);
             }
         });
 
-        // Leave match room
         socket.on('leave_match_room', (matchId: string) => {
             if (matchId) {
-                console.log(`[Socket.IO] User ${socket.id} is leaving room for match ${matchId}`);
+                console.log(`[Socket.IO] Người dùng ${socket.id} đang rời phòng ${matchId}`);
                 socket.leave(matchId);
             }
         });
 
-        // Join role room for notifications
+        socket.on('token_invalidated', (data: { sessionToken: string; message: string }) => {
+            if (socket.data.sessionToken === data.sessionToken) {
+                console.log(`[Socket.IO] Token bị invalidate cho socket ${socket.id}`);
+                socket.emit('token_invalidated', {
+                    success: false,
+                    message: data.message,
+                    code: 'TOKEN_INVALIDATED'
+                });
+                
+                socket.disconnect();
+            }
+        });
+
         socket.on('join_role_room', (data: { userId: string; role: string }) => {
             if (data.userId && data.role) {
                 const roomName = `role_${data.role}`;
                 const userRoomName = `user_${data.userId}`;
                 
-                console.log(`[Socket.IO] User ${data.userId} (${data.role}) joining rooms: ${roomName}, ${userRoomName}`);
+                console.log(`[Socket.IO] Người dùng ${data.userId} (${data.role}) tham gia phòng: ${roomName}, ${userRoomName}`);
                 
                 socket.join(roomName);
                 socket.join(userRoomName);
                 
-                // Lưu thông tin user vào socket data
                 socket.data.userId = data.userId;
                 socket.data.role = data.role;
             }
         });
 
-        // Leave role room
         socket.on('leave_role_room', (data: { userId: string; role: string }) => {
             if (data.userId && data.role) {
                 const roomName = `role_${data.role}`;
                 const userRoomName = `user_${data.userId}`;
                 
-                console.log(`[Socket.IO] User ${data.userId} (${data.role}) leaving rooms: ${roomName}, ${userRoomName}`);
-                
+                console.log(`[Socket.IO] Người dùng ${data.userId} (${data.role}) rời phòng: ${roomName}, ${userRoomName}`);
                 socket.leave(roomName);
                 socket.leave(userRoomName);
             }
         });
 
-        // Handle notification read status
         socket.on('mark_notification_read', async (notificationId: string) => {
             try {
                 if (socket.data.userId) {
-                    // Emit event để client khác biết notification đã được đọc
                     socket.broadcast.emit('notification_read', {
                         notificationId,
                         userId: socket.data.userId
                     });
                 }
             } catch (error) {
-                console.error('Error handling notification read:', error);
+                console.error(MESSAGES.MSG100, error);
             }
         });
 
-        // Handle typing indicators
         socket.on('typing_start', (data: { matchId: string; userId: string; userName: string }) => {
             if (data.matchId) {
                 socket.to(data.matchId).emit('user_typing', {
@@ -89,11 +285,9 @@ export const initializeSocket = (serverIo: Server) => {
             }
         });
 
-        // Handle disconnect
         socket.on('disconnect', () => {
-            console.log(`[Socket.IO] User disconnected: ${socket.id}`);
+            console.log(`[Socket.IO] Người dùng đã ngắt kết nối: ${socket.id}`);
             
-            // Clean up user data
             if (socket.data.userId && socket.data.role) {
                 const roomName = `role_${socket.data.role}`;
                 const userRoomName = `user_${socket.data.userId}`;
@@ -101,36 +295,48 @@ export const initializeSocket = (serverIo: Server) => {
                 socket.leave(roomName);
                 socket.leave(userRoomName);
                 
-                console.log(`[Socket.IO] Cleaned up rooms for user ${socket.data.userId}`);
+                console.log(`[Socket.IO] Dọn dẹp phòng cho người dùng ${socket.data.userId}`);
             }
+
+            if (socket.data.matchId) {
+                socket.leave(socket.data.matchId);
+                console.log(`[Socket.IO] Dọn dẹp phòng trận đấu ${socket.data.matchId}`);
+            }
+
+
         });
+
+
     });
 };
 
 export const getIO = (): Server => {
     if (!io) {
-        throw new Error("Socket.io not initialized!");
+        throw new Error("Socket.io chưa được khởi tạo!");
     }
     return io;
 };
 
-// Helper function để gửi thông báo cho user cụ thể
 export const sendNotificationToUser = (userId: string, event: string, data: any) => {
     if (io) {
         io.to(`user_${userId}`).emit(event, data);
     }
 };
 
-// Helper function để gửi thông báo cho role cụ thể
 export const sendNotificationToRole = (role: string, event: string, data: any) => {
     if (io) {
         io.to(`role_${role}`).emit(event, data);
     }
 };
 
-// Helper function để gửi thông báo cho tất cả
 export const broadcastNotification = (event: string, data: any) => {
     if (io) {
         io.emit(event, data);
+    }
+};
+
+export const sendNotificationToMatch = (matchId: string, event: string, data: any) => {
+    if (io) {
+        io.to(matchId).emit(event, data);
     }
 };

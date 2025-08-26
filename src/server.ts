@@ -7,15 +7,16 @@ import { initializeSocket } from './socket';
 
 dotenv.config();
 
-// Connecting to MongoDB and Starting Server
 export const startServer = async () => {
     try {
         await connectDB(process.env.DB_URI);
 
-        console.log('MongoDB database connection established successfully');
+        console.log('Kết nối cơ sở dữ liệu MongoDB đã được thiết lập thành công');
 
         const httpServer = http.createServer(app);
         const io = new SocketIOServer(httpServer, {
+            path: '/socket.io',
+            transports: ['websocket'],
             cors: {
                 origin: process.env.ORIGIN?.split(',') || ["http://localhost:3000", "https://scorelens-omega.vercel.app"],
                 methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
@@ -23,18 +24,17 @@ export const startServer = async () => {
                 credentials: true
             }
         });
-        initializeSocket(io);
+        initializeSocket(io, httpServer);
         const PORT = process.env.PORT;
         httpServer.listen(PORT, () => {
-            console.log(`Server is listening on port: http://localhost:${process.env.PORT} ....`);
+            console.log(`Máy chủ đang lắng nghe trên cổng: http://localhost:${process.env.PORT} ....`);
         });
         
     } catch (error: any) {
-        console.log('MongoDB connection error. Please make sure MongoDB is running: ');
+        console.log('Lỗi kết nối MongoDB. Vui lòng đảm bảo MongoDB đang chạy.: ');
     }
 };
 
-// Establish http server connection
 startServer();
 
 export default app;

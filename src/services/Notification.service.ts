@@ -6,6 +6,7 @@ import { Brand } from '../models/Brand.model';
 import { Club } from '../models/Club.model';
 import { Table } from '../models/Table.model';
 import { getIO } from '../socket';
+import { MESSAGES } from '../config/messages';
 
 export class NotificationService {
   // Tạo thông báo cho feedback mới (chỉ tạo theo status hiện tại)
@@ -36,7 +37,6 @@ export class NotificationService {
             notifications.push({
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
-              type: 'feedback',
               title: 'Feedback mới',
               message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: manager.managerId,
@@ -60,7 +60,6 @@ export class NotificationService {
               notifications.push({
                 notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 feedbackId,
-                type: 'feedback',
                 title: 'Feedback mới',
                 message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
                 recipientId: admin.adminId,
@@ -79,7 +78,6 @@ export class NotificationService {
             notifications.push({
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
-              type: 'feedback',
               title: 'Feedback mới',
               message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: sAdmin.sAdminId,
@@ -97,18 +95,13 @@ export class NotificationService {
       // Lưu thông báo vào database nếu có
       if (notifications.length > 0) {
         const savedNotifications = await Notification.insertMany(notifications);
-        
         // Gửi thông báo realtime qua socket
         this.sendRealtimeNotifications(savedNotifications);
-
-        console.log(`Created ${notifications.length} notifications for feedback ${feedbackId} (status: ${status})`);
-      } else {
-        console.log(`No notifications created for feedback ${feedbackId} (status: ${status})`);
-      }
+      } 
 
       return notifications;
     } catch (error) {
-      console.error('Error creating feedback notifications:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -145,7 +138,6 @@ export class NotificationService {
               notifications.push({
                 notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 feedbackId,
-                type: 'feedback',
                 title: 'Feedback mới',
                 message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
                 recipientId: admin.adminId,
@@ -164,7 +156,6 @@ export class NotificationService {
             notifications.push({
               notificationId: `NOTI-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               feedbackId,
-              type: 'feedback',
               title: 'Feedback mới',
               message: `Có feedback mới từ ${tableName} tại ${clubName} (${brandName}) cần xử lý`,
               recipientId: sAdmin.sAdminId,
@@ -182,19 +173,14 @@ export class NotificationService {
 
       // Lưu thông báo vào database nếu có
       if (notifications.length > 0) {
-        const savedNotifications = await Notification.insertMany(notifications);
-        
+        const savedNotifications = await Notification.insertMany(notifications);       
         // Gửi thông báo realtime qua socket
         this.sendRealtimeNotifications(savedNotifications);
-
-        console.log(`Created ${notifications.length} notifications for status change to ${newStatus} (feedback: ${feedbackId})`);
-      } else {
-        console.log(`No notifications created for status change to ${newStatus} (feedback: ${feedbackId})`);
       }
 
       return notifications;
     } catch (error) {
-      console.error('Error creating status change notifications:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -232,7 +218,7 @@ export class NotificationService {
       });
 
     } catch (error) {
-      console.error('Error sending realtime notifications:', error);
+      console.error(MESSAGES.MSG100, error);
     }
   }
 
@@ -337,7 +323,7 @@ export class NotificationService {
         .sort({ dateTime: -1 })
         .skip(skip)
         .limit(limit)
-        .select('notificationId feedbackId supportRequestId type title message recipientId recipientRole isRead dateTime createdAt updatedAt');
+        .select('notificationId feedbackId title message recipientId recipientRole isRead dateTime createdAt updatedAt');
 
       const total = await Notification.countDocuments(matchCondition);
 
@@ -351,7 +337,7 @@ export class NotificationService {
         }
       };
     } catch (error) {
-      console.error('Error getting user notifications:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -365,7 +351,7 @@ export class NotificationService {
       const feedbacks = await Feedback.find({ clubId: { $in: clubIds } }).select('feedbackId');
       return feedbacks.map((feedback: any) => feedback.feedbackId);
     } catch (error) {
-      console.error('Error getting feedback IDs by club IDs:', error);
+      console.error(MESSAGES.MSG100, error);
       return [];
     }
   }
@@ -395,7 +381,7 @@ export class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -451,7 +437,7 @@ export class NotificationService {
 
       return result;
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -504,7 +490,7 @@ export class NotificationService {
       const count = await Notification.countDocuments(matchCondition);
       return count;
     } catch (error) {
-      console.error('Error getting unread count:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
@@ -528,7 +514,7 @@ export class NotificationService {
 
       return notification;
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error(MESSAGES.MSG100, error);
       throw error;
     }
   }
