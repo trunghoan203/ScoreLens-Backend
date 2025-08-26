@@ -832,3 +832,506 @@ export const getSignUrl = async (req: Request & { admin?: any }, res: Response):
         });
     }
 };
+
+export const getDashboardData = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.admin?.adminId;
+        if (!adminId) {
+            return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        }
+
+        const admin = await Admin.findOne({ adminId }).select('brandId');
+        if (!admin || !admin.brandId) {
+            return next(new ErrorHandler('Admin không có brand được gán', 400));
+        }
+
+        const brandId = admin.brandId;
+
+        // Sử dụng aggregation pipeline để lấy tất cả dữ liệu trong một query
+        const dashboardData = await Club.aggregate([
+            // Match clubs thuộc brand của admin
+            { $match: { brandId: brandId } },
+            
+            // Lookup tables
+            {
+                $lookup: {
+                    from: 'tables',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'tables'
+                }
+            },
+            
+            // Lookup managers
+            {
+                $lookup: {
+                    from: 'managers',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'managers'
+                }
+            },
+            
+            // Lookup feedbacks
+            {
+                $lookup: {
+                    from: 'feedbacks',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'feedbacks'
+                }
+            },
+            
+            // Project để tính toán các metrics
+            {
+                $project: {
+                    clubId: 1,
+                    clubName: 1,
+                    status: 1,
+                    address: 1,
+                    phoneNumber: 1,
+                    tableNumber: 1,
+                    
+                    // Tính toán table metrics
+                    totalTables: { $size: '$tables' },
+                    tablesInUse: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'inuse'] }
+                            }
+                        }
+                    },
+                    emptyTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'empty'] }
+                            }
+                        }
+                    },
+                    maintenanceTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'maintenance'] }
+                            }
+                        }
+                    },
+                    
+                    // Tính toán manager metrics
+                    totalManagers: { $size: '$managers' },
+                    workingManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', true] }
+                            }
+                        }
+                    },
+                    onLeaveManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', false] }
+                            }
+                        }
+                    },
+                    
+                    // Tính toán feedback metrics
+                    totalFeedbacks: { $size: '$feedbacks' },
+                    pendingFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $ne: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    },
+                    resolvedFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $eq: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        // Lấy tổng số membership của brand
+        const totalMemberships = await Membership.countDocuments({ brandId });
+        const activeMemberships = await Membership.countDocuments({ 
+            brandId, 
+            status: 'active' 
+        });
+
+        // Tính toán tổng quan
+        const summary = {
+            totalBranches: dashboardData.length,
+            openBranches: dashboardData.filter(club => club.status === 'open').length,
+            closedBranches: dashboardData.filter(club => club.status === 'closed').length,
+            maintenanceBranches: dashboardData.filter(club => club.status === 'maintenance').length,
+            
+            totalTables: dashboardData.reduce((sum, club) => sum + club.totalTables, 0),
+            tablesInUse: dashboardData.reduce((sum, club) => sum + club.tablesInUse, 0),
+            emptyTables: dashboardData.reduce((sum, club) => sum + club.emptyTables, 0),
+            maintenanceTables: dashboardData.reduce((sum, club) => sum + club.maintenanceTables, 0),
+            
+            totalManagers: dashboardData.reduce((sum, club) => sum + club.totalManagers, 0),
+            workingManagers: dashboardData.reduce((sum, club) => sum + club.workingManagers, 0),
+            onLeaveManagers: dashboardData.reduce((sum, club) => sum + club.onLeaveManagers, 0),
+            
+            totalFeedbacks: dashboardData.reduce((sum, club) => sum + club.totalFeedbacks, 0),
+            pendingFeedbacks: dashboardData.reduce((sum, club) => sum + club.pendingFeedbacks, 0),
+            resolvedFeedbacks: dashboardData.reduce((sum, club) => sum + club.resolvedFeedbacks, 0),
+            
+            totalMemberships,
+            activeMemberships,
+            inactiveMemberships: totalMemberships - activeMemberships
+        };
+
+        const branchComparison = dashboardData.map(club => ({
+            branchName: club.clubName,
+            tables: club.totalTables,
+            managers: club.totalManagers
+        }));
+
+        const tableStatusDistribution = [
+            { status: 'Đang sử dụng', count: summary.tablesInUse, percentage: Math.round((summary.tablesInUse / summary.totalTables) * 100) || 0 },
+            { status: 'Trống', count: summary.emptyTables, percentage: Math.round((summary.emptyTables / summary.totalTables) * 100) || 0 },
+            { status: 'Bảo trì', count: summary.maintenanceTables, percentage: Math.round((summary.maintenanceTables / summary.totalTables) * 100) || 0 }
+        ];
+
+        res.status(200).json({
+            success: true,
+            data: {
+                summary,
+                branchDetails: dashboardData,
+                branchComparison,
+                tableStatusDistribution
+            }
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Lỗi khi lấy dữ liệu dashboard', 500));
+    }
+});
+
+export const getClubDashboardData = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.admin?.adminId;
+        const { clubId } = req.params;
+        
+        if (!adminId) {
+            return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        }
+
+        if (!clubId) {
+            return next(new ErrorHandler('Club ID không được cung cấp', 400));
+        }
+
+        const admin = await Admin.findOne({ adminId }).select('brandId');
+        if (!admin || !admin.brandId) {
+            return next(new ErrorHandler('Admin không có brand được gán', 400));
+        }
+
+        const brandId = admin.brandId;
+
+        const club = await Club.findOne({ clubId, brandId });
+        if (!club) {
+            return next(new ErrorHandler('Club không tồn tại hoặc không thuộc quyền quản lý', 404));
+        }
+
+        // Sử dụng aggregation pipeline để lấy dữ liệu chi tiết của club
+        const clubData = await Club.aggregate([
+            { $match: { clubId: clubId, brandId: brandId } },
+            
+            // Lookup tables với thông tin chi tiết
+            {
+                $lookup: {
+                    from: 'tables',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'tables'
+                }
+            },
+            
+            // Lookup managers với thông tin chi tiết
+            {
+                $lookup: {
+                    from: 'managers',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'managers'
+                }
+            },
+            
+            // Lookup feedbacks với thông tin chi tiết
+            {
+                $lookup: {
+                    from: 'feedbacks',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'feedbacks'
+                }
+            },
+            
+            // Lookup matches để tính toán doanh thu (nếu cần)
+            {
+                $lookup: {
+                    from: 'matches',
+                    localField: 'clubId',
+                    foreignField: 'clubId',
+                    as: 'matches'
+                }
+            },
+            
+            // Project để tính toán các metrics chi tiết
+            {
+                $project: {
+                    clubId: 1,
+                    clubName: 1,
+                    status: 1,
+                    address: 1,
+                    phoneNumber: 1,
+                    tableNumber: 1,
+                    createdAt: 1,
+                    
+                    // Table details
+                    tables: {
+                        $map: {
+                            input: '$tables',
+                            as: 'table',
+                            in: {
+                                tableId: '$$table.tableId',
+                                name: '$$table.name',
+                                category: '$$table.category',
+                                status: '$$table.status',
+                                qrCodeData: '$$table.qrCodeData'
+                            }
+                        }
+                    },
+                    
+                    // Manager details
+                    managers: {
+                        $map: {
+                            input: '$managers',
+                            as: 'manager',
+                            in: {
+                                managerId: '$$manager.managerId',
+                                fullName: '$$manager.fullName',
+                                email: '$$manager.email',
+                                phoneNumber: '$$manager.phoneNumber',
+                                isActive: '$$manager.isActive',
+                                lastLogin: '$$manager.lastLogin'
+                            }
+                        }
+                    },
+                    
+                    // Feedback details
+                    feedbacks: {
+                        $map: {
+                            input: '$feedbacks',
+                            as: 'feedback',
+                            in: {
+                                feedbackId: '$$feedback.feedbackId',
+                                content: '$$feedback.content',
+                                status: '$$feedback.status',
+                                createdAt: '$$feedback.createdAt',
+                                createdBy: '$$feedback.createdBy'
+                            }
+                        }
+                    },
+                    
+                    // Metrics
+                    totalTables: { $size: '$tables' },
+                    tablesInUse: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'inuse'] }
+                            }
+                        }
+                    },
+                    emptyTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'empty'] }
+                            }
+                        }
+                    },
+                    maintenanceTables: {
+                        $size: {
+                            $filter: {
+                                input: '$tables',
+                                cond: { $eq: ['$$this.status', 'maintenance'] }
+                            }
+                        }
+                    },
+                    
+                    totalManagers: { $size: '$managers' },
+                    workingManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', true] }
+                            }
+                        }
+                    },
+                    onLeaveManagers: {
+                        $size: {
+                            $filter: {
+                                input: '$managers',
+                                cond: { $eq: ['$$this.isActive', false] }
+                            }
+                        }
+                    },
+                    
+                    totalFeedbacks: { $size: '$feedbacks' },
+                    pendingFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $ne: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    },
+                    resolvedFeedbacks: {
+                        $size: {
+                            $filter: {
+                                input: '$feedbacks',
+                                cond: { $eq: ['$$this.status', 'resolved'] }
+                            }
+                        }
+                    },
+                    
+                    // Match metrics (nếu cần)
+                    totalMatches: { $size: '$matches' },
+                    todayMatches: {
+                        $size: {
+                            $filter: {
+                                input: '$matches',
+                                cond: {
+                                    $gte: ['$$this.createdAt', new Date(new Date().setHours(0, 0, 0, 0))]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        if (clubData.length === 0) {
+            return next(new ErrorHandler('Không tìm thấy dữ liệu club', 404));
+        }
+
+        const clubDetail = clubData[0];
+
+        res.status(200).json({
+            success: true,
+            data: clubDetail
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Lỗi khi lấy dữ liệu club dashboard', 500));
+    }
+});
+
+export const getDashboardStats = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.admin?.adminId;
+        if (!adminId) {
+            return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        }
+
+        const admin = await Admin.findOne({ adminId }).select('brandId');
+        if (!admin || !admin.brandId) {
+            return next(new ErrorHandler('Admin không có brand được gán', 400));
+        }
+
+        const brandId = admin.brandId;
+
+        // Sử dụng Promise.all để chạy song song các query đơn giản
+        const [
+            totalBranches,
+            openBranches,
+            totalTables,
+            tablesInUse,
+            emptyTables,
+            maintenanceTables,
+            totalManagers,
+            workingManagers,
+            totalFeedbacks,
+            pendingFeedbacks,
+            totalMemberships,
+            activeMemberships
+        ] = await Promise.all([
+            Club.countDocuments({ brandId }),
+            Club.countDocuments({ brandId, status: 'open' }),
+            Table.countDocuments({ clubId: { $in: await Club.distinct('clubId', { brandId }) } }),
+            Table.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
+                status: 'inuse' 
+            }),
+            Table.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
+                status: 'empty' 
+            }),
+            Table.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
+                status: 'maintenance' 
+            }),
+            Manager.countDocuments({ brandId }),
+            Manager.countDocuments({ brandId, isActive: true }),
+            Feedback.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) } 
+            }),
+            Feedback.countDocuments({ 
+                clubId: { $in: await Club.distinct('clubId', { brandId }) },
+                status: { $ne: 'resolved' }
+            }),
+            Membership.countDocuments({ brandId }),
+            Membership.countDocuments({ brandId, status: 'active' })
+        ]);
+
+        const stats = {
+            branches: {
+                total: totalBranches,
+                open: openBranches,
+                closed: totalBranches - openBranches
+            },
+            tables: {
+                total: totalTables,
+                inUse: tablesInUse,
+                empty: emptyTables,
+                maintenance: maintenanceTables
+            },
+            managers: {
+                total: totalManagers,
+                working: workingManagers,
+                onLeave: totalManagers - workingManagers
+            },
+            feedbacks: {
+                total: totalFeedbacks,
+                pending: pendingFeedbacks,
+                resolved: totalFeedbacks - pendingFeedbacks
+            },
+            memberships: {
+                total: totalMemberships,
+                active: activeMemberships,
+                inactive: totalMemberships - activeMemberships
+            }
+        };
+
+        res.status(200).json({
+            success: true,
+            data: stats
+        });
+
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Lỗi khi lấy thống kê dashboard', 500));
+    }
+});
