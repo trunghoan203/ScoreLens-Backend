@@ -5,7 +5,7 @@ export const MESSAGES = {
   MSG02: 'Đăng xuất thành công',
   MSG03: 'Đăng ký thành công',
   MSG04: 'Xác thực email thành công',
-  MSG05: 'Vui lòng nhập đầy đủ họ tên, email và mật khẩu',
+  MSG05: 'Vui lòng nhập đầy đủ họ và tên, email và mật khẩu',
   MSG06: 'Email đã được đăng ký',
   MSG07: 'Mã xác thực đã được gửi đến email',
   MSG08: 'Thông tin đăng nhập không hợp lệ',

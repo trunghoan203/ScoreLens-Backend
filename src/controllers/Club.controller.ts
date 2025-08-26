@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Club } from '../models/Club.model';
 import { Brand } from '../models/Brand.model';
 import { Admin } from '../models/Admin.model';
+import { Table } from '../models/Table.model';
 import { MESSAGES } from '../config/messages';
 
 // Tạo club mới (hỗ trợ tạo 1 hoặc nhiều club)
@@ -202,7 +203,6 @@ export const getClubs = async (req: Request & { admin?: any }, res: Response): P
 
     const clubsWithTableCount = await Promise.all(
       clubs.map(async (club) => {
-        const Table = require('../models/Table.model').Table;
         const tableCount = await Table.countDocuments({ clubId: club.clubId });
         return {
           ...club.toObject(),
@@ -232,7 +232,15 @@ export const getClubDetail = async (req: Request & { admin?: any }, res: Respons
       res.status(404).json({ success: false, message: MESSAGES.MSG60 });
       return;
     }
-    res.status(200).json({ success: true, club });
+
+    const actualTableCount = await Table.countDocuments({ clubId: club.clubId });
+
+    const clubWithTableCount = {
+      ...club.toObject(),
+      actualTableCount
+    };
+
+    res.status(200).json({ success: true, club: clubWithTableCount });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
