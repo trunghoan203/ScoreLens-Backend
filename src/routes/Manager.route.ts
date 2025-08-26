@@ -23,6 +23,8 @@ import {
     getRecordStatus,
     deleteRecording,
     cleanupRecordings,
+    downloadRecording,
+    streamRecordingPublic,
 } from '../controllers/Camera.controller';
 
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -54,7 +56,7 @@ import {
     updateFeedbackSchema
 } from '../validations';
 import { findMatchById } from '../middlewares/utils/findMatchById.middleware';
-import { allowManagerOrHost, allowManagerOrMatchCreator } from '../middlewares/auth/matchRoleAuth.middleware';
+import { allowManagerOrHost, allowManagerOrMatchCreator, allowManagerOrMatchCreatorForDownload } from '../middlewares/auth/matchRoleAuth.middleware';
 
 const managerRouter = express.Router();
 
@@ -94,8 +96,12 @@ managerRouter.post('/camera/:cameraId/record', isAuthenticated, recordCamera);
 
 // Recording management routes
 managerRouter.get('/camera/:cameraId/recordings', isAuthenticated, getRecordStatus);
+managerRouter.get('/camera/:cameraId/recordings/:jobId/download', allowManagerOrMatchCreatorForDownload, downloadRecording);
 managerRouter.delete('/camera/:cameraId/recordings/:jobId', isAuthenticated, deleteRecording);
 managerRouter.post('/camera/:cameraId/recordings/cleanup', isAuthenticated, cleanupRecordings);
+
+// Public video streaming route (không cần xác thực)
+managerRouter.get('/camera/:cameraId/recordings/:jobId/stream', streamRecordingPublic);
 
 // Video stream routes - Manager hoặc người tạo match có thể truy cập
 managerRouter.post('/camera/:cameraId/stream/start', allowManagerOrMatchCreator, startVideoStream);

@@ -539,3 +539,123 @@ export const cleanupRecordings = async (req: Request & { manager?: any }, res: R
         return;
     }
 };
+
+export const downloadRecording = async (req: Request & { manager?: any; match?: any }, res: Response): Promise<void> => {
+    try {
+        const { cameraId, jobId } = req.params;
+        const manager = req.manager;
+        const match = req.match;
+
+        const camera = await Camera.findOne({ cameraId });
+        if (!camera) {
+            res.status(404).json({ success: false, message: 'Camera không tồn tại' });
+            return;
+        }
+
+        if (manager) {
+            const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
+            if (!table) {
+                res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
+                return;
+            }
+        } else if (match) {
+            if (match.tableId !== camera.tableId) {
+                res.status(403).json({ success: false, message: 'Camera không thuộc bàn đang chơi' });
+                return;
+            }
+        } else {
+            res.status(403).json({ success: false, message: 'Không có quyền truy cập camera' });
+            return;
+        }
+
+        const recordingsDir = path.join(process.cwd(), 'recordings');
+        const cameraDir = path.join(recordingsDir, cameraId);
+        const jobDir = path.join(cameraDir, jobId);
+        const videoFile = path.join(jobDir, 'clip.mp4');
+
+        if (!fs.existsSync(videoFile)) {
+            res.status(404).json({ success: false, message: 'Video file không tồn tại' });
+            return;
+        }
+
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', 'Range');
+
+        const stat = fs.statSync(videoFile);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+
+            res.status(206);
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+            res.setHeader('Content-Length', chunksize);
+
+            const stream = fs.createReadStream(videoFile, { start, end });
+            stream.pipe(res);
+        } else {
+            res.setHeader('Content-Length', fileSize);
+            const stream = fs.createReadStream(videoFile);
+            stream.pipe(res);
+        }
+
+    } catch (error) {
+        console.error('Download recording error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const streamRecordingPublic = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { cameraId, jobId } = req.params;
+
+        const recordingsDir = path.join(process.cwd(), 'recordings');
+        const cameraDir = path.join(recordingsDir, cameraId);
+        const jobDir = path.join(cameraDir, jobId);
+        const videoFile = path.join(jobDir, 'clip.mp4');
+
+        if (!fs.existsSync(videoFile)) {
+            res.status(404).json({ success: false, message: 'Video file không tồn tại' });
+            return;
+        }
+
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', 'Range');
+
+        const stat = fs.statSync(videoFile);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+
+            res.status(206);
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+            res.setHeader('Content-Length', chunksize);
+
+            const stream = fs.createReadStream(videoFile, { start, end });
+            stream.pipe(res);
+        } else {
+            res.setHeader('Content-Length', fileSize);
+            const stream = fs.createReadStream(videoFile);
+            stream.pipe(res);
+        }
+
+    } catch (error) {
+        console.error('Stream recording error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
