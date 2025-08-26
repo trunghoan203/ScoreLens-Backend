@@ -12,13 +12,17 @@ import {
 } from '../controllers/Table.controller';
 import { createMembership, listMemberships, updateMembership, deleteMembership } from '../controllers/Membership.controller';
 import {
-    listCameras, 
-    createCamera, 
-    updateCamera, 
-    deleteCamera, 
+    listCameras,
+    createCamera,
+    updateCamera,
+    deleteCamera,
     cameraConnection,
     startVideoStream,
     stopVideoStream,
+    recordCamera,
+    getRecordStatus,
+    deleteRecording,
+    cleanupRecordings,
 } from '../controllers/Camera.controller';
 
 import { getFeedbacks, getFeedbackDetail, updateFeedback } from '../controllers/Feedback.controller';
@@ -85,6 +89,13 @@ managerRouter.post('/camera/test-connection', isAuthenticated, cameraConnection)
 managerRouter.post('/camera', isAuthenticated, validate(createCameraSchema), createCamera);
 managerRouter.put('/camera/:cameraId', isAuthenticated, validate(updateCameraSchema), updateCamera);
 managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
+managerRouter.post('/camera/:cameraId/record', isAuthenticated, recordCamera);
+
+
+// Recording management routes
+managerRouter.get('/camera/:cameraId/recordings', isAuthenticated, getRecordStatus);
+managerRouter.delete('/camera/:cameraId/recordings/:jobId', isAuthenticated, deleteRecording);
+managerRouter.post('/camera/:cameraId/recordings/cleanup', isAuthenticated, cleanupRecordings);
 
 // Video stream routes - Manager hoặc người tạo match có thể truy cập
 managerRouter.post('/camera/:cameraId/stream/start', allowManagerOrMatchCreator, startVideoStream);
