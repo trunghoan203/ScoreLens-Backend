@@ -24,7 +24,7 @@ import {
     citizenCodeSchema,
     addressSchema,
     textSchema,
-  } from "../validations/common.validations";
+} from "../validations/common.validations";
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, email, password } = req.body;
@@ -421,43 +421,44 @@ export const setNewPassword = async (req: Request, res: Response): Promise<void>
     }
 };
 
-    const createManagerSchema = z.object({
-        fullName: textSchema,
-        email: emailSchema,
-        phoneNumber: phoneNumberSchema,
-        dateOfBirth: dateOfBirthSchema,
-        citizenCode: citizenCodeSchema,
-        address: addressSchema,
-        clubId: z.string()
-    });
+const createManagerSchema = z.object({
+    fullName: textSchema,
+    email: emailSchema,
+    phoneNumber: phoneNumberSchema,
+    dateOfBirth: dateOfBirthSchema,
+    citizenCode: citizenCodeSchema,
+    address: addressSchema,
+    clubId: z.string()
+});
 
+// Create Manager
 export const createManager = catchAsync(
     async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
-    try {
-    const adminId = req.admin?.adminId;
-    if (!adminId) {
-        return next(new ErrorHandler(MESSAGES.MSG110, 401));
+        try {
+            const adminId = req.admin?.adminId;
+            if (!adminId) {
+                return next(new ErrorHandler(MESSAGES.MSG110, 401));
+            }
+
+            const parsedData = createManagerSchema.parse(req.body);
+
+            const newManager = await AdminService.createManagerByAdmin(
+                adminId.toString(),
+                parsedData
+            );
+
+            res.status(201).json({
+                success: true,
+                message: MESSAGES.MSG112,
+                data: newManager,
+            });
+        } catch (err) {
+            next(err);
+        }
     }
-
-      const parsedData = createManagerSchema.parse(req.body);
-
-      const newManager = await AdminService.createManagerByAdmin(
-        adminId.toString(),
-        parsedData
-      );
-
-    res.status(201).json({
-        success: true,
-        message: MESSAGES.MSG112,
-        data: newManager,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
 );
-  
 
+//Update Manager
 export const updateManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const { managerId } = req.params;
     const updateData = req.body;
@@ -480,6 +481,7 @@ export const updateManager = catchAsync(async (req: Request & { admin?: any }, r
     });
 });
 
+//Delete Manager
 export const deleteManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const { managerId } = req.params;
     const adminId = req.admin?.adminId;
@@ -499,6 +501,7 @@ export const deleteManager = catchAsync(async (req: Request & { admin?: any }, r
     });
 });
 
+//Deactivate Manager
 export const deactivateManager = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
     const { managerId } = req.params;
 
@@ -521,7 +524,6 @@ export const deactivateManager = catchAsync(async (req: Request & { admin?: any 
 });
 
 export const getAllManagers = catchAsync(async (req: Request & { admin?: any }, res: Response, next: NextFunction) => {
-    // Có thể kiểm tra quyền admin ở đây nếu cần
     const { brandId } = req.query;
     const managers = await AdminService.getAllManagersByAdmin(brandId as string | undefined);
     res.status(200).json({
@@ -545,7 +547,6 @@ export const getManagerDetail = catchAsync(async (req: Request & { admin?: any }
 // Resend verification code (cho đăng ký)
 export const resendVerificationCode = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Kiểm tra req.body có tồn tại không
         if (!req.body) {
             res.status(400).json({ success: false, message: MESSAGES.MSG120 });
             return;
@@ -564,22 +565,18 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
             return;
         }
 
-        // Kiểm tra xem tài khoản đã được verify chưa
         if (admin.isVerified) {
             res.status(400).json({ success: false, message: MESSAGES.MSG18 });
             return;
         }
 
-        // Tạo mã xác thực mới
         const activationCode = generateRandomCode(6);
         const activationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Cập nhật mã xác thực mới
         admin.activationCode = activationCode;
         admin.activationCodeExpires = activationCodeExpires;
         await admin.save({ validateBeforeSave: false });
 
-        // Gửi email với mã mới
         await sendMail({
             email: admin.email,
             subject: 'ScoreLens - Mã Xác Thực Mới',
@@ -604,7 +601,6 @@ export const resendVerificationCode = async (req: Request, res: Response): Promi
 // Resend reset password code
 export const resendResetPasswordCode = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Kiểm tra req.body có tồn tại không
         if (!req.body) {
             res.status(400).json({ success: false, message: MESSAGES.MSG120 });
             return;
@@ -623,22 +619,18 @@ export const resendResetPasswordCode = async (req: Request, res: Response): Prom
             return;
         }
 
-        // Kiểm tra xem tài khoản đã được verify chưa
         if (!admin.isVerified) {
             res.status(403).json({ success: false, message: MESSAGES.MSG19 });
             return;
         }
 
-        // Tạo mã reset password mới
         const resetCode = generateRandomCode(6);
         const resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Cập nhật mã reset mới
         admin.activationCode = resetCode;
         admin.activationCodeExpires = resetCodeExpires;
         await admin.save({ validateBeforeSave: false });
 
-        // Gửi email với mã mới
         await sendMail({
             email: admin.email,
             subject: 'ScoreLens - Mã Đặt Lại Mật Khẩu',
@@ -801,16 +793,15 @@ export const getSignUrl = async (req: Request & { admin?: any }, res: Response):
         const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
         if (!cloudName || !apiKey || !apiSecret) {
-            res.status(500).json({ 
-                success: false, 
-                message: 'Cloudinary configuration not found' 
+            res.status(500).json({
+                success: false,
+                message: 'Cloudinary configuration not found'
             });
             return;
         }
 
         const timestamp = Math.round(new Date().getTime() / 1000);
-        
-        // Generate signature using Cloudinary's signing algorithm
+
         const signature = crypto
             .createHash('sha1')
             .update(`timestamp=${timestamp}${apiSecret}`)
@@ -826,9 +817,9 @@ export const getSignUrl = async (req: Request & { admin?: any }, res: Response):
             }
         });
     } catch (error: any) {
-        res.status(500).json({ 
-            success: false, 
-            message: error.message || 'Failed to generate signature' 
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to generate signature'
         });
     }
 };
@@ -847,12 +838,9 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
 
         const brandId = admin.brandId;
 
-        // Sử dụng aggregation pipeline để lấy tất cả dữ liệu trong một query
         const dashboardData = await Club.aggregate([
-            // Match clubs thuộc brand của admin
             { $match: { brandId: brandId } },
-            
-            // Lookup tables
+
             {
                 $lookup: {
                     from: 'tables',
@@ -861,8 +849,7 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
                     as: 'tables'
                 }
             },
-            
-            // Lookup managers
+
             {
                 $lookup: {
                     from: 'managers',
@@ -871,8 +858,7 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
                     as: 'managers'
                 }
             },
-            
-            // Lookup feedbacks
+
             {
                 $lookup: {
                     from: 'feedbacks',
@@ -881,8 +867,7 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
                     as: 'feedbacks'
                 }
             },
-            
-            // Project để tính toán các metrics
+
             {
                 $project: {
                     clubId: 1,
@@ -891,8 +876,7 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
                     address: 1,
                     phoneNumber: 1,
                     tableNumber: 1,
-                    
-                    // Tính toán table metrics
+
                     totalTables: { $size: '$tables' },
                     tablesInUse: {
                         $size: {
@@ -918,8 +902,7 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
                             }
                         }
                     },
-                    
-                    // Tính toán manager metrics
+
                     totalManagers: { $size: '$managers' },
                     workingManagers: {
                         $size: {
@@ -937,8 +920,7 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
                             }
                         }
                     },
-                    
-                    // Tính toán feedback metrics
+
                     totalFeedbacks: { $size: '$feedbacks' },
                     pendingFeedbacks: {
                         $size: {
@@ -960,33 +942,31 @@ export const getDashboardData = catchAsync(async (req: Request & { admin?: any }
             }
         ]);
 
-        // Lấy tổng số membership của brand
         const totalMemberships = await Membership.countDocuments({ brandId });
-        const activeMemberships = await Membership.countDocuments({ 
-            brandId, 
-            status: 'active' 
+        const activeMemberships = await Membership.countDocuments({
+            brandId,
+            status: 'active'
         });
 
-        // Tính toán tổng quan
         const summary = {
             totalBranches: dashboardData.length,
             openBranches: dashboardData.filter(club => club.status === 'open').length,
             closedBranches: dashboardData.filter(club => club.status === 'closed').length,
             maintenanceBranches: dashboardData.filter(club => club.status === 'maintenance').length,
-            
+
             totalTables: dashboardData.reduce((sum, club) => sum + club.totalTables, 0),
             tablesInUse: dashboardData.reduce((sum, club) => sum + club.tablesInUse, 0),
             emptyTables: dashboardData.reduce((sum, club) => sum + club.emptyTables, 0),
             maintenanceTables: dashboardData.reduce((sum, club) => sum + club.maintenanceTables, 0),
-            
+
             totalManagers: dashboardData.reduce((sum, club) => sum + club.totalManagers, 0),
             workingManagers: dashboardData.reduce((sum, club) => sum + club.workingManagers, 0),
             onLeaveManagers: dashboardData.reduce((sum, club) => sum + club.onLeaveManagers, 0),
-            
+
             totalFeedbacks: dashboardData.reduce((sum, club) => sum + club.totalFeedbacks, 0),
             pendingFeedbacks: dashboardData.reduce((sum, club) => sum + club.pendingFeedbacks, 0),
             resolvedFeedbacks: dashboardData.reduce((sum, club) => sum + club.resolvedFeedbacks, 0),
-            
+
             totalMemberships,
             activeMemberships,
             inactiveMemberships: totalMemberships - activeMemberships
@@ -1023,7 +1003,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
     try {
         const adminId = req.admin?.adminId;
         const { clubId } = req.params;
-        
+
         if (!adminId) {
             return next(new ErrorHandler(MESSAGES.MSG110, 401));
         }
@@ -1044,11 +1024,9 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
             return next(new ErrorHandler('Club không tồn tại hoặc không thuộc quyền quản lý', 404));
         }
 
-        // Sử dụng aggregation pipeline để lấy dữ liệu chi tiết của club
         const clubData = await Club.aggregate([
             { $match: { clubId: clubId, brandId: brandId } },
-            
-            // Lookup tables với thông tin chi tiết
+
             {
                 $lookup: {
                     from: 'tables',
@@ -1057,8 +1035,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                     as: 'tables'
                 }
             },
-            
-            // Lookup managers với thông tin chi tiết
+
             {
                 $lookup: {
                     from: 'managers',
@@ -1067,8 +1044,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                     as: 'managers'
                 }
             },
-            
-            // Lookup feedbacks với thông tin chi tiết
+
             {
                 $lookup: {
                     from: 'feedbacks',
@@ -1077,8 +1053,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                     as: 'feedbacks'
                 }
             },
-            
-            // Lookup matches để tính toán doanh thu (nếu cần)
+
             {
                 $lookup: {
                     from: 'matches',
@@ -1087,8 +1062,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                     as: 'matches'
                 }
             },
-            
-            // Project để tính toán các metrics chi tiết
+
             {
                 $project: {
                     clubId: 1,
@@ -1098,8 +1072,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                     phoneNumber: 1,
                     tableNumber: 1,
                     createdAt: 1,
-                    
-                    // Table details
+
                     tables: {
                         $map: {
                             input: '$tables',
@@ -1113,8 +1086,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                             }
                         }
                     },
-                    
-                    // Manager details
+
                     managers: {
                         $map: {
                             input: '$managers',
@@ -1129,8 +1101,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                             }
                         }
                     },
-                    
-                    // Feedback details
+
                     feedbacks: {
                         $map: {
                             input: '$feedbacks',
@@ -1144,8 +1115,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                             }
                         }
                     },
-                    
-                    // Metrics
+
                     totalTables: { $size: '$tables' },
                     tablesInUse: {
                         $size: {
@@ -1171,7 +1141,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                             }
                         }
                     },
-                    
+
                     totalManagers: { $size: '$managers' },
                     workingManagers: {
                         $size: {
@@ -1189,7 +1159,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                             }
                         }
                     },
-                    
+
                     totalFeedbacks: { $size: '$feedbacks' },
                     pendingFeedbacks: {
                         $size: {
@@ -1207,8 +1177,7 @@ export const getClubDashboardData = catchAsync(async (req: Request & { admin?: a
                             }
                         }
                     },
-                    
-                    // Match metrics (nếu cần)
+
                     totalMatches: { $size: '$matches' },
                     todayMatches: {
                         $size: {
@@ -1254,7 +1223,6 @@ export const getDashboardStats = catchAsync(async (req: Request & { admin?: any 
 
         const brandId = admin.brandId;
 
-        // Sử dụng Promise.all để chạy song song các query đơn giản
         const [
             totalBranches,
             openBranches,
@@ -1272,24 +1240,24 @@ export const getDashboardStats = catchAsync(async (req: Request & { admin?: any 
             Club.countDocuments({ brandId }),
             Club.countDocuments({ brandId, status: 'open' }),
             Table.countDocuments({ clubId: { $in: await Club.distinct('clubId', { brandId }) } }),
-            Table.countDocuments({ 
-                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
-                status: 'inuse' 
+            Table.countDocuments({
+                clubId: { $in: await Club.distinct('clubId', { brandId }) },
+                status: 'inuse'
             }),
-            Table.countDocuments({ 
-                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
-                status: 'empty' 
+            Table.countDocuments({
+                clubId: { $in: await Club.distinct('clubId', { brandId }) },
+                status: 'empty'
             }),
-            Table.countDocuments({ 
-                clubId: { $in: await Club.distinct('clubId', { brandId }) }, 
-                status: 'maintenance' 
+            Table.countDocuments({
+                clubId: { $in: await Club.distinct('clubId', { brandId }) },
+                status: 'maintenance'
             }),
             Manager.countDocuments({ brandId }),
             Manager.countDocuments({ brandId, isActive: true }),
-            Feedback.countDocuments({ 
-                clubId: { $in: await Club.distinct('clubId', { brandId }) } 
+            Feedback.countDocuments({
+                clubId: { $in: await Club.distinct('clubId', { brandId }) }
             }),
-            Feedback.countDocuments({ 
+            Feedback.countDocuments({
                 clubId: { $in: await Club.distinct('clubId', { brandId }) },
                 status: { $ne: 'resolved' }
             }),

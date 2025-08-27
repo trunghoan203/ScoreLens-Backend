@@ -131,7 +131,7 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
 
 export const deleteManagerByAdmin = async (adminId: string, managerId: string): Promise<void> => {
     const manager = await Manager.findOne({ managerId });
-        console.log({ managerId });
+    console.log({ managerId });
     if (!manager) {
         throw new ErrorHandler('Manager không tồn tại.', 404);
     }
