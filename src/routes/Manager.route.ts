@@ -41,6 +41,9 @@ import {
     getMatchHistory,
     joinMatch,
     updateVideoUrl,
+    startAutoRecording,
+    stopAutoRecording,
+    getAutoRecordingStatus,
 } from '../controllers/Match.controller';
 import { isAuthenticated } from '../middlewares/auth/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
@@ -93,9 +96,9 @@ managerRouter.put('/camera/:cameraId', isAuthenticated, validate(updateCameraSch
 managerRouter.delete('/camera/:cameraId', isAuthenticated, deleteCamera);
 managerRouter.post('/camera/:cameraId/record', isAuthenticated, recordCamera);
 
-
 // Recording management routes
 managerRouter.get('/camera/:cameraId/recordings', isAuthenticated, getRecordStatus);
+managerRouter.get('/matches/:matchId/recordings', isAuthenticated, getRecordStatus);
 managerRouter.get('/camera/:cameraId/recordings/:jobId/download', allowManagerOrMatchCreatorForDownload, downloadRecording);
 managerRouter.delete('/camera/:cameraId/recordings/:jobId', isAuthenticated, deleteRecording);
 managerRouter.post('/camera/:cameraId/recordings/cleanup', isAuthenticated, cleanupRecordings);
@@ -106,8 +109,6 @@ managerRouter.get('/camera/:cameraId/recordings/:jobId/stream', streamRecordingP
 // Video stream routes - Manager hoặc người tạo match có thể truy cập
 managerRouter.post('/camera/:cameraId/stream/start', allowManagerOrMatchCreator, startVideoStream);
 managerRouter.post('/camera/:cameraId/stream/stop', allowManagerOrMatchCreator, stopVideoStream);
-
-
 
 // Feedback management routes for manager
 managerRouter.get('/feedback', isAuthenticated, getFeedbacks);
@@ -127,6 +128,11 @@ managerRouter.put('/matches/:id/video-url', isAuthenticated, findMatchById, upda
 managerRouter.put('/matches/:id/start', isAuthenticated, findMatchById, startMatch);
 managerRouter.put('/matches/:id/end', isAuthenticated, findMatchById, endMatch);
 managerRouter.delete('/matches/:id', isAuthenticated, findMatchById, deleteMatch);
+
+// Auto recording routes
+managerRouter.post('/matches/:matchId/auto-record/start', isAuthenticated, startAutoRecording);
+managerRouter.post('/matches/:matchId/auto-record/stop', isAuthenticated, stopAutoRecording);
+managerRouter.get('/matches/:matchId/auto-record/status', isAuthenticated, getAutoRecordingStatus);
 
 managerRouter.post('/matches/join', joinMatch);
 

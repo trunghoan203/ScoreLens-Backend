@@ -52,6 +52,93 @@ const stopStream = (cameraId: string): boolean => {
     return false;
 };
 
+interface AutoRecordJob {
+    matchId: string;
+    cameraId: string;
+    intervalId: NodeJS.Timeout;
+    isActive: boolean;
+}
+
+export const activeAutoRecordJobs = new Map<string, AutoRecordJob>();
+
+export const startAutoRecordForMatch = async (matchId: string, cameraId: string, durationSec: number = 20): Promise<{ success: boolean; message: string }> => {
+    try {
+        if (activeAutoRecordJobs.has(matchId)) {
+            return { success: false, message: 'Auto record đã đang chạy cho match này' };
+        }
+
+        const camera = await Camera.findOne({ cameraId });
+        if (!camera) {
+            return { success: false, message: 'Camera không tồn tại' };
+        }
+
+        const intervalId = setInterval(async () => {
+            const job = activeAutoRecordJobs.get(matchId);
+            if (!job || !job.isActive) {
+                return;
+            }
+
+            try {
+                const result = await CameraService.recordOnce({
+                    camera: {
+                        cameraId: camera.cameraId,
+                        IPAddress: camera.IPAddress,
+                        username: camera.username,
+                        password: camera.password,
+                    },
+                    durationSec: durationSec,
+                    uploadToAI: true,
+                    extraMeta: {
+                        tableId: camera.tableId,
+                        matchId: matchId,
+                        isAutoRecord: true
+                    }
+                });
+
+                if (!result.success) {
+                    console.error(`Auto record failed for match ${matchId}: ${result.error}`);
+                }
+            } catch (error) {
+                console.error(`Auto record error for match ${matchId}:`, error);
+            }
+        }, durationSec * 1000);
+
+        activeAutoRecordJobs.set(matchId, {
+            matchId,
+            cameraId,
+            intervalId,
+            isActive: true
+        });
+
+        return { success: true, message: 'Auto record đã được khởi động' };
+
+    } catch (error) {
+        console.error('Start auto record error:', error);
+        return { success: false, message: 'Lỗi khi khởi động auto record' };
+    }
+};
+
+export const stopAutoRecordForMatch = async (matchId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+        const job = activeAutoRecordJobs.get(matchId);
+        if (!job) {
+            return { success: false, message: 'Không tìm thấy auto record job' };
+        }
+
+        clearInterval(job.intervalId);
+        job.isActive = false;
+        activeAutoRecordJobs.delete(matchId);
+
+        return { success: true, message: 'Auto record đã được dừng' };
+
+    } catch (error) {
+        console.error('Stop auto record error:', error);
+        return { success: false, message: 'Lỗi khi dừng auto record' };
+    }
+};
+
+
+
 export const listCameras = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
         const manager = req.manager;
@@ -390,60 +477,186 @@ export const recordCamera = async (req: Request & { manager?: any }, res: Respon
 
 export const getRecordStatus = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
     try {
-        const { cameraId } = req.params;
+        const { cameraId, matchId } = req.params;
+        const { matchId: queryMatchId } = req.query;
+        const finalMatchId = matchId || queryMatchId;
         const manager = req.manager;
 
-        const camera = await Camera.findOne({ cameraId });
-        if (!camera) {
-            res.status(404).json({ success: false, message: 'Camera không tồn tại' });
+        if (cameraId) {
+            const camera = await Camera.findOne({ cameraId });
+            if (!camera) {
+                res.status(404).json({ success: false, message: 'Camera không tồn tại' });
+                return;
+            }
+
+            if (manager) {
+                const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
+                if (!table) {
+                    res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
+                    return;
+                }
+            }
+
+            const baseDir = path.join(process.cwd(), 'recordings', cameraId);
+            let recordings = [];
+
+            if (fs.existsSync(baseDir)) {
+                const jobDirs = fs.readdirSync(baseDir);
+                for (const jobId of jobDirs) {
+                    const jobDir = path.join(baseDir, jobId);
+                    const mp4Path = path.join(jobDir, 'clip.mp4');
+                    const metadataPath = path.join(jobDir, 'metadata.json');
+
+                    if (fs.existsSync(mp4Path)) {
+                        const stats = fs.statSync(mp4Path);
+                        let metadata: any = {};
+
+                        if (fs.existsSync(metadataPath)) {
+                            try {
+                                const metadataContent = fs.readFileSync(metadataPath, 'utf8');
+                                metadata = JSON.parse(metadataContent);
+                            } catch (error) {
+                                console.error('Error reading metadata:', error);
+                            }
+                        }
+
+                        if (finalMatchId && metadata.matchId !== finalMatchId) {
+                            continue;
+                        }
+
+                        recordings.push({
+                            jobId,
+                            cameraId: camera.cameraId,
+                            tableId: camera.tableId,
+                            fileName: 'clip.mp4',
+                            filePath: mp4Path,
+                            size: stats.size,
+                            createdAt: stats.birthtime,
+                            modifiedAt: stats.mtime,
+                            metadata: metadata
+                        });
+                    }
+                }
+            }
+
+            let activeAutoRecord = null;
+            for (const [activeMatchId, job] of activeAutoRecordJobs.entries()) {
+                if (job.cameraId === cameraId && job.isActive) {
+                    if (finalMatchId && activeMatchId !== finalMatchId) {
+                        continue;
+                    }
+                    activeAutoRecord = {
+                        matchId: activeMatchId,
+                        cameraId: job.cameraId,
+                        isActive: job.isActive,
+                        startTime: new Date(),
+                        duration: 20
+                    };
+                    break;
+                }
+            }
+
+            res.json({
+                success: true,
+                cameraId,
+                matchId: finalMatchId || null,
+                recordings: recordings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+                activeRecording: activeAutoRecord,
+                isRecording: !!activeAutoRecord,
+                totalRecordings: recordings.length
+            });
             return;
         }
 
-        if (manager) {
-            const table = await Table.findOne({ tableId: camera.tableId, clubId: manager.clubId });
-            if (!table) {
-                res.status(403).json({ success: false, message: 'Camera không thuộc quyền quản lý của bạn' });
-                return;
+        if (finalMatchId) {
+            let cameras: any[] = [];
+            if (manager) {
+                const tables = await Table.find({ clubId: manager.clubId });
+                const tableIds = tables.map(t => t.tableId);
+                cameras = await Camera.find({ tableId: { $in: tableIds } });
             }
-        }
 
-        const baseDir = path.join(process.cwd(), 'recordings', cameraId);
-        let recordings = [];
+            const allRecordings = [];
 
-        if (fs.existsSync(baseDir)) {
-            const jobDirs = fs.readdirSync(baseDir);
-            for (const jobId of jobDirs) {
-                const jobDir = path.join(baseDir, jobId);
-                const mp4Path = path.join(jobDir, 'clip.mp4');
+            for (const camera of cameras) {
+                const baseDir = path.join(process.cwd(), 'recordings', camera.cameraId);
 
-                if (fs.existsSync(mp4Path)) {
-                    const stats = fs.statSync(mp4Path);
-                    recordings.push({
-                        jobId,
-                        fileName: 'clip.mp4',
-                        filePath: mp4Path,
-                        size: stats.size,
-                        createdAt: stats.birthtime,
-                        modifiedAt: stats.mtime
-                    });
+                if (fs.existsSync(baseDir)) {
+                    const jobDirs = fs.readdirSync(baseDir);
+                    for (const jobId of jobDirs) {
+                        const jobDir = path.join(baseDir, jobId);
+                        const mp4Path = path.join(jobDir, 'clip.mp4');
+                        const metadataPath = path.join(jobDir, 'metadata.json');
+
+                        if (fs.existsSync(mp4Path)) {
+                            const stats = fs.statSync(mp4Path);
+                            let metadata: any = {};
+
+                            if (fs.existsSync(metadataPath)) {
+                                try {
+                                    const metadataContent = fs.readFileSync(metadataPath, 'utf8');
+                                    metadata = JSON.parse(metadataContent);
+                                } catch (error) {
+                                    console.error('Error reading metadata:', error);
+                                }
+                            }
+
+                            if (metadata.matchId === finalMatchId) {
+                                allRecordings.push({
+                                    jobId,
+                                    cameraId: camera.cameraId,
+                                    tableId: camera.tableId,
+                                    fileName: 'clip.mp4',
+                                    filePath: mp4Path,
+                                    size: stats.size,
+                                    createdAt: stats.birthtime,
+                                    modifiedAt: stats.mtime,
+                                    metadata: metadata
+                                });
+                            }
+                        }
+                    }
                 }
             }
+
+            let activeAutoRecord = null;
+            for (const [activeMatchId, job] of activeAutoRecordJobs.entries()) {
+                if (activeMatchId === finalMatchId && job.isActive) {
+                    activeAutoRecord = {
+                        matchId: activeMatchId,
+                        cameraId: job.cameraId,
+                        isActive: job.isActive,
+                        startTime: new Date(),
+                        duration: 20
+                    };
+                    break;
+                }
+            }
+
+            res.json({
+                success: true,
+                matchId: finalMatchId,
+                recordings: allRecordings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+                activeRecording: activeAutoRecord,
+                isRecording: !!activeAutoRecord,
+                totalRecordings: allRecordings.length,
+                cameras: cameras.map(c => ({ cameraId: c.cameraId, tableId: c.tableId }))
+            });
+            return;
         }
 
-        res.json({
-            success: true,
-            cameraId,
-            recordings: recordings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        res.status(400).json({
+            success: false,
+            message: 'Cần cung cấp cameraId hoặc matchId'
         });
         return;
 
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Lỗi khi lấy trạng thái record',
+            message: 'Lỗi khi lấy danh sách video',
             error: error instanceof Error ? error.message : 'Unknown error'
         });
-        return;
     }
 };
 
@@ -487,9 +700,10 @@ export const deleteRecording = async (req: Request & { manager?: any }, res: Res
             message: 'Lỗi khi xóa recording',
             error: error instanceof Error ? error.message : 'Unknown error'
         });
-        return;
     }
 };
+
+
 
 
 export const cleanupRecordings = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
@@ -536,7 +750,6 @@ export const cleanupRecordings = async (req: Request & { manager?: any }, res: R
             message: 'Lỗi khi dọn dẹp recordings',
             error: error instanceof Error ? error.message : 'Unknown error'
         });
-        return;
     }
 };
 
