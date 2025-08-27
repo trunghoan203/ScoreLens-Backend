@@ -29,6 +29,7 @@ export const createMembershipSchema = z.object({
 export const updateMembershipSchema = z.object({
   fullName: textSchema.optional(),
   phoneNumber: phoneNumberSchema.optional(),
+  status: z.enum(['active', 'inactive']).optional(),
 });
 
 export const createCameraSchema = z.object({

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Membership } from '../models/Membership.model';
 import { Club } from '../models/Club.model';
+import { Match } from '../models/Match.model';
 import { MESSAGES } from '../config/messages';
 
 export const listMemberships = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
@@ -79,7 +80,6 @@ export const updateMembership = async (req: Request & { manager?: any }, res: Re
             }
         }
 
-        // Trim khoảng trắng từ fullName trước khi lưu
         const trimmedFullName = fullName ? fullName.trim() : fullName;
 
         const membership = await Membership.findOneAndUpdate(
@@ -200,6 +200,38 @@ export const getMembershipByPhoneNumber = async (req: Request, res: Response): P
             }
         });
     } catch (error: any) {
+        res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    }
+};
+
+export const getDashboardStats = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const totalMembers = await Membership.countDocuments();
+
+        const totalMatches = await Match.countDocuments();
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const todayMatches = await Match.countDocuments({
+            createdAt: {
+                $gte: today,
+                $lt: tomorrow
+            }
+        });
+
+        res.json({
+            success: true,
+            stats: {
+                totalMembers,
+                totalMatches,
+                todayMatches
+            }
+        });
+    } catch (error) {
+        console.error('Error getting dashboard stats:', error);
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
     }
 };

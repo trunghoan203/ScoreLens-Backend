@@ -1107,6 +1107,7 @@ export const joinMatch = async (req: Request, res: Response): Promise<void> => {
             res.status(404).json({ success: false, message: MESSAGES.MSG81 });
             return;
         }
+
         if (match.status !== 'pending') {
             res.status(400).json({ success: false, message: MESSAGES.MSG85 });
             return;
