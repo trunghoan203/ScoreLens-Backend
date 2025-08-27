@@ -1,7 +1,7 @@
 import { validate } from './../middlewares/validate.middleware';
 import express from 'express';
 import { createFeedback } from '../controllers/Feedback.controller';
-import { searchMembership, getMembershipById, getMembershipByPhoneNumber } from '../controllers/Membership.controller';
+import { searchMembership, getMembershipById, getMembershipByPhoneNumber, getDashboardStats } from '../controllers/Membership.controller';
 import {
     verifyMembership,
     createMatch,
@@ -24,6 +24,8 @@ import { allowManagerOrHost } from '../middlewares/auth/matchRoleAuth.middleware
 import { createFeedbackSchema, membershipCodeSchema } from '../validations';
 
 const membershipRoute = express.Router();
+
+membershipRoute.get('/dashboard/stats', getDashboardStats);
 
 membershipRoute.get('/search/:membershipId', searchMembership);
 membershipRoute.get('/phone/:phoneNumber', getMembershipByPhoneNumber);
