@@ -61,7 +61,6 @@ export class CameraService {
         });
 
         ffprobe.on('close', (code) => {
-          // Timeout after 8 seconds
           setTimeout(() => {
             if (!hasOutput && !hasError) {
               resolve(false);
@@ -356,7 +355,6 @@ export class CameraService {
               fs.rmSync(jobDir, { recursive: true, force: true });
               deletedCount++;
             } catch (error) {
-              // Ignore deletion errors
             }
           }
         }
