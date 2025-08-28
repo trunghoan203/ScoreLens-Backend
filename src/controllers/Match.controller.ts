@@ -8,6 +8,7 @@ import { getIO } from '../socket';
 import { randomBytes } from 'crypto';
 import { Club } from '../models/Club.model';
 import { MESSAGES } from '../config/messages';
+import { startAutoRecordForMatch, stopAutoRecordForMatch } from './Camera.controller';
 
 export const createMatch = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -574,7 +575,6 @@ export const updateTeamMembers = async (req: Request, res: Response): Promise<vo
 
                     const existed = existingByKey.get(key)?.member;
                     if (existed) {
-                        // Khi Manager chỉnh sửa, tất cả thành viên đều là participant
                         newTeamsForManager[ti].members.push({ ...existed, role: 'participant' });
                     } else if (r.kind === 'membership') {
                         newTeamsForManager[ti].members.push({
@@ -823,12 +823,24 @@ export const startMatch = async (req: Request, res: Response): Promise<void> => 
 
         const updatedMatch = await match.save();
 
+        let autoRecordResult = null;
+        if (updatedMatch.isAiAssisted) {
+            const camera = await Camera.findOne({ tableId: updatedMatch.tableId });
+            if (camera) {
+                autoRecordResult = await startAutoRecordForMatch(updatedMatch.matchId, camera.cameraId, 20);
+                console.log(`🎥 Auto record for AI match ${updatedMatch.matchId}:`, autoRecordResult);
+            } else {
+                console.warn(`⚠️ No camera found for table ${updatedMatch.tableId} in AI match ${updatedMatch.matchId}`);
+            }
+        }
+
         getIO().to(updatedMatch.matchId).emit('match_updated', updatedMatch);
 
         res.status(200).json({
             success: true,
             message: MESSAGES.MSG78,
-            data: updatedMatch
+            data: updatedMatch,
+            autoRecord: autoRecordResult
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -874,6 +886,12 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
 
         const finishedMatch = await match.save();
 
+        let autoRecordStopResult = null;
+        if (finishedMatch.isAiAssisted) {
+            autoRecordStopResult = await stopAutoRecordForMatch(finishedMatch.matchId);
+            console.log(`🛑 Auto record stopped for AI match ${finishedMatch.matchId}:`, autoRecordStopResult);
+        }
+
         getIO().to(finishedMatch.matchId).emit('match_updated', finishedMatch);
         getIO().to(finishedMatch.matchId).emit('match_ended', {
             matchId: finishedMatch.matchId,
@@ -885,7 +903,8 @@ export const endMatch = async (req: Request, res: Response): Promise<void> => {
         res.status(200).json({
             success: true,
             message: MESSAGES.MSG76,
-            data: finishedMatch
+            data: finishedMatch,
+            autoRecordStop: autoRecordStopResult
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
@@ -1482,7 +1501,6 @@ export const updateVideoUrl = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        // Validate URL format if provided
         if (videoUrl && videoUrl !== '') {
             try {
                 new URL(videoUrl);
@@ -1564,6 +1582,148 @@ export const getUserSessionToken = async (req: Request, res: Response): Promise<
 
     } catch (error: any) {
         res.status(500).json({ success: false, message: MESSAGES.MSG100 });
+    }
+};
+
+
+export const startAutoRecording = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
+    try {
+        const { matchId } = req.params;
+        const { cameraId, intervalSeconds = 20 } = req.body;
+        const manager = req.manager;
+
+        const match = await Match.findOne({ matchId });
+        if (!match) {
+            res.status(404).json({
+                success: false,
+                message: 'Match không tồn tại'
+            });
+            return;
+        }
+
+        if (match.status !== 'ongoing') {
+            res.status(400).json({
+                success: false,
+                message: 'Match phải đang diễn ra để bắt đầu auto recording'
+            });
+            return;
+        }
+
+        const table = await Table.findOne({ tableId: match.tableId, clubId: manager.clubId });
+        if (!table) {
+            res.status(403).json({
+                success: false,
+                message: 'Không có quyền truy cập match này'
+            });
+            return;
+        }
+
+        const result = await startAutoRecordForMatch(matchId, cameraId, intervalSeconds);
+
+        res.status(200).json({
+            success: result.success,
+            message: result.message,
+            data: {
+                matchId,
+                cameraId,
+                intervalSeconds,
+                isActive: result.success
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Start auto recording error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi bắt đầu auto recording'
+        });
+    }
+};
+
+export const stopAutoRecording = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
+    try {
+        const { matchId } = req.params;
+        const manager = req.manager;
+
+        const match = await Match.findOne({ matchId });
+        if (!match) {
+            res.status(404).json({
+                success: false,
+                message: 'Match không tồn tại'
+            });
+            return;
+        }
+
+        const table = await Table.findOne({ tableId: match.tableId, clubId: manager.clubId });
+        if (!table) {
+            res.status(403).json({
+                success: false,
+                message: 'Không có quyền truy cập match này'
+            });
+            return;
+        }
+
+        const result = await stopAutoRecordForMatch(matchId);
+
+        res.status(200).json({
+            success: result.success,
+            message: result.message,
+            data: {
+                matchId,
+                isActive: false
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Stop auto recording error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi dừng auto recording'
+        });
+    }
+};
+
+export const getAutoRecordingStatus = async (req: Request & { manager?: any }, res: Response): Promise<void> => {
+    try {
+        const { matchId } = req.params;
+        const manager = req.manager;
+
+        const match = await Match.findOne({ matchId });
+        if (!match) {
+            res.status(404).json({
+                success: false,
+                message: 'Match không tồn tại'
+            });
+            return;
+        }
+
+        const table = await Table.findOne({ tableId: match.tableId, clubId: manager.clubId });
+        if (!table) {
+            res.status(403).json({
+                success: false,
+                message: 'Không có quyền truy cập match này'
+            });
+            return;
+        }
+
+        const { activeAutoRecordJobs } = await import('./Camera.controller');
+        const job = activeAutoRecordJobs.get(matchId);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                matchId,
+                isActive: job ? job.isActive : false,
+                cameraId: job?.cameraId
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Get auto recording status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi lấy trạng thái auto recording'
+        });
     }
 };
 
