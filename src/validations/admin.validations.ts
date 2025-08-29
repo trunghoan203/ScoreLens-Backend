@@ -77,6 +77,7 @@ export const updateManagerSchema = z.object({
   email: emailSchema.optional(),
   citizenCode: citizenCodeSchema.optional(),
   address: addressSchema.optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const forgotPasswordSchema = z.object({

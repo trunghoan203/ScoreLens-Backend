@@ -26,7 +26,6 @@ const ManagerSchema: Schema<IManager> = new Schema({
     email: {
         type: String,
         required: [true, 'Email không được để trống'],
-        unique: true,
         lowercase: true,
         trim: true,
         match: [
@@ -46,7 +45,6 @@ const ManagerSchema: Schema<IManager> = new Schema({
     citizenCode: {
         type: String,
         required: [true, 'Số CCCD không được để trống'],
-        unique: true,
         trim: true
     },
     activationCode: {

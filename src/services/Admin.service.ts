@@ -25,26 +25,31 @@ interface UpdateManagerInput {
 }
 
 export const createManagerByAdmin = async (adminId: string, managerData: CreateManagerInput): Promise<Partial<IManager>> => {
-    const { email, citizenCode, clubId } = managerData;
+    const { email, phoneNumber, citizenCode, clubId } = managerData;
 
-    const existingManager = await Manager.findOne({ $or: [{ email }, { citizenCode }] });
-    if (existingManager) {
-        if (existingManager.email === email) {
-            throw new ErrorHandler(`Email '${email}' đã được sử dụng.`, 409);
-        }
-        if (existingManager.citizenCode === citizenCode) {
-            throw new ErrorHandler(`Số CCCD '${citizenCode}' đã được sử dụng.`, 409);
-        }
-    }
-
-    // Lấy brandId từ club
     const club = await Club.findOne({ clubId });
     if (!club) {
         throw new ErrorHandler('Club không tồn tại.', 404);
     }
     const brandId = club.brandId;
 
-    // Gán brandId vào managerData
+    const existingManager = await Manager.findOne({
+        brandId,
+        $or: [{ email }, { phoneNumber }, { citizenCode }]
+    });
+
+    if (existingManager) {
+        if (existingManager.email === email) {
+            throw new ErrorHandler(`Email '${email}' đã được sử dụng trong thương hiệu này.`, 409);
+        }
+        if (existingManager.phoneNumber === phoneNumber) {
+            throw new ErrorHandler(`Số điện thoại '${phoneNumber}' đã được sử dụng trong thương hiệu này.`, 409);
+        }
+        if (existingManager.citizenCode === citizenCode) {
+            throw new ErrorHandler(`Số CCCD '${citizenCode}' đã được sử dụng trong thương hiệu này.`, 409);
+        }
+    }
+
     const newManager = await Manager.create({ ...managerData, brandId });
 
     const managerObject = {
@@ -70,29 +75,6 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
         throw new ErrorHandler('Manager không tồn tại.', 404);
     }
 
-    if (updateData.email || updateData.citizenCode) {
-        const queryConditions: any = {};
-
-        if (updateData.email) {
-            queryConditions.email = updateData.email;
-        }
-        if (updateData.citizenCode) {
-            queryConditions.citizenCode = updateData.citizenCode;
-        }
-        queryConditions.managerId = { $ne: managerId };
-
-        const existingManager = await Manager.findOne(queryConditions);
-        if (existingManager) {
-            if (updateData.email && existingManager.email === updateData.email) {
-                throw new ErrorHandler(`Email '${updateData.email}' đã được sử dụng.`, 409);
-            }
-            if (updateData.citizenCode && existingManager.citizenCode === updateData.citizenCode) {
-                throw new ErrorHandler(`Số CCCD '${updateData.citizenCode}' đã được sử dụng.`, 409);
-            }
-        }
-    }
-
-    // Nếu update clubId thì đồng bộ lại brandId
     let newBrandId = manager.brandId;
     if (updateData.clubId && updateData.clubId !== manager.clubId) {
         const club = await Club.findOne({ clubId: updateData.clubId });
@@ -100,6 +82,36 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
             throw new ErrorHandler('Club không tồn tại.', 404);
         }
         newBrandId = club.brandId;
+    }
+
+    if (updateData.email || updateData.phoneNumber || updateData.citizenCode) {
+        const queryConditions: any = {
+            brandId: newBrandId,
+            managerId: { $ne: managerId }
+        };
+
+        if (updateData.email) {
+            queryConditions.email = updateData.email;
+        }
+        if (updateData.phoneNumber) {
+            queryConditions.phoneNumber = updateData.phoneNumber;
+        }
+        if (updateData.citizenCode) {
+            queryConditions.citizenCode = updateData.citizenCode;
+        }
+
+        const existingManager = await Manager.findOne(queryConditions);
+        if (existingManager) {
+            if (updateData.email && existingManager.email === updateData.email) {
+                throw new ErrorHandler(`Email '${updateData.email}' đã được sử dụng trong thương hiệu này.`, 409);
+            }
+            if (updateData.phoneNumber && existingManager.phoneNumber === updateData.phoneNumber) {
+                throw new ErrorHandler(`Số điện thoại '${updateData.phoneNumber}' đã được sử dụng trong thương hiệu này.`, 409);
+            }
+            if (updateData.citizenCode && existingManager.citizenCode === updateData.citizenCode) {
+                throw new ErrorHandler(`Số CCCD '${updateData.citizenCode}' đã được sử dụng trong thương hiệu này.`, 409);
+            }
+        }
     }
 
     const updatedManager = await Manager.findOneAndUpdate(
@@ -131,47 +143,9 @@ export const updateManagerByAdmin = async (adminId: string, managerId: string, u
 
 export const deleteManagerByAdmin = async (adminId: string, managerId: string): Promise<void> => {
     const manager = await Manager.findOne({ managerId });
-        console.log({ managerId });
     if (!manager) {
         throw new ErrorHandler('Manager không tồn tại.', 404);
     }
-
-    // const activeMatches = await Match.find({
-    //     managerId: managerId,
-    //     endTime: { $exists: false }
-    // });
-
-    // if (activeMatches.length > 0) {
-    //     throw new ErrorHandler(
-    //         `Không thể xóa Manager vì đang có ${activeMatches.length} trận đấu đang diễn ra. Vui lòng kết thúc các trận đấu trước khi xóa.`,
-    //         409
-    //     );
-    // }
-
-    // const thirtyDaysAgo = new Date();
-    // thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    // const recentMatches = await Match.find({
-    //     managerId: managerId,
-    //     endTime: { $gte: thirtyDaysAgo }
-    // });
-
-    // if (recentMatches.length > 0) {
-    //     throw new ErrorHandler(
-    //         `Không thể xóa Manager vì có ${recentMatches.length} trận đấu đã diễn ra trong 30 ngày gần đây. Vui lòng chờ sau 30 ngày để xóa.`,
-    //         409
-    //     );
-    // }
-
-    // const matchEvents = await MatchEvent.find({ managerId: managerId });
-
-    // if (matchEvents.length > 0) {
-    //     throw new ErrorHandler(
-    //         `Không thể xóa Manager vì có ${matchEvents.length} sự kiện trận đấu được tạo bởi manager này. Vui lòng xóa các sự kiện trước.`,
-    //         409
-    //     );
-    // }
-
     if (manager.isActive) {
         throw new ErrorHandler(
             'Không thể xóa Manager đang hoạt động. Vui lòng vô hiệu hóa tài khoản trước khi xóa.',
@@ -187,18 +161,6 @@ export const deactivateManagerByAdmin = async (adminId: string, managerId: strin
     if (!manager) {
         throw new ErrorHandler('Manager không tồn tại.', 404);
     }
-
-    // const activeMatches = await Match.find({
-    //     managerId: managerId,
-    //     endTime: { $exists: false }
-    // });
-
-    // if (activeMatches.length > 0) {
-    //     throw new ErrorHandler(
-    //         `Không thể vô hiệu hóa Manager vì đang có ${activeMatches.length} trận đấu đang diễn ra. Vui lòng kết thúc các trận đấu trước khi vô hiệu hóa.`,
-    //         409
-    //     );
-    // }
 
     manager.isActive = false;
     await manager.save();
