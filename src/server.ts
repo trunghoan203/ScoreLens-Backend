@@ -18,7 +18,7 @@ export const startServer = async () => {
             path: '/socket.io',
             transports: ['websocket'],
             cors: {
-                origin: process.env.ORIGIN?.split(',') || ["http://localhost:3000", "https://scorelens-omega.vercel.app"],
+                origin: process.env.ORIGIN?.split(',') || ["http://localhost:3000", "https://scorelens-weld.vercel.app"],
                 methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
                 allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
                 credentials: true
